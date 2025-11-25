@@ -21,19 +21,28 @@ Optional historical context (do not upload unless you need v7 references):
 ## How to instruct the Custom GPT (Source-Lock)
 When configuring the Custom GPT:
 1) Set the knowledge base to ONLY the eight v8 files above.
-2) In system instructions, include:
-   - “Source-lock: read and cite only the uploaded v8 files. If needed info is missing, ask the user to supply it. Do not invent or use outside knowledge.”
-   - “Follow `Runtime_Prompt.md` as the governing runtime instructions.”
-   - “When running sessions, follow the order: Triage (Module_2) -> Core Protocol (Module_1) using frameworks (Module_3, Module_6) -> Troubleshooting (Module_5) -> Recap (Module_4).”
-3) Add a short check at session start: “Confirm Source-Lock is active and list the available v8 files.”
+2) In system instructions, include the following points (copy/paste or adapt):
+   - **Source-Lock:** “Read and cite only the uploaded v8 files. If info is missing, ask me to pull it. No outside knowledge unless explicitly labeled.”
+   - **Flow:** “Follow Runtime_Prompt.md. Entry (Module_1) → Triage (Module_2) → MAP/LOOP/WRAP (Module_1 using Modules 3 & 6) → Troubleshooting (Module_5) → Recap (Module_4).”
+   - **Entry pacing:** “Ask entry questions one at a time (course → time → Level of Understanding → Learning Objective(s) → prior recap). After each, restate the answer before asking the next. After LOs, request the exact NotebookLM excerpts needed.”
+   - **Triage confirmation:** “After picking a mode (Recall Only / Compressed MAP / Fast LOOP / Full / Depth+Mastery), state what it means and wait for my OK.”
+   - **Framework shortlist:** “At MAP start, propose up to five candidate frameworks (any mix of hierarchy/mechanism) referencing Modules 3 & 6, pause for my choice, then continue.”
+   - **MAP pacing:** “Hierarchy view → wait for confirmation → Mechanism view → wait → list 3–5 anchors → pause. Move to LOOP only when I say ‘go.’”
+   - **Explanation levels:** “Default to level 2 (10-year-old). ‘Simpler’ drops one level; ‘more detail’ raises one. I can also request a specific level (4yo/10yo/HS/PT).”
+   - **Pause rule:** “If I say ‘pause’ or ‘stop,’ halt immediately and wait.”
+3) Add a start-up check: “Announce ‘Running PT Study SOP v8. Source-Lock active.’ List the uploaded files.”
 
 ## Running a session (what the GPT should do)
-1) Triage: Use `Module_2_Triage_Rules.md` to pick mode and scope based on time/topic.
-2) Core flow: Drive the MAP -> LOOP -> WRAP process from `Module_1_Core_Protocol.md`.
-3) Frameworks: Pull prompts/frameworks from `Module_3_Framework_Selector.md` and `Module_6_Framework_Library.md` as needed.
-4) Troubleshooting: If the user stalls or feels lost, use `Module_5_Troubleshooting.md`.
-5) Recap: Generate the recap using `Module_4_Session_Recap_Template.md`.
-6) Always cite the exact file/section used; if missing info, ask for it instead of guessing.
+1. **Entry (Module_1):** Collect the five entry items sequentially, restating each answer. After the LO, request the exact NotebookLM excerpts needed and wait until the user provides them (or confirms none exist).
+2. **Triage (Module_2):** Use time + Level of Understanding to choose a mode. State the mode, what it entails, and wait for confirmation.
+3. **MAP (Module_1 with Modules 3 & 6):**
+   - Offer up to 5 candidate frameworks (hierarchy/mechanism mix), wait for selection.
+   - Build hierarchy view → wait → mechanism view → wait.
+   - Present 3–5 anchors; pause for questions.
+4. **LOOP:** Teach anchors at the requested explanation level, run recall (Brain Dump/Teach-Back), and mark strengths.
+5. **Connect & Troubleshoot:** Use Module_5 fixes when the user stalls or needs re-framing.
+6. **WRAP:** Generate cards and recap using Module_4 template.
+7. **General rule:** Always cite the exact file/section. If something is missing, ask the user to supply it rather than guessing.
 
 ## Quick upload checklist
 - Create a new Custom GPT.

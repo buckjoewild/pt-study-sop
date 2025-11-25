@@ -1,42 +1,54 @@
-# PT Study SOP v7.2 â€“ Single-Session Study System
+# PT Study SOP - releases and docs
 
-**Author:** Trey  
-**Version:** 7.2  
-**Last Updated:** November 24, 2025
+**Latest package:** v8 (`releases/v8/PT_Study_SOP_v8.zip`)
+**Included docs:** v7.4 runtime prompt (V7.4), v7.2 core docs (sop_v7_core.md, methods_index.md)
+**Last Updated:** November 25, 2025
 
 ---
 
-## ğŸ“š Project Overview
+## What's here
+
+- `releases/v8/PT_Study_SOP_v8.zip` (and extracted folder): complete v8 package with modules and runtime prompt.
+- `V7.4`: v7.4 single-session runtime prompt.
+- `sop_v7_core.md`, `methods_index.md`: v7.2 core SOP and methods index.
+- `changelog.md`: version history.
+- `v7.3`: prior prompt/version artifact.
+
+The sections below describe the v7.x system; see the v8 package for the latest materials.
+
+---
+
+## =ƒôÜ Project Overview
 
 Welcome to the **PT Study SOP v7.2** repository! This project contains a comprehensive, evidence-based study system designed specifically for Doctor of Physical Therapy (DPT) students balancing coursework, work, and family commitments.
 
 The system is built around a simple, repeatable framework:
 
-### **MAP â†’ LOOP â†’ WRAP**
+### **MAP GåÆ LOOP GåÆ WRAP**
 
-- **MAP** â€“ Set up your session, build anchor concepts, and create memory hooks
-- **LOOP** â€“ Teach small chunks â†’ Active Recall â†’ Correct â†’ Repeat
-- **WRAP** â€“ Connect concepts, quiz yourself, and export weak-point flashcards
+- **MAP** GÇô Set up your session, build anchor concepts, and create memory hooks
+- **LOOP** GÇô Teach small chunks GåÆ Active Recall GåÆ Correct GåÆ Repeat
+- **WRAP** GÇô Connect concepts, quiz yourself, and export weak-point flashcards
 
-Think of it as: **MAP (warm-up) â†’ LOOP (work sets) â†’ WRAP (cool-down + log)**
+Think of it as: **MAP (warm-up) GåÆ LOOP (work sets) GåÆ WRAP (cool-down + log)**
 
 ---
 
-## ğŸ¯ Core Principles
+## =ƒÄ» Core Principles
 
 This SOP is grounded in cognitive science and learning theory:
 
-- **Desirable Difficulty** â€“ Effortful recall beats passive review
-- **Mechanistic Understanding** â€“ Learn *why* things work, not just *what* they are
-- **Scaffolding** â€“ Build big-picture anchors first, then add details
-- **Cognitive Load Management** â€“ Small chunks, minimal overwhelm
-- **Metacognition** â€“ Track what you know (Strong/Moderate/Weak)
-- **Weak-Point-Driven Review** â€“ Focus on what you actually missed
-- **Personal Encoding** â€“ Create your own memory hooks for better retention
+- **Desirable Difficulty** GÇô Effortful recall beats passive review
+- **Mechanistic Understanding** GÇô Learn *why* things work, not just *what* they are
+- **Scaffolding** GÇô Build big-picture anchors first, then add details
+- **Cognitive Load Management** GÇô Small chunks, minimal overwhelm
+- **Metacognition** GÇô Track what you know (Strong/Moderate/Weak)
+- **Weak-Point-Driven Review** GÇô Focus on what you actually missed
+- **Personal Encoding** GÇô Create your own memory hooks for better retention
 
 ---
 
-## ğŸ“– Documentation Structure
+## =ƒôû Documentation Structure
 
 This repository contains four main documentation files:
 
@@ -51,7 +63,7 @@ The complete operational guide for running study sessions. This is your primary 
 
 ### 2. [Methods Index](./methods_index.md)
 A comprehensive index of all methods, protocols, and techniques used in the SOP:
-- NMMF (Name â†’ Meaning â†’ Memory Hook â†’ Function)
+- NMMF (Name GåÆ Meaning GåÆ Memory Hook GåÆ Function)
 - Hook Integration Rule (HIR)
 - Personal Encoding Step (PES)
 - Brain Dump and Teach-Back protocols
@@ -66,7 +78,7 @@ Version history and updates:
 
 ---
 
-## ğŸš€ Quick Start Guide
+## =ƒÜÇ Quick Start Guide
 
 ### For Students
 
@@ -81,7 +93,7 @@ Version history and updates:
    - Time available (5-20 min / 45-90 min / 90-180 min)
    - Your Level of Understanding (None/Low/Moderate/High)
 
-3. **Follow the MAP â†’ LOOP â†’ WRAP flow:**
+3. **Follow the MAP GåÆ LOOP GåÆ WRAP flow:**
    - Build your mental map with 3-7 anchor concepts
    - Create personal memory hooks (NMMF + PES)
    - Practice active recall (Brain Dump or Teach-Back)
@@ -104,13 +116,13 @@ If you're implementing this SOP in a custom GPT or AI system:
 
 ---
 
-## ğŸ”‘ Key Features of v7.2
+## =ƒöæ Key Features of v7.2
 
 ### New in Version 7.2
 
 1. **NMMF Framework** (Section 2.5)
    - Systematic approach to learning terminology
-   - Name â†’ Meaning â†’ Memory Hook â†’ Function
+   - Name GåÆ Meaning GåÆ Memory Hook GåÆ Function
    - Reduces cognitive load on complex terms
 
 2. **Hook Integration Rule (HIR)** (Section 2.6)
@@ -125,7 +137,7 @@ If you're implementing this SOP in a custom GPT or AI system:
 
 ---
 
-## ğŸ“‹ Use Cases
+## =ƒôï Use Cases
 
 This SOP works for:
 
@@ -144,7 +156,7 @@ This SOP works for:
 
 ---
 
-## ğŸ› ï¸ Tools & Integration
+## =ƒ¢án+Å Tools & Integration
 
 This SOP is designed to work with:
 
@@ -155,7 +167,7 @@ This SOP is designed to work with:
 
 ---
 
-## ğŸ“Š Session Outputs
+## =ƒôè Session Outputs
 
 Every study session produces:
 
@@ -172,7 +184,7 @@ Every study session produces:
 
 ---
 
-## ğŸ“ Learning Philosophy
+## =ƒÄô Learning Philosophy
 
 This SOP treats studying like physical training:
 
@@ -184,7 +196,7 @@ Just like you wouldn't skip warm-ups or cool-downs in PT, don't skip MAP or WRAP
 
 ---
 
-## ğŸ¤ Contributing
+## =ƒñ¥ Contributing
 
 This is a living document. If you have suggestions, improvements, or adaptations:
 
@@ -196,7 +208,7 @@ The goal is continuous refinement based on real-world use.
 
 ---
 
-## ğŸ“ Support & Questions
+## =ƒôP Support & Questions
 
 For questions about implementation or adaptation:
 
@@ -206,13 +218,13 @@ For questions about implementation or adaptation:
 
 ---
 
-## ğŸ“„ License
+## =ƒôä License
 
 This study system is shared for educational purposes. Feel free to adapt it to your own learning needs.
 
 ---
 
-## ğŸŒŸ Success Metrics
+## =ƒîƒ Success Metrics
 
 You'll know this system is working when:
 
@@ -224,4 +236,4 @@ You'll know this system is working when:
 
 ---
 
-**Ready to start?** Head to the [Core SOP Documentation](./sop_v7_core.md) and begin your first MAP â†’ LOOP â†’ WRAP session!
+**Ready to start?** Head to the [Core SOP Documentation](./sop_v7_core.md) and begin your first MAP GåÆ LOOP GåÆ WRAP session!

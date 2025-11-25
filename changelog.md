@@ -1,12 +1,26 @@
 # PT Study SOP – Changelog
 
 **Repository:** PT Study SOP  
-**Current Version:** 7.2  
-**Last Updated:** November 24, 2025
+**Current Version:** 8.0  
+**Last Updated:** November 25, 2025
 
 ---
 
-## Version 7.2 (Current)
+## Version 8.0 (Current)
+
+**Release Date:** November 25, 2025
+
+### Package contents
+- Added v8 package in `releases/v8/PT_Study_SOP_v8.zip` (with extracted folder).
+- Includes Module_1_Core_Protocol.md, Module_2_Triage_Rules.md, Module_3_Framework_Selector.md, Module_4_Session_Recap_Template.md, Module_5_Troubleshooting.md, Module_6_Framework_Library.md, Master_Index.md, and Runtime_Prompt.md.
+
+### Notes
+- v7.x documentation remains in the root (V7.4 prompt, sop_v7_core.md, methods_index.md).
+- Use the v8 package for the latest materials; keep v7.x for historical reference.
+
+---
+
+## Version 7.2 (Previous)
 
 **Release Date:** November 24, 2025
 
@@ -421,3 +435,6 @@ Feel free to:
 ---
 
 *End of Changelog*
+
+
+

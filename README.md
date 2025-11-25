@@ -18,37 +18,36 @@ The sections below describe the v7.x system; see the v8 package for the latest m
 
 ---
 
-## =ƒôÜ Project Overview
+## Project Overview
 
 Welcome to the **PT Study SOP v7.2** repository! This project contains a comprehensive, evidence-based study system designed specifically for Doctor of Physical Therapy (DPT) students balancing coursework, work, and family commitments.
 
 The system is built around a simple, repeatable framework:
 
-### **MAP GåÆ LOOP GåÆ WRAP**
+### **MAP -> LOOP -> WRAP**
+- **MAP** -> Set up your session, build anchor concepts, and create memory hooks
+- **LOOP** -> Teach small chunks -> Active Recall -> Correct -> Repeat
+- **WRAP** -> Connect concepts, quiz yourself, and export weak-point flashcards
 
-- **MAP** GÇô Set up your session, build anchor concepts, and create memory hooks
-- **LOOP** GÇô Teach small chunks GåÆ Active Recall GåÆ Correct GåÆ Repeat
-- **WRAP** GÇô Connect concepts, quiz yourself, and export weak-point flashcards
-
-Think of it as: **MAP (warm-up) GåÆ LOOP (work sets) GåÆ WRAP (cool-down + log)**
+Think of it as: **MAP (warm-up) -> LOOP (work sets) -> WRAP (cool-down + log)**
 
 ---
 
-## =ƒÄ» Core Principles
+## Core Principles
 
 This SOP is grounded in cognitive science and learning theory:
 
-- **Desirable Difficulty** GÇô Effortful recall beats passive review
-- **Mechanistic Understanding** GÇô Learn *why* things work, not just *what* they are
-- **Scaffolding** GÇô Build big-picture anchors first, then add details
-- **Cognitive Load Management** GÇô Small chunks, minimal overwhelm
-- **Metacognition** GÇô Track what you know (Strong/Moderate/Weak)
-- **Weak-Point-Driven Review** GÇô Focus on what you actually missed
-- **Personal Encoding** GÇô Create your own memory hooks for better retention
+- **Desirable Difficulty** -> Effortful recall beats passive review
+- **Mechanistic Understanding** -> Learn *why* things work, not just *what* they are
+- **Scaffolding** -> Build big-picture anchors first, then add details
+- **Cognitive Load Management** -> Small chunks, minimal overwhelm
+- **Metacognition** -> Track what you know (Strong/Moderate/Weak)
+- **Weak-Point-Driven Review** -> Focus on what you actually missed
+- **Personal Encoding** -> Create your own memory hooks for better retention
 
 ---
 
-## =ƒôû Documentation Structure
+## Documentation Structure
 
 This repository contains four main documentation files:
 
@@ -63,7 +62,7 @@ The complete operational guide for running study sessions. This is your primary 
 
 ### 2. [Methods Index](./methods_index.md)
 A comprehensive index of all methods, protocols, and techniques used in the SOP:
-- NMMF (Name GåÆ Meaning GåÆ Memory Hook GåÆ Function)
+- NMMF (Name -> Meaning -> Memory Hook -> Function)
 - Hook Integration Rule (HIR)
 - Personal Encoding Step (PES)
 - Brain Dump and Teach-Back protocols
@@ -78,7 +77,7 @@ Version history and updates:
 
 ---
 
-## =ƒÜÇ Quick Start Guide
+## Quick Start Guide
 
 ### For Students
 
@@ -93,7 +92,7 @@ Version history and updates:
    - Time available (5-20 min / 45-90 min / 90-180 min)
    - Your Level of Understanding (None/Low/Moderate/High)
 
-3. **Follow the MAP GåÆ LOOP GåÆ WRAP flow:**
+3. **Follow the MAP -> LOOP -> WRAP flow:**
    - Build your mental map with 3-7 anchor concepts
    - Create personal memory hooks (NMMF + PES)
    - Practice active recall (Brain Dump or Teach-Back)
@@ -116,13 +115,13 @@ If you're implementing this SOP in a custom GPT or AI system:
 
 ---
 
-## =ƒöæ Key Features of v7.2
+## Key Features of v7.2
 
 ### New in Version 7.2
 
 1. **NMMF Framework** (Section 2.5)
    - Systematic approach to learning terminology
-   - Name GåÆ Meaning GåÆ Memory Hook GåÆ Function
+   - Name -> Meaning -> Memory Hook -> Function
    - Reduces cognitive load on complex terms
 
 2. **Hook Integration Rule (HIR)** (Section 2.6)
@@ -137,7 +136,7 @@ If you're implementing this SOP in a custom GPT or AI system:
 
 ---
 
-## =ƒôï Use Cases
+## Use Cases
 
 This SOP works for:
 
@@ -156,7 +155,7 @@ This SOP works for:
 
 ---
 
-## =ƒ¢án+Å Tools & Integration
+## Tools & Integration
 
 This SOP is designed to work with:
 
@@ -167,7 +166,7 @@ This SOP is designed to work with:
 
 ---
 
-## =ƒôè Session Outputs
+## Session Outputs
 
 Every study session produces:
 
@@ -184,7 +183,7 @@ Every study session produces:
 
 ---
 
-## =ƒÄô Learning Philosophy
+## Learning Philosophy
 
 This SOP treats studying like physical training:
 
@@ -196,7 +195,7 @@ Just like you wouldn't skip warm-ups or cool-downs in PT, don't skip MAP or WRAP
 
 ---
 
-## =ƒñ¥ Contributing
+## Contributing
 
 This is a living document. If you have suggestions, improvements, or adaptations:
 
@@ -208,7 +207,7 @@ The goal is continuous refinement based on real-world use.
 
 ---
 
-## =ƒôP Support & Questions
+## Support & Questions
 
 For questions about implementation or adaptation:
 
@@ -218,13 +217,13 @@ For questions about implementation or adaptation:
 
 ---
 
-## =ƒôä License
+## License
 
 This study system is shared for educational purposes. Feel free to adapt it to your own learning needs.
 
 ---
 
-## =ƒîƒ Success Metrics
+## Success Metrics
 
 You'll know this system is working when:
 
@@ -236,4 +235,4 @@ You'll know this system is working when:
 
 ---
 
-**Ready to start?** Head to the [Core SOP Documentation](./sop_v7_core.md) and begin your first MAP GåÆ LOOP GåÆ WRAP session!
+**Ready to start?** Head to the [Core SOP Documentation](./sop_v7_core.md) and begin your first MAP -> LOOP -> WRAP session!

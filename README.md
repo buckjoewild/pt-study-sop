@@ -11,12 +11,12 @@
 - `releases/v8/PT_Study_SOP_v8/`: complete v8 package with Runtime Prompt, Master Index, and Modules 1-6.
 - `USAGE.md`: step-by-step instructions for loading v8 into a Custom GPT.
 - `changelog.md`: version history.
-- `legacy/`: v7.4 single-session prompt, v7.3, and v7.2 core SOP/methods (historical reference).
+- `legacy/`: v7.4 single-session prompt ([legacy/V7.4/](./legacy/V7.4/)), v7.3 package ([legacy/v7.3/](./legacy/v7.3/)), and v7.2 core SOP/methods ([legacy/sop_v7_core.md](./legacy/sop_v7_core.md), [legacy/methods_index.md](./legacy/methods_index.md)).
 
 ## What's here
 
 - `releases/v8/PT_Study_SOP_v8/`: latest v8 modules.
-- `legacy/`: historical files (v7.4, v7.3, v7.2 core SOP, methods index).
+- `legacy/`: historical files ([legacy/V7.4/](./legacy/V7.4/)), [legacy/v7.3/](./legacy/v7.3/), [legacy/sop_v7_core.md](./legacy/sop_v7_core.md), [legacy/methods_index.md](./legacy/methods_index.md).
 
 The sections below summarize the older v7.x documentation. For current usage, start with `releases/v8/` and read `USAGE.md`.
 
@@ -68,7 +68,7 @@ This SOP is grounded in cognitive science and learning theory:
 
 This repository contains four main documentation files:
 
-### 1. [Core SOP Documentation](./sop_v7_core.md)
+### 1. [Core SOP Documentation](./legacy/sop_v7_core.md)
 The complete operational guide for running study sessions. This is your primary reference for:
 - Session setup and triggers
 - Smart Prime (MAP phase) with NMMF framework
@@ -77,7 +77,7 @@ The complete operational guide for running study sessions. This is your primary 
 - Fast/exam crunch mode
 - Troubleshooting and guardrails
 
-### 2. [Methods Index](./methods_index.md)
+### 2. [Methods Index](./legacy/methods_index.md)
 A comprehensive index of all methods, protocols, and techniques used in the SOP:
 - NMMF (Name -> Meaning -> Memory Hook -> Function)
 - Hook Integration Rule (HIR)
@@ -121,8 +121,8 @@ Version history and updates:
 
 If you're implementing this SOP in a custom GPT or AI system:
 
-1. Read the [Core SOP Documentation](./sop_v7_core.md) thoroughly
-2. Reference the [Methods Index](./methods_index.md) for specific protocols
+1. Read the [Core SOP Documentation](./legacy/sop_v7_core.md) thoroughly
+2. Reference the [Methods Index](./legacy/methods_index.md) for specific protocols
 3. Follow the always-on rules:
    - Source-Lock to project materials
    - Enforce active recall before moving on
@@ -228,8 +228,8 @@ The goal is continuous refinement based on real-world use.
 
 For questions about implementation or adaptation:
 
-- Review the [Core SOP Documentation](./sop_v7_core.md) for detailed guidance
-- Check the [Methods Index](./methods_index.md) for specific techniques
+- Review the [Core SOP Documentation](./legacy/sop_v7_core.md) for detailed guidance
+- Check the [Methods Index](./legacy/methods_index.md) for specific techniques
 - Consult the [Changelog](./changelog.md) for version-specific information
 
 ---
@@ -252,4 +252,4 @@ You'll know this system is working when:
 
 ---
 
-**Ready to start?** Head to the [Core SOP Documentation](./sop_v7_core.md) and begin your first MAP -> LOOP -> WRAP session!
+**Ready to start?** Head to the [Core SOP Documentation](./legacy/sop_v7_core.md) and begin your first MAP -> LOOP -> WRAP session!

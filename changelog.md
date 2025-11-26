@@ -1,12 +1,26 @@
 # PT Study SOP – Changelog
 
-**Repository:** PT Study SOP  
-**Current Version:** 8.0  
-**Last Updated:** November 25, 2025
+**Repository:** PT Study SOP
+**Current Version:** 8.1
+**Last Updated:** December 5, 2025
 
 ---
 
-## Version 8.0 (Current)
+## Version 8.1 (Current)
+
+**Release Date:** December 5, 2025
+
+### Notes
+- Added a **Response QA Checklist (Always-On)** to Module 1 so the AI self-checks phase, depth, constraints, note prompts, hooks, and flow before sending non-trivial replies.
+- Defined **Note-Taking Prompts** under LOOP in Module 1 to encourage small handwriting/mapping/sketching actions at natural stopping points.
+- Extended Module 1 NMMF guidance to explicitly allow **sound/phonetic hooks** and short jingles; added **Depth & Pacing: Surface-Then-Structure** defaults for new topics in Full Protocol and Compressed MAP.
+- Appended a **Flow Critique** block to Module 4 session recaps for pacing feedback.
+- Introduced **Module 7 – Meta-Revision Log** for cross-session adjustments and updated Runtime Prompt to reference QA and note prompts.
+- Updated Master Index with Module 7 across structure, triggers, and checklist.
+
+---
+
+## Version 8.0 (Previous)
 
 **Release Date:** November 25, 2025
 

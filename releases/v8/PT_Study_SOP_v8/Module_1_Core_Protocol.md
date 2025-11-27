@@ -81,6 +81,19 @@ If any item is “no,” revise the answer internally before sending it.
 4. Offer options: "(1) Big-picture recall, (2) Deepen specific anchors, (3) Weak points only"
 5. → Enter LOOP at appropriate phase
 
+### Quick Entry
+**Trigger:** User resumes within 48 hours of previous session or states "same topic/day."
+
+**Flow:**
+1. Skip full 5-question Entry sequence.
+2. Ask only:
+   - "Same topic as last session?"
+   - "Any new source material or changes?"
+   - "Time available today?"
+3. Auto-import prior recap context (anchors, weak points).
+4. Reconfirm or adjust triage mode.
+5. Resume at LOOP or MAP depending on recap status.
+
 ---
 
 ## PHASE FLOW: MAP → LOOP → WRAP
@@ -113,6 +126,12 @@ If any item is “no,” revise the answer internally before sending it.
    - Run PES: "Does this hook work, or would your brain prefer something different?"
 
 5. **Check-in:** "What's clear? What's fuzzy? Ready for recall, or need more on something?"
+
+6. **Cross-Anchor Bridge (Optional)**
+   - Before exiting MAP, connect adjacent anchors:
+     - Ask: "How does Anchor A link to Anchor B?"
+     - Build a one-line bridge statement.
+     - Add these bridges to recap under 'Mechanism Maps.'
 
 ### LOOP (Learn → Recall → Connect → Quiz)
 
@@ -163,6 +182,13 @@ Use these patterns at natural stopping points (end of an anchor chunk, after a r
 - Confirm: "Ready for cards and recap?"
 - Anki cards: Weak anchors + important Moderate + user-tagged critical
 - Session Recap: Use template from Module 4
+
+**Card Export (Optional)**
+- If session produces hooks, analogies, or definitions:
+  - Offer: "Would you like to export these as Anki CSV cards?"
+  - Generate CSV using fields:
+    - Front | Back | Tags | Hook
+  - Save in /mnt/data/ as [Course_Topic_Date].csv
 
 **9. Save Instructions**
 - "Save this recap to NotebookLM/OneNote as: [Course — Module — Topic — YYYY-MM-DD]"

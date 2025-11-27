@@ -231,6 +231,22 @@ Time needed: ~30-45 min to solidify, or 15 min for quick recall drill
 
 ---
 
+## MINI-RECAP (60-Second Version)
+Use when full recap is not required.
+
+**Template:**
+Topic: [Course — Module — Topic]  
+Date: [YYYY-MM-DD]  
+Anchors Covered: [List]  
+Strong / Moderate / Weak Summary  
+Top 3 Hooks or Analogies  
+Next Focus: [Next anchor or recall goal]  
+Mode: [Recall Only / Fast LOOP / etc.]
+
+**Purpose:** Keep daily continuity between sessions; ideal for multi-day topics.
+
+---
+
 ## AI GENERATION INSTRUCTIONS
 
 **At session end:**

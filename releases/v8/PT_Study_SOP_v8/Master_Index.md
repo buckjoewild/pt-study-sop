@@ -26,8 +26,18 @@ PT_Study_SOP_v8/
 ├── Module_4_Session_Recap_Template.md   ← Pull when generating outputs
 ├── Module_5_Troubleshooting.md  ← Pull when stuck
 ├── Module_6_Framework_Library.md    ← Pull for framework details
+├── Module_7_Storyframe_Protocol.md  ← Optional narrative-learning extension
 └── Module_7_Meta_Revision_Log.md    ← Pull for cross-session meta notes
 ```
+
+---
+
+### New in v8.1
+- Quick Entry Mode
+- Mini-Recap Template
+- Cross-Anchor Bridge Step
+- Anki Export Automation
+- Optional Storyframe Protocol (Module 7)
 
 ---
 

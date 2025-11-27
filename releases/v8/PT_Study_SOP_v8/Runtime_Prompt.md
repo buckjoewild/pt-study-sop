@@ -1,6 +1,12 @@
 # PT Study SOP v8.1  Runtime Prompt
 **Copy-paste this to start any new study session.**
 
+Now supports:
+- Quick Entry Mode (resumes faster)
+- Mini-Recap option
+- Anki Export during WRAP
+- Optional Storyframe integration
+
 ---
 
 ```

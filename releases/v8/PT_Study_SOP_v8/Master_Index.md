@@ -26,33 +26,32 @@ PT_Study_SOP_v8/
 ├── Module_4_Session_Recap_Template.md   ← Pull when generating outputs
 ├── Module_5_Troubleshooting.md  ← Pull when stuck
 ├── Module_6_Framework_Library.md    ← Pull for framework details
-├── Module_7_Storyframe_Protocol.md  ← Optional narrative-learning extension
-└── Module_7_Meta_Revision_Log.md    ← Pull for cross-session meta notes
+├── Module_7_Meta_Revision_Log.md    ← Pull for cross-session meta notes
+└── Module_7_Storyframe_Protocol.md  ← Optional narrative-learning extension
 ```
 
 ---
 
 ### New in v8.1
-- Quick Entry Mode
-- Mini-Recap Template
-- Cross-Anchor Bridge Step
-- Anki Export Automation
-- Optional Storyframe Protocol (Module 7)
+- Response QA Checklist (always-on self-check before non-trivial replies)
+- Note-Taking Prompts during LOOP (light handwriting/mapping prompts)
+- Depth & Pacing: Surface-Then-Structure defaults for new topics
+- Flow Critique added to Session Recap template
+- Meta-Revision Log module for cross-session adjustments
 
 ---
 
 ## Module Triggers (When to Pull Which Module)
 
-| Trigger phrase / situation                                 | Module | Purpose                                                   |
-| ---------------------------------------------------------- | ------ | --------------------------------------------------------- |
-| Runtime prompt needs SOP context                           | 1      | Core protocol always in memory                            |
-| Calibrate depth based on time and knowledge                | 2      | Select mode (Recall Only, Compressed MAP, Fast LOOP, etc.) |
-| Need frameworks and rationale                              | 3      | Choose best-fit frameworks                                |
-| Ready to generate recap at WRAP                            | 4      | Session recap template                                    |
-| Stuck, confused, or flow broken                            | 5      | Troubleshooting steps                                     |
-| Want detailed framework definitions                        | 6      | Framework library                                         |
-| “Log meta notes”, “Update meta log”, end-of-day reflection | 7      | Capture cross-session lessons to adjust future sessions    |
-
+| Trigger phrase / situation | Module | Purpose |
+| --- | --- | --- |
+| Runtime prompt needs SOP context | 1 | Core protocol always in memory |
+| Calibrate depth based on time and knowledge | 2 | Select mode (Recall Only, Compressed MAP, Fast LOOP, etc.) |
+| Need frameworks and rationale | 3 | Choose best-fit frameworks |
+| Ready to generate recap at WRAP | 4 | Session recap template |
+| Stuck, confused, or flow broken | 5 | Troubleshooting steps |
+| Want detailed framework definitions | 6 | Framework library |
+| “Log meta notes”, “Update meta log”, end-of-day reflection | 7 | Capture cross-session lessons to adjust future sessions |
 ---
 
 ## How to Use This System

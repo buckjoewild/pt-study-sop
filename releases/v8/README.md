@@ -1,9 +1,11 @@
-# PT Study SOP v8 package
+# PT Study SOP v8.1 Package
 
-This folder contains the v8 release pulled from PT_Study_SOP_v8.zip.
-Use the extracted files for the latest SOP materials; the zip is kept for distribution/backups.
+This folder contains the v8.1 release files.
 
-## Contents
+## Contents (9 files for Custom GPT upload)
+
+Located in `PT_Study_SOP_v8.1/`:
+
 - Module_1_Core_Protocol.md
 - Module_2_Triage_Rules.md
 - Module_3_Framework_Selector.md
@@ -14,5 +16,12 @@ Use the extracted files for the latest SOP materials; the zip is kept for distri
 - Master_Index.md
 - Runtime_Prompt.md
 
-## Source
-- Original archive: `PT_Study_SOP_v8.zip`
+## Version History
+
+- v8.1 (Dec 5, 2025): HUD/menu, Self-Check QA, Storyframe integration, HookStyle, Surface-Then-Structure, meta-log flow
+- v8.0 (Nov 25, 2025): Modular restructure from monolithic v7.x
+
+## Notes
+
+- Zip file removed (OneDrive/Git provides backup)
+- Module_7_Storyframe_Protocol.md removed (content absorbed into Module_1)

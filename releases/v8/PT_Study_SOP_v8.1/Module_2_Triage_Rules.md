@@ -1,29 +1,42 @@
 # PT Study SOP v8.1.1 — Module 2: Triage Rules
 
-**Purpose:** Calibrate session depth based on time available and current knowledge level.  
+**Purpose:** Calibrate session depth based on time available and current knowledge level.
 **When to consult:** After gathering context in Entry, before starting MAP or LOOP.
 
 ---
 
-## TRIAGE MATRIX
+## SITUATION MATRIX
 
-| Time | Goal | Mode | What Happens |
-|------|------|------|--------------|
-| **15-20 min/module** | Coverage | **Prime Mode** | Scan, names, groups. No depth. |
-| **20-30 min/topic** | Coverage + Basic Hooks | **Sprint Mode** | Quick anchors, 1 hook each, 1 recall pass |
-| **15-30 min** | Retrieval Practice | **Recall Only** | No teaching, drill existing anchors |
-| **45-60 min** | Learning (Low Knowledge) | **Compressed MAP** | 3-5 anchors, essential NMMF, quick recall |
-| **45-60 min** | Learning (Mod/High Knowledge) | **Fast LOOP** | Minimal MAP, straight to recall → quiz |
-| **90+ min** | Deep Learning | **Full Protocol** | Complete MAP → LOOP → WRAP |
-| **90+ min** | Mastery | **Depth + Mastery** | Quick MAP, extended connect, hard cases |
+User selects situation FIRST. This filters which modes are offered.
+
+| Situation | Description | Available Modes |
+|-----------|-------------|-----------------|
+| **CRUNCH** | Exam soon, lots to cover, need speed | Prime, Sprint, Recall Only |
+| **NORMAL** | Regular study, balanced pace | Compressed MAP, Fast LOOP, Full Protocol |
+| **DEEP DIVE** | Fewer topics, want mastery | Full Protocol, Depth + Mastery |
+| **MAINTENANCE** | Already learned, need review | Recall Only, Fast LOOP |
+
+---
+
+## MODE REFERENCE
+
+| Mode | Time | PERO Stage | What Happens | Best For |
+|------|------|------------|--------------|----------|
+| **Prime** | 15-20 min/module | Priming | Scan, names, groups. No depth. | First exposure, coverage |
+| **Sprint** | 20-30 min/topic | Priming + Light Encoding | Quick anchors, 1 hook each, 1 recall | Need hooks, no time for depth |
+| **Recall Only** | 15-30 min | Retrieval | No teaching, drill existing anchors | Maintenance, pre-exam drill |
+| **Compressed MAP** | 45-60 min | Encoding + Retrieval | 3-5 anchors, essential NMMF, quick recall | New material, limited time |
+| **Fast LOOP** | 45-60 min | Encoding + Retrieval | Minimal MAP, straight to recall + quiz | Somewhat familiar, fill gaps |
+| **Full Protocol** | 90+ min | Full PERO | Complete MAP → LOOP → WRAP | Important topic, thorough learning |
+| **Depth + Mastery** | 90+ min | Full PERO + Overlearning | Extended connect, hard cases, application | Push to exam-ready |
 
 ---
 
 ## DETAILED MODE DESCRIPTIONS
 
-### Prime Mode (NEW)
+### Prime Mode
 
-**Trigger:** "Prime mode" / "Just priming" / "Coverage mode" / Multiple modules to scan
+**Situation:** CRUNCH
 
 **Time:** 15-20 minutes per module (hard stop)
 
@@ -44,18 +57,19 @@
 - No Anki cards
 - No detailed hooks
 
-**Output:** Prime Map (topic list with groupings, ready for encoding later)
+**Output:** Prime Map
 
 **Use When:**
 - First exposure to new content
 - Multiple modules to cover in one session
-- Tonight = breadth, tomorrow = depth
+- This session = breadth, next session = depth
+- User needs speed over mastery
 
 ---
 
-### Sprint Mode (NEW)
+### Sprint Mode
 
-**Trigger:** "Sprint mode" / "Fast coverage" / "Quick pass"
+**Situation:** CRUNCH
 
 **Time:** 20-30 minutes per topic (hard stop)
 
@@ -65,7 +79,7 @@
 1. Quick MAP: 3-5 anchors, Level 2 explanations
 2. Fast hooks: 1 per anchor (simple, user-preferred)
 3. One Brain Dump: single recall pass, mark S/M/W
-4. Sprint Recap: 5 bullets + hooks + "needs depth" flags
+4. Sprint Recap: anchors, hooks, "needs depth" flags
 5. Move on
 
 **What Does NOT Happen:**
@@ -75,17 +89,18 @@
 - Detailed quizzes
 - Perfectionism
 
-**Output:** Sprint Recap (anchors, hooks, weak flags)
+**Output:** Sprint Recap
 
 **Use When:**
 - Many topics, limited time
 - Need hooks but not mastery
-- Exam approaching, first pass through material
+- Will return for deeper pass
+- CRUNCH situation + some familiarity
 
 ---
 
 ### Recall Only (Micro Sessions)
-**Time:** 5-20 minutes  
+**Time:** 5-20 minutes
 **Goal:** Reinforce existing knowledge, identify decay
 
 **Flow:**
@@ -103,7 +118,7 @@
 ---
 
 ### Compressed MAP (Standard + Low Knowledge)
-**Time:** 45-90 minutes  
+**Time:** 45-90 minutes
 **Goal:** Build foundational understanding efficiently
 
 **Flow:**
@@ -122,7 +137,7 @@
 ---
 
 ### Fast LOOP (Standard + Moderate/High Knowledge)
-**Time:** 45-90 minutes  
+**Time:** 45-90 minutes
 **Goal:** Verify understanding, find gaps, strengthen connections
 
 **Flow:**
@@ -140,7 +155,7 @@
 ---
 
 ### Full Protocol (Long + Low Knowledge)
-**Time:** 90+ minutes  
+**Time:** 90+ minutes
 **Goal:** Deep learning for lasting retention
 
 **Flow:**
@@ -161,7 +176,7 @@
 ---
 
 ### Depth + Mastery (Long + Moderate/High Knowledge)
-**Time:** 90+ minutes  
+**Time:** 90+ minutes
 **Goal:** Push to mastery, clinical application, exam readiness
 
 **Flow:**

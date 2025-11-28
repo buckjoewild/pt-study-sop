@@ -13,13 +13,15 @@
 PRIME MAP: [Module Name]
 Date: [YYYY-MM-DD]
 Time: [X] min
+Situation: CRUNCH
+Mode: Prime
 ═══════════════════════════════════════════════════════════
 
 GROUP 1: [Category Name]
   • [Topic] — [1-sentence description]
   • [Topic] — [1-sentence description]
   • [Topic] — [1-sentence description]
-  
+
 GROUP 2: [Category Name]
   • [Topic] — [1-sentence description]
   • [Topic] — [1-sentence description]
@@ -34,7 +36,7 @@ QUICK HOOKS (hard names only):
 
 ═══════════════════════════════════════════════════════════
 STATUS: Primed. Ready for encoding.
-NEXT SESSION: Encoding pass (~[estimated time])
+NEXT: Encoding session (Compressed MAP or Full Protocol recommended)
 ═══════════════════════════════════════════════════════════
 ```
 
@@ -45,14 +47,16 @@ NEXT SESSION: Encoding pass (~[estimated time])
 SPRINT RECAP: [Topic]
 Date: [YYYY-MM-DD]
 Time: [X] min
+Situation: CRUNCH
+Mode: Sprint
 ═══════════════════════════════════════════════════════════
 
 ANCHORS:
-  1. [Anchor] — [S/M/W]
-  2. [Anchor] — [S/M/W]
-  3. [Anchor] — [S/M/W]
+  1. [Anchor] — [Hook] — [S/M/W]
+  2. [Anchor] — [Hook] — [S/M/W]
+  3. [Anchor] — [Hook] — [S/M/W]
 
-HOOKS:
+HOOKS SUMMARY:
   • [Anchor] → [Hook]
   • [Anchor] → [Hook]
   • [Anchor] → [Hook]
@@ -63,7 +67,7 @@ NEEDS DEPTH (flag for next session):
 
 ═══════════════════════════════════════════════════════════
 STATUS: Surface pass complete.
-NEXT SESSION: Encoding + Recall (~[estimated time])
+NEXT: Encoding + Recall session (Compressed MAP or Full Protocol)
 ═══════════════════════════════════════════════════════════
 ```
 

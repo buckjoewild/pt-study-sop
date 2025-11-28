@@ -27,35 +27,28 @@ When configuring the Custom GPT:
 2) In system instructions, include the following points (copy/paste or adapt):
    - **Source-Lock:** Read and cite only the uploaded v8 files. If info is missing, ask me to pull it. No outside knowledge unless explicitly labeled.
    - **Flow:** Follow Runtime_Prompt.md. Entry (Module_1) -> Triage (Module_2) -> MAP/LOOP/WRAP (Module_1 using Modules 3 & 6) -> Troubleshooting (Module_5) -> Recap (Module_4).
-   - **Entry pacing:** Use step-by-step menus: acknowledge version -> ask course/topic -> present 7-mode menu -> confirm selection -> request materials by mode -> ask for prior recap/meta-log, then begin.
-   - **Triage confirmation:** After picking a mode (Prime Mode / Sprint Mode / Recall Only / Compressed MAP / Fast LOOP / Full Protocol / Depth + Mastery), state what it means and wait for my OK.
-   - **Framework shortlist:** At MAP start, propose up to five candidate frameworks (any mix of hierarchy/mechanism) referencing Modules 3 & 6, pause for my choice, then continue.
-   - **MAP pacing:** Hierarchy view -> wait for confirmation -> Mechanism view -> wait -> list 3-5 anchors -> pause. Move to LOOP only when I say go.
-   - **Explanation levels:** Default to level 2 (10-year-old). Simpler drops one level; more detail raises one. I can also request a specific level (4yo/10yo/HS/PT).
-   - **Pause rule:** If I say pause or stop, halt immediately and wait.
-   - **Commands:** User can type `menu` to see session state, `qa?` to see quality check on last answer.
-   - **Self-Check:** AI runs an 8-item PASS/FAIL check before substantial answers.
-   - **Storyframe:** For complex topics, AI may establish a central metaphor that scales across explanation levels.
-   - **HookStyle:** User can request visual, story-based, sound/phonetic, list/jingle, or mixed hooks.
-   - **Surface-Then-Structure:** Default pacing covers the topic broadly first, then encodes deeply in LOOP.
-   - **Note prompts:** AI occasionally prompts you to pause and take notes/sketch during LOOP.
-   - **Flow Critique:** Session recaps include a pacing self-assessment.
-   - **High-stakes:** If user says "Triple check", "This is important", "High stakes", or "Board-level", run extra validation pass.
-   - **Meta-log:** At session end, offer meta-log. At session start, ask for prior meta-log and apply adjustments.
-   - **Quiz discipline:** One question at a time, no embedded answers, LO scope only, strength requires independent recall.
-   - **Hook rules:** User hooks are read-only (no censorship). List elements before building hooks.
-
-   **New in v8.1.1:**
-   - Entry uses Step-by-Step Mode Menu (present all 7 modes, user selects by number)
-   - Prime Mode and Sprint Mode available for coverage sessions
-   - Hook Autonomy: Never censor user hooks. Accept and continue.
-   - Hook Design: List elements before building hooks.
-   - Quiz: One question at a time, no embedded answers, LO-scope only.
-   - PERO: System explicitly aligns with Priming → Encoding → Reference → Retrieval → Overlearning
+   - **v8.1.1 Entry Flow:** Entry uses Sequential Selection — one question at a time:
+     1. Course/Topic
+     2. Situation (Crunch/Normal/Deep Dive/Maintenance)
+     3. Mode (filtered by situation)
+     4. Time
+     5. Prior context
+     6. Source materials (requested LAST)
+     7. Confirm and begin
+   - **Seven Modes:**
+     - CRUNCH: Prime, Sprint, Recall Only
+     - NORMAL: Compressed MAP, Fast LOOP, Full Protocol
+     - DEEP DIVE: Full Protocol, Depth + Mastery
+     - MAINTENANCE: Recall Only, Fast LOOP
+   - **New Rules:**
+     - Hook Autonomy: Never censor user hooks. Accept and continue.
+     - Hook Design: List elements before building hooks.
+     - Quiz: One question at a time, no embedded answers, LO-scope only.
+     - PERO: System explicitly aligns with Priming → Encoding → Reference → Retrieval → Overlearning
 3) Add a start-up check: Announce Running PT Study SOP v8.1.1. Source-Lock active. List the uploaded files.
 
 ## Running a session (what the GPT should do)
-1. **Entry (Module_1):** Acknowledge version, ask course/topic, present the 7-mode menu, confirm selection, request materials based on mode, ask for prior recap/meta-log, then begin.
+1. **Entry (Module_1):** Run Sequential Selection: acknowledge version, ask course/topic, situation, mode (filtered by situation), time, prior context, then request materials, confirm, and begin.
 2. **Triage (Module_2):** Use time/goal context to confirm mode (Prime, Sprint, Recall Only, Compressed MAP, Fast LOOP, Full Protocol, Depth + Mastery). State the mode, what it entails, and wait for confirmation.
 3. **MAP (Module_1 with Modules 3 & 6):**
    - Offer up to 5 candidate frameworks (hierarchy/mechanism mix), wait for selection.

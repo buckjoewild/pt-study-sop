@@ -1,6 +1,6 @@
 # PT Study SOP - Changelog
 
-**Repository:** PT Study SOP  
+**Repository:** PT Study SOP
 **Current Version:** 8.1.1
 **Last Updated:** November 28, 2025
 
@@ -10,23 +10,38 @@
 
 **Release Date:** November 28, 2025
 
-### Major Additions
+### Major Changes
 
-1. **Prime Mode** — Pure priming, no encoding. Scan, name, group, move on. (15-20 min/module)
-2. **Sprint Mode** — Fast coverage with basic hooks. (20-30 min/topic)
-3. **Step-by-Step Entry Menus** — Replace Q&A with structured mode selection
-4. **Hook Autonomy Rule** — No censorship of user-created hooks
-5. **Hook Design Rule** — List all elements before building hooks
-6. **Quiz Delivery Rules** — One question at a time, no embedded answers, LO-only scope
-7. **PERO System Alignment** — Explicit mapping to Justin Sung's framework
-8. **Interleaving Explicit** — Renamed Connect & Expand to Connect, Interleave & Expand
-9. **Strength Labeling Clarified** — Pasted notes ≠ independent recall
+**Entry System Overhaul:**
+- Replaced Q&A interrogation with Sequential Selection
+- User selects Situation FIRST (Crunch/Normal/Deep Dive/Maintenance)
+- Situation filters available modes
+- Each question asked ONE at a time with confirmation
+- Source materials requested LAST (after all selections complete)
+
+**New Modes:**
+- **Prime Mode** — Pure priming, scan and organize only (15-20 min/module)
+- **Sprint Mode** — Fast coverage with basic hooks (20-30 min/topic)
+
+**New Rules:**
+- **Hook Autonomy Rule** — No censorship of user-created hooks
+- **Hook Design Rule** — List all elements before building hooks
+- **Quiz Delivery Rules** — One question at a time, no embedded answers, LO-only scope
+- **Strength Labeling Clarified** — Pasted notes ≠ independent recall
+
+**PERO Alignment:**
+- Explicit mapping to Justin Sung's PERO system
+- Renamed "Connect, Interleave & Expand" to "Connect, Interleave & Expand"
+
+**Language Fixes:**
+- Removed day-specific language (this session/next session phrasing)
+- Changed to session-neutral (this session/next session)
 
 ### Files Modified
-- Module_1_Core_Protocol.md (major updates)
-- Module_2_Triage_Rules.md (new modes)
-- Module_4_Session_Recap_Template.md (new templates)
-- Runtime_Prompt.md (aligned)
+- Module_1_Core_Protocol.md (major rewrite of Entry System)
+- Module_2_Triage_Rules.md (Situation Matrix, new modes)
+- Module_4_Session_Recap_Template.md (Prime Map, Sprint Recap templates)
+- Runtime_Prompt.md (complete rewrite)
 - Master_Index.md (updated)
 - changelog.md (this file)
 

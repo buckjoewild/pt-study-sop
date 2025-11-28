@@ -912,7 +912,7 @@ Cognitive overload is normal. Adjust immediately, don't push through.
 
 **When to Use:**
 
-- Exam tomorrow
+- Exam next session
 - Quick refresh before clinical
 - Limited study window
 - Emergency prep

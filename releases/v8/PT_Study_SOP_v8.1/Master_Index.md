@@ -8,13 +8,16 @@
 |---------------|---------------|
 | No pure Priming mode | Added Prime Mode (15-20 min/module, scan only) |
 | No fast coverage mode | Added Sprint Mode (20-30 min/topic, hooks + 1 recall) |
-| Entry was Q&A interrogation | Replaced with Step-by-Step Option Menus |
+| Entry was Q&A guessing game | Replaced with Sequential Selection (Situation → Mode → Time → Materials) |
+| GPT asked all questions at once | Now asks ONE question, waits, confirms, then next |
+| Mode selection was AI-driven | Now user-driven with filtered options by situation |
 | Quiz delivered multiple questions | Added Quiz Delivery Rules (1 at a time, no hints) |
 | GPT censored user hooks | Added Hook Autonomy Rule (no censorship) |
 | Hooks built without listing elements | Added Hook Design Rule (list first, build second) |
 | PERO system implicit | Made explicit with PERO alignment section |
 | Interleaving unnamed | Renamed to "Connect, Interleave & Expand" |
 | Strong label given for pasted notes | Clarified strength requires INDEPENDENT recall |
+| Day-specific language | Changed to session-neutral (this session/next session) |
 
 ---
 
@@ -38,25 +41,11 @@ PT_Study_SOP_v8/
 
 | PERO Stage | SOP Location |
 |------------|--------------|
-| **P — Priming** | Prime Mode, Sprint Mode, MAP surface pass |
+| **P — Priming** | Prime Mode, Sprint Mode surface pass, MAP overview |
 | **E — Encoding** | NMMF, Hooks, Storyframe, Frameworks |
-| **R — Reference** | Anki cards, Recaps, NotebookLM |
+| **R — Reference** | Anki cards, Recaps, Prime Maps, NotebookLM |
 | **R — Retrieval** | Brain Dump, Teach-Back, Quiz |
 | **O — Overlearning** | Depth + Mastery, Anki spaced repetition |
-
----
-
-### New in v8.1
-- **Session HUD & Menu** - Type `menu` to see Phase/Mode/Framework/HookStyle/Level/Anchor
-- **Self-Check Rules** - 8-item PASS/FAIL check before substantial answers
-- **`qa?` Command** - Debug visibility into last response's quality check
-- **High-Stakes Triggers** - "Triple check", "This is important", "High stakes", "Board-level"
-- **Storyframe Integration** - Central metaphor option in MAP, scales across explanation levels
-- **HookStyle Control** - User can request visual, story-based, sound/phonetic, list/jingle, or mixed
-- **Surface-Then-Structure** - Fast coverage first, encoding depth second
-- **Note-Taking Prompts** - Light prompts for handwriting/mapping during LOOP
-- **Flow Critique** - Pacing self-assessment in session recaps
-- **Meta-Log Flow** - Lightweight end-of-session capture, start-of-session import
 
 ---
 
@@ -105,15 +94,15 @@ PT_Study_SOP_v8/
 
 ## Quick Reference: The Seven Modes
 
-| Mode | Time | PERO Stage | What Happens |
-|------|------|------------|--------------|
-| **Prime Mode** | 15-20 min/module | Priming | Scan, names, groups, no depth |
-| **Sprint Mode** | 20-30 min/topic | Priming + Light Encoding | Quick anchors, hooks, 1 recall |
-| **Recall Only** | 15-30 min | Retrieval | No teaching, drill existing |
-| **Compressed MAP** | 45-60 min | Encoding + Retrieval | 3-5 anchors, essential hooks |
-| **Fast LOOP** | 45-60 min | Encoding + Retrieval | Minimal MAP, straight to recall |
-| **Full Protocol** | 90+ min | Full PERO | Complete MAP → LOOP → WRAP |
-| **Depth + Mastery** | 90+ min | Full PERO + Overlearning | Extended connect, hard cases |
+| Mode | Situation | Time | PERO Stage | What Happens |
+|------|-----------|------|------------|--------------|
+| **Prime** | CRUNCH | 15-20 min/module | Priming | Scan, names, groups, no depth |
+| **Sprint** | CRUNCH | 20-30 min/topic | Priming + Light Encoding | Quick anchors, hooks, 1 recall |
+| **Recall Only** | CRUNCH/MAINT | 15-30 min | Retrieval | No teaching, drill existing |
+| **Compressed MAP** | NORMAL | 45-60 min | Encoding + Retrieval | 3-5 anchors, essential hooks |
+| **Fast LOOP** | NORMAL/MAINT | 45-60 min | Encoding + Retrieval | Minimal MAP, straight to recall |
+| **Full Protocol** | NORMAL/DEEP | 90+ min | Full PERO | Complete MAP → LOOP → WRAP |
+| **Depth + Mastery** | DEEP | 90+ min | Full PERO + Overlearning | Extended connect, hard cases |
 
 ---
 
@@ -122,7 +111,7 @@ PT_Study_SOP_v8/
 ```
 ENTRY
   |
-  Step-by-step menu: acknowledge version -> course/topic -> mode selection -> materials -> prior recap/meta-log
+  Sequential selection: acknowledge version -> course/topic -> situation -> mode -> time -> prior context -> materials -> confirm
   |
 TRIAGE
   |
@@ -160,7 +149,7 @@ WRAP
 
 | Version | Date | Changes |
 |---------|------|---------|
-| v8.1.1 | 2025-11-28 | Prime + Sprint modes, step-by-step entry menus, hook autonomy/design rules, quiz delivery discipline, PERO alignment |
+| v8.1.1 | 2025-11-28 | Prime + Sprint modes, sequential entry selection, hook autonomy/design rules, quiz delivery discipline, PERO alignment |
 | v8.1 | 2025-12-05 | HUD/menu, Self-Check (8-item QA + `qa?` command), high-stakes triggers, Storyframe integration, HookStyle control, Surface-Then-Structure, note prompts, Flow Critique, meta-log flow |
 | v8.0 | 2025-11-25 | Modular restructure, triage system, 4-level explanations, framework selector, improved recap template |
 | v7.4 | Prior | Monolithic SOP |

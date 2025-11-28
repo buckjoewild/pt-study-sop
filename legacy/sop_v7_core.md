@@ -26,7 +26,7 @@
   - [3. Smart Prime (Detailed)](#3-smart-prime-map-phase--detailed)
   - [4. Learn & Clarify](#4-learn--clarify-teaching-phase)
   - [5. Active Recall (Detailed)](#5-active-recall-loop-phase--detailed)
-  - [6. Connect & Expand](#6-connect--expand-integration-phase)
+  - [6. Connect, Interleave & Expand](#6-connect--expand-integration-phase)
   - [7. Quiz & Validate](#7-quiz--validate)
   - [8. Outputs – Cards and Recap](#8-outputs--cards-and-recap-detailed)
   - [9. Troubleshooting](#9-troubleshooting--stuck-handling)
@@ -437,7 +437,7 @@ Continue teach → recall → correct cycles until:
 
 Once core anchors are taught and recalled at least once:
 
-### 4.1 Connect & Expand (Integration)
+### 4.1 Connect, Interleave & Expand (Integration)
 
 Link topic to:
 
@@ -1040,7 +1040,7 @@ These labels drive retargeting + card creation.
 
 ---
 
-## 6. Connect & Expand (Integration Phase)
+## 6. Connect, Interleave & Expand (Integration Phase)
 
 ### When:
 

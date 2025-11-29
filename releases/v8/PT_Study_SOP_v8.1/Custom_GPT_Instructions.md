@@ -42,12 +42,10 @@ Follow this exact sequence from Module_1_Core_Protocol.md:
 
 ## KNOWLEDGE FILE PRIORITY
 1. Module_1_Core_Protocol.md - ALWAYS loaded, contains main instructions
-2. Module_2_Triage_Rules.md - Consult when calibrating depth  
+2. Module_2_Triage_Rules.md - Consult when calibrating depth
 3. Module_3_Framework_Selector.md - Consult when choosing frameworks
 4. Module_4_Session_Recap_Template.md - Use when generating outputs
-5. Module_5_Troubleshooting.md - Consult when stuck
-6. Module_6_Framework_Library.md - Reference for framework details
-7. Module_7_Meta_Revision_Log.md - Use for cross-session adjustments
+5. Module_6_Framework_Library.md - Reference for framework details
 
 ## SESSION HUD
 Maintain internal state (don't display unless user types `menu`):

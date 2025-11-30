@@ -1,7 +1,7 @@
 # PT Study SOP v8 Packages
 
-## v8.2 (High-Speed Refactor)
-Folder: `PT_Study_SOP_v8.2/`
+## v8.3 (High-Speed Refactor)
+Folder: `PT_Study_SOP_v8.3/`
 
 Contents (8 files):
 - Custom_GPT_Instructions.md
@@ -36,8 +36,9 @@ Folder: _not included_
 Notes: v8.1 introduced HUD/menu and QA refinements but the downloadable package was superseded by v8.1.1 in this repository. Use v8.1.1 for the closest available materials.
 
 ## Version History
+- v8.3 (Nov 29, 2025): High-Speed refactor with Sprint/Core/Drill, Silver Platter MAP, Safety Override; removed Modules 5 & 7.
 - v8.2 (Nov 29, 2025): High-Speed refactor with Sprint/Core/Drill, Silver Platter MAP, Safety Override; removed Modules 5 & 7.
-- v8.1 (Dec 5, 2025): HUD/menu, Self-Check QA, Storyframe integration, HookStyle, Surface-Then-Structure, meta-log flow.
+- v8.1 (Nov 20, 2025): HUD/menu, Self-Check QA, Storyframe integration, HookStyle, Surface-Then-Structure, meta-log flow.
 - v8.0 (Nov 25, 2025): Modular restructure from monolithic v7.x. **Package not stored in this repository (folder `PT_Study_SOP_v8/` is absent); use v8.1+ for downloads.**
 
 ## Notes

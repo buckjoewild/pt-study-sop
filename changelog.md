@@ -1,18 +1,32 @@
 # PT Study SOP - Changelog
 
 **Repository:** PT Study SOP
-**Current Version:** 8.2
-**Last Updated:** Updated for v8.2 release
+**Current Version:** 8.3
+**Last Updated:** Updated for v8.3 release
 
 ---
 
-## Version 8.2 (Current)
+## Version 8.3 (Current)
 
 **Release Date:** November 29, 2025
 
 ### Summary
 
-v8.2 (Current): Major Refactor. Removed Modules 5 & 7. Consolidated Triage into Sprint/Core/Drill. Implemented "Silver Platter" MAP protocol (no waiting). Added "Safety Override" to Custom Instructions to prevent bureaucracy.
+v8.3 (Current): Major Refactor. Removed Modules 5 & 7. Consolidated Triage into Sprint/Core/Drill. Implemented "Silver Platter" MAP protocol (no waiting). Added "Safety Override" to Custom Instructions to prevent bureaucracy.
+
+**Folder:** `releases/v8/PT_Study_SOP_v8.3/`
+
+---
+
+## Version 8.2 (Previous)
+
+**Release Date:** November 29, 2025
+
+### Summary
+
+v8.2: Major Refactor. Removed Modules 5 & 7. Consolidated Triage into Sprint/Core/Drill. Implemented "Silver Platter" MAP protocol (no waiting). Added "Safety Override" to Custom Instructions to prevent bureaucracy.
+
+**Folder:** `releases/v8/PT_Study_SOP_v8.2/` (renamed to v8.3 for current materials)
 
 ---
 
@@ -117,7 +131,8 @@ v8.2 (Current): Major Refactor. Removed Modules 5 & 7. Consolidated Triage into 
 ## Version Support
 
 ### Current Support
-- **v8.2:** Fully supported, High-Speed refactor
+- **v8.3:** Fully supported, High-Speed refactor
+- **v8.2:** Supported (superseded by v8.3)
 - **v8.1.1:** Supported (package in `releases/v8/PT_Study_SOP_v8.1.1/`)
 - **v8.1:** Supported (package not stored; superseded by v8.1.1 in this repo)
 
@@ -131,6 +146,7 @@ v8.2 (Current): Major Refactor. Removed Modules 5 & 7. Consolidated Triage into 
 
 | Version | Release Date | Key Features | Major Changes |
 |---------|--------------|--------------|---------------|
+| **8.3** | Nov 29, 2025 | High-Speed refactor, Safety Override, Silver Platter MAP, Sprint/Core/Drill triage | Removed Modules 5 & 7, streamlined triage into three modes |
 | **8.2** | Nov 29, 2025 | High-Speed refactor, Safety Override, Silver Platter MAP, Sprint/Core/Drill triage | Removed Modules 5 & 7, streamlined triage into three modes |
 | **8.1.1** | Nov 28, 2025 | Prime/Sprint modes, step-by-step entry menus, hook autonomy/design, quiz delivery rules, PERO alignment | Coverage + retrieval discipline, explicit priming/interleaving |
 | **8.1** | Nov 20, 2025 | HUD/menu, Self-Check QA, Storyframe, HookStyle, Surface-Then-Structure, meta-log flow | Refinements for control, reliability, and encoding |

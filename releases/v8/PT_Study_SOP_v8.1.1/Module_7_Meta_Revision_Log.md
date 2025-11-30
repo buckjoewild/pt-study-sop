@@ -1,4 +1,4 @@
-# PT Study SOP v8.1 - Module 7: Meta-Revision Log (Cross-Session)
+# PT Study SOP v8.1.1 - Module 7: Meta-Revision Log (Cross-Session)
 
 Purpose: Capture how the SOP and AI behavior are working across days and topics, so future sessions can be tuned for the user.
 

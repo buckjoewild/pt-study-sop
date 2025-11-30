@@ -42,6 +42,8 @@ v8.2 (Current): Major Refactor. Removed Modules 5 & 7. Consolidated Triage into 
 - USAGE.md (updated to reference Custom_GPT_Instructions.md)
 - changelog.md (this file)
 
+**Folder:** `releases/v8/PT_Study_SOP_v8.1.1/`
+
 ## Version 8.1
 
 **Release Date:** December 5, 2025
@@ -96,6 +98,8 @@ v8.2 (Current): Major Refactor. Removed Modules 5 & 7. Consolidated Triage into 
 - Runtime_Prompt.md - Added commands, Self-Check, meta-log flow, Storyframe
 - changelog.md - This entry
 
+**Folder:** Package not currently stored in the repository; use v8.1.1 for the closest available materials.
+
 ### Files Removed
 - Module_7_Storyframe_Protocol.md - Content absorbed into Module 1
 
@@ -114,8 +118,8 @@ v8.2 (Current): Major Refactor. Removed Modules 5 & 7. Consolidated Triage into 
 
 ### Current Support
 - **v8.2:** Fully supported, High-Speed refactor
-- **v8.1.1:** Supported
-- **v8.1:** Supported
+- **v8.1.1:** Supported (package in `releases/v8/PT_Study_SOP_v8.1.1/`)
+- **v8.1:** Supported (package not stored; superseded by v8.1.1 in this repo)
 
 ### Deprecated
 - **v8.0:** Not available in this repository; consider upgrading to a supported v8.1+ release

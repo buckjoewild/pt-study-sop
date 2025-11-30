@@ -1,4 +1,4 @@
-# PT Study SOP v8.1 — Module 3: Framework Selector
+# PT Study SOP v8.1.1 — Module 3: Framework Selector
 
 **Purpose:** Help AI select the single best framework based on topic type.
 **When to consult:** During MAP phase, before building dual views.

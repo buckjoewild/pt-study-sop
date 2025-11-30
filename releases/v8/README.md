@@ -30,7 +30,7 @@ Contents (7 files currently stored):
 ## Version History
 - v8.2 (Nov 29, 2025): High-Speed refactor with Sprint/Core/Drill, Silver Platter MAP, Safety Override; removed Modules 5 & 7.
 - v8.1 (Dec 5, 2025): HUD/menu, Self-Check QA, Storyframe integration, HookStyle, Surface-Then-Structure, meta-log flow.
-- v8.0 (Nov 25, 2025): Modular restructure from monolithic v7.x.
+- v8.0 (Nov 25, 2025): Modular restructure from monolithic v7.x. **Package not stored in this repository (folder `PT_Study_SOP_v8/` is absent); use v8.1+ for downloads.**
 
 ## Notes
 - Zip files are removed (OneDrive/Git provides backup).

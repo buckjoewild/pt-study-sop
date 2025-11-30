@@ -105,9 +105,8 @@ v8.2 (Current): Major Refactor. Removed Modules 5 & 7. Consolidated Triage into 
 
 **Release Date:** November 25, 2025
 
-- Added v8 package in `releases/v8/PT_Study_SOP_v8/` (extracted folder).
-- Includes Module_1_Core_Protocol.md, Module_2_Triage_Rules.md, Module_3_Framework_Selector.md, Module_4_Session_Recap_Template.md, Module_5_Troubleshooting.md, Module_6_Framework_Library.md, Master_Index.md, and Runtime_Prompt.md.
-- v7.x documentation lives in `legacy/` for reference.
+- v8.0 package is **not stored** in this repository. The folder `releases/v8/PT_Study_SOP_v8/` was never added.
+- Refer to v8.1+ for current downloadable materials; v7.x documentation lives in `legacy/` for reference.
 
 ---
 
@@ -117,9 +116,9 @@ v8.2 (Current): Major Refactor. Removed Modules 5 & 7. Consolidated Triage into 
 - **v8.2:** Fully supported, High-Speed refactor
 - **v8.1.1:** Supported
 - **v8.1:** Supported
-- **v8.0:** Supported, but v8.1+ is preferred
 
 ### Deprecated
+- **v8.0:** Not available in this repository; consider upgrading to a supported v8.1+ release
 - **v7.x and earlier:** No longer supported
 
 ---
@@ -131,7 +130,7 @@ v8.2 (Current): Major Refactor. Removed Modules 5 & 7. Consolidated Triage into 
 | **8.2** | Nov 29, 2025 | High-Speed refactor, Safety Override, Silver Platter MAP, Sprint/Core/Drill triage | Removed Modules 5 & 7, streamlined triage into three modes |
 | **8.1.1** | Nov 28, 2025 | Prime/Sprint modes, step-by-step entry menus, hook autonomy/design, quiz delivery rules, PERO alignment | Coverage + retrieval discipline, explicit priming/interleaving |
 | **8.1** | Dec 5, 2025 | HUD/menu, Self-Check QA, Storyframe, HookStyle, Surface-Then-Structure, meta-log flow | Refinements for control, reliability, and encoding |
-| **8.0** | Nov 25, 2025 | Modular SOP, triage, framework selector | Complete restructure from monolithic |
+| **8.0** | Nov 25, 2025 | Modular SOP, triage, framework selector | Package not stored in repo; upgrade to v8.1+ |
 | **7.2** | Nov 24, 2025 | NMMF, HIR, PES | Systematic hook creation |
 | **7.1** | Prior | MAP + LOOP + WRAP, active recall | Established core structure |
 

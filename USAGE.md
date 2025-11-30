@@ -1,12 +1,12 @@
-# PT Study SOP v8.2 - Usage Guide
-Quick Start
-Copy the text from `releases/v8/PT_Study_SOP_v8.2/Runtime_Prompt.md`.
+# PT Study SOP v8.3 - Usage Guide
+## Quick Start
+Copy the text from `releases/v8/PT_Study_SOP_v8.3/Runtime_Prompt.md`.
 
 Paste it into a new ChatGPT session.
 
 Command: "Resume [Topic]" or "Let's Study [Topic]".
 
-The 3 Modes (Triage)
+## The 3 Modes (Triage)
 The system will auto-select one of these three gears:
 
 1. SPRINT MODE (The "Crunch" Gear)
@@ -34,7 +34,7 @@ What happens: Zero teaching. Rapid-fire questions only.
 
 Output: Weak point list.
 
-Key Commands
+## Key Commands
 "menu" -> Show the HUD (Phase, Mode, Hook Style).
 
 "Resume [Topic]" -> Restores context from your last recap.

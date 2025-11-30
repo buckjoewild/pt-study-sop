@@ -15,8 +15,8 @@ Contents (8 files):
 
 Highlights: Sprint/Core/Drill triage only, Silver Platter MAP (prebuilt anchors), Safety Override (no bureaucracy), and streamlined recap/resume flow. Modules 5 and 7 are retired in this version.
 
-## v8.1 Package (previous)
-Folder: `PT_Study_SOP_v8.1/`
+## v8.1.1 Package (previous)
+Folder: `PT_Study_SOP_v8.1.1/`
 
 Contents (10 files currently stored):
 - Custom_GPT_Instructions.md
@@ -29,6 +29,11 @@ Contents (10 files currently stored):
 - Module_6_Framework_Library.md
 - Module_7_Meta_Revision_Log.md
 - Runtime_Prompt.md
+
+## v8.1 Package (not stored in repo)
+Folder: _not included_
+
+Notes: v8.1 introduced HUD/menu and QA refinements but the downloadable package was superseded by v8.1.1 in this repository. Use v8.1.1 for the closest available materials.
 
 ## Version History
 - v8.2 (Nov 29, 2025): High-Speed refactor with Sprint/Core/Drill, Silver Platter MAP, Safety Override; removed Modules 5 & 7.

@@ -8,7 +8,7 @@
 
 ## Version 8.2 (Current)
 
-**Release Date:** TBD
+**Release Date:** November 29, 2025
 
 ### Summary
 
@@ -128,7 +128,7 @@ v8.2 (Current): Major Refactor. Removed Modules 5 & 7. Consolidated Triage into 
 
 | Version | Release Date | Key Features | Major Changes |
 |---------|--------------|--------------|---------------|
-| **8.2** | TBD | High-Speed refactor, Safety Override, Silver Platter MAP, Sprint/Core/Drill triage | Removed Modules 5 & 7, streamlined triage into three modes |
+| **8.2** | Nov 29, 2025 | High-Speed refactor, Safety Override, Silver Platter MAP, Sprint/Core/Drill triage | Removed Modules 5 & 7, streamlined triage into three modes |
 | **8.1.1** | Nov 28, 2025 | Prime/Sprint modes, step-by-step entry menus, hook autonomy/design, quiz delivery rules, PERO alignment | Coverage + retrieval discipline, explicit priming/interleaving |
 | **8.1** | Dec 5, 2025 | HUD/menu, Self-Check QA, Storyframe, HookStyle, Surface-Then-Structure, meta-log flow | Refinements for control, reliability, and encoding |
 | **8.0** | Nov 25, 2025 | Modular SOP, triage, framework selector | Complete restructure from monolithic |

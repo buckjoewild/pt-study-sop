@@ -1,46 +1,11 @@
-# PT Study SOP v8 Packages
+# PT Study SOP v8 Archives
 
-## v8.3 (High-Speed Refactor)
-Folder: `PT_Study_SOP_v8.3/`
+This directory stores historical v8.x packages for reference. The current production build is **v8.6 (Active Architect)** in the repository root.
 
-Contents (8 files):
-- Custom_GPT_Instructions.md
-- Module_1_Core_Protocol.md
-- Module_2_Triage_Rules.md
-- Module_3_Framework_Selector.md
-- Module_4_Session_Recap_Template.md
-- Module_6_Framework_Library.md
-- Master_Index.md
-- Runtime_Prompt.md
+## Packages
+- `PT_Study_SOP_v8.5.1/` — Spotter Prime bundle.
+- `PT_Study_SOP_v8.4/` — Tutor Edition bundle.
+- `PT_Study_SOP_v8.3/` — High-Speed refactor bundle.
+- `PT_Study_SOP_v8.1.1/` — HUD/menu and QA refinements bundle.
 
-Highlights: Sprint/Core/Drill triage only, Silver Platter MAP (prebuilt anchors), Safety Override (no bureaucracy), and streamlined recap/resume flow. Modules 5 and 7 are retired in this version.
-
-## v8.1.1 Package (previous)
-Folder: `PT_Study_SOP_v8.1.1/`
-
-Contents (10 files currently stored):
-- Custom_GPT_Instructions.md
-- Master_Index.md
-- Module_1_Core_Protocol.md
-- Module_2_Triage_Rules.md
-- Module_3_Framework_Selector.md
-- Module_4_Session_Recap_Template.md
-- Module_5_Troubleshooting.md
-- Module_6_Framework_Library.md
-- Module_7_Meta_Revision_Log.md
-- Runtime_Prompt.md
-
-## v8.1 Package (not stored in repo)
-Folder: _not included_
-
-Notes: v8.1 introduced HUD/menu and QA refinements but the downloadable package was superseded by v8.1.1 in this repository. Use v8.1.1 for the closest available materials.
-
-## Version History
-- v8.3 (Nov 29, 2025): High-Speed refactor with Sprint/Core/Drill, Silver Platter MAP, Safety Override; removed Modules 5 & 7.
-- v8.2 (Nov 29, 2025): High-Speed refactor with Sprint/Core/Drill, Silver Platter MAP, Safety Override; removed Modules 5 & 7.
-- v8.1 (Nov 20, 2025): HUD/menu, Self-Check QA, Storyframe integration, HookStyle, Surface-Then-Structure, meta-log flow.
-- v8.0 (Nov 25, 2025): Modular restructure from monolithic v7.x. **Package not stored in this repository (folder `PT_Study_SOP_v8/` is absent); use v8.1+ for downloads.**
-
-## Notes
-- Zip files are removed (OneDrive/Git provides backup).
-- v7.x documentation remains in `legacy/`.
+Use these only when you need legacy behavior or backwards comparisons. For new deployments, load the root v8.6 package.

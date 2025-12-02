@@ -30,6 +30,8 @@ from config import (
     RECENT_SESSIONS_COUNT,
     WEAK_THRESHOLD,
     STRONG_THRESHOLD,
+    SCORE_MIN,
+    SCORE_MAX,
 )
 from db_setup import init_database, get_connection
 from ingest_session import parse_markdown_session
@@ -229,6 +231,60 @@ def api_upload():
     return jsonify({"ok": ok, "message": msg, "filename": filename}), status
 
 
+@app.route("/api/quick_session", methods=["POST"])
+def api_quick_session():
+    """
+    Quick session entry endpoint for direct form input.
+    Accepts JSON data and creates a session entry.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"ok": False, "message": "No JSON data provided."}), 400
+
+        # Validate required fields
+        required_fields = ["topic", "study_mode", "time_spent_minutes", "understanding_level"]
+        for field in required_fields:
+            if field not in data or data[field] in [None, ""]:
+                return jsonify({"ok": False, "message": f"Missing required field: {field}"}), 400
+
+        # Set defaults for optional fields
+        session_data = {
+            "session_date": data.get("session_date", datetime.now().strftime("%Y-%m-%d")),
+            "session_time": data.get("session_time", datetime.now().strftime("%H:%M")),
+            "topic": data["topic"].strip(),
+            "study_mode": data["study_mode"],
+            "time_spent_minutes": int(data["time_spent_minutes"]),
+            "frameworks_used": data.get("frameworks_used", "").strip(),
+            "gated_platter_triggered": data.get("gated_platter_triggered", "No"),
+            "wrap_phase_reached": data.get("wrap_phase_reached", "No"),
+            "anki_cards_count": int(data.get("anki_cards_count", 0)),
+            "understanding_level": int(data["understanding_level"]),
+            "retention_confidence": int(data.get("retention_confidence", 3)),
+            "system_performance": int(data.get("system_performance", 3)),
+            "what_worked": data.get("what_worked", "").strip(),
+            "what_needs_fixing": data.get("what_needs_fixing", "").strip(),
+            "notes_insights": data.get("notes_insights", "").strip(),
+            "created_at": datetime.now().isoformat(),
+        }
+
+        # Validate score ranges
+        for score_field in ["understanding_level", "retention_confidence", "system_performance"]:
+            score = session_data[score_field]
+            if score < SCORE_MIN or score > SCORE_MAX:
+                return jsonify({"ok": False, "message": f"{score_field} must be between {SCORE_MIN} and {SCORE_MAX}"}), 400
+
+        # Insert into database
+        ok, msg = insert_session_data(session_data)
+        status = 200 if ok else 400
+        return jsonify({"ok": ok, "message": msg}), status
+
+    except ValueError as e:
+        return jsonify({"ok": False, "message": f"Invalid number format: {e}"}), 400
+    except Exception as e:
+        return jsonify({"ok": False, "message": f"Server error: {e}"}), 500
+
+
 # -----------------------------------------------------------------------------
 # Front-end HTML (inline for simplicity)
 # -----------------------------------------------------------------------------
@@ -340,6 +396,316 @@ _INDEX_HTML = r"""
       padding: 10px 14px;
       font-weight: 700;
       cursor: pointer;
+    }
+    button:hover { transform: translateY(-1px); }
+    pre {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 16px;
+      overflow-x: auto;
+      color: var(--text);
+    }
+    .status {
+      margin-top: 12px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .status.success {
+      background: rgba(46, 160, 67, 0.15);
+      color: #3fb950;
+      border: 1px solid rgba(46, 160, 67, 0.4);
+    }
+    .status.error {
+      background: rgba(248, 81, 73, 0.15);
+      color: #f85149;
+      border: 1px solid rgba(248, 81, 73, 0.4);
+    }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>PT Study Brain Dashboard</h1>
+
+      <div class="section">
+        <h2>Upload Study Materials</h2>
+        <div class="muted">Upload PDFs, images, or text files to add to your study brain.</div>
+        <form id="upload-form" enctype="multipart/form-data" style="margin-top: 16px;">
+          <input type="file" id="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.txt" required style="margin-bottom: 12px;">
+          <button type="submit">Upload File</button>
+        </form>
+        <div class="status" id="upload-status"></div>
+      </div>
+
+      <div class="section">
+        <h2>Quick Session Entry</h2>
+        <div class="muted">Document what worked, what didn't, or quick session notes directly.</div>
+        <form id="quick-session-form" style="margin-top: 16px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div>
+              <label style="display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px;">Topic *</label>
+              <input type="text" id="topic" required style="width: 100%; padding: 8px; border: 1px solid #30363d; border-radius: 6px; background: #0d1117; color: var(--text);">
+            </div>
+            <div>
+              <label style="display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px;">Study Mode</label>
+              <select id="study_mode" style="width: 100%; padding: 8px; border: 1px solid #30363d; border-radius: 6px; background: #0d1117; color: var(--text);">
+                <option value="Core">Core</option>
+                <option value="Sprint">Sprint</option>
+                <option value="Drill">Drill</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px;">Time (minutes) *</label>
+              <input type="number" id="time_spent_minutes" required min="1" style="width: 100%; padding: 8px; border: 1px solid #30363d; border-radius: 6px; background: #0d1117; color: var(--text);">
+            </div>
+            <div>
+              <label style="display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px;">Understanding * (1-5)</label>
+              <input type="number" id="understanding_level" required min="1" max="5" style="width: 100%; padding: 8px; border: 1px solid #30363d; border-radius: 6px; background: #0d1117; color: var(--text);">
+            </div>
+            <div>
+              <label style="display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px;">Retention (1-5)</label>
+              <input type="number" id="retention_confidence" min="1" max="5" style="width: 100%; padding: 8px; border: 1px solid #30363d; border-radius: 6px; background: #0d1117; color: var(--text);">
+            </div>
+            <div>
+              <label style="display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px;">System Performance (1-5)</label>
+              <input type="number" id="system_performance" min="1" max="5" style="width: 100%; padding: 8px; border: 1px solid #30363d; border-radius: 6px; background: #0d1117; color: var(--text);">
+            </div>
+          </div>
+
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px;">What Worked / What You Liked</label>
+            <textarea id="what_worked" rows="3" placeholder="e.g., 'The gated platter really helped me focus', 'Love how it broke down the complex topic'" style="width: 100%; padding: 8px; border: 1px solid #30363d; border-radius: 6px; background: #0d1117; color: var(--text); resize: vertical;"></textarea>
+          </div>
+
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px;">What Needs Fixing / What It Didn't Do</label>
+            <textarea id="what_needs_fixing" rows="3" placeholder="e.g., 'It didn't explain the concept clearly', 'Need more examples on this topic'" style="width: 100%; padding: 8px; border: 1px solid #30363d; border-radius: 6px; background: #0d1117; color: var(--text); resize: vertical;"></textarea>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px;">Additional Notes & Insights</label>
+            <textarea id="notes_insights" rows="2" placeholder="Any other observations..." style="width: 100%; padding: 8px; border: 1px solid #30363d; border-radius: 6px; background: #0d1117; color: var(--text); resize: vertical;"></textarea>
+          </div>
+
+          <button type="submit" style="margin-right: 8px;">Save Session</button>
+          <button type="button" onclick="resetForm()" style="background: #30363d; box-shadow: none;">Clear Form</button>
+        </form>
+        <div class="status" id="quick-session-status"></div>
+      </div>
+
+      <div class="section">
+        <h2>Study Statistics</h2>
+        <div class="muted">Overview of your study progress and performance.</div>
+        <div id="stats-container" style="margin-top: 16px;">
+          <div class="loading">Loading statistics...</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Resume & Experience</h2>
+        <div class="muted">View and download your professional resume.</div>
+        <div style="margin-top: 16px;">
+          <button onclick="viewResume()" style="margin-right: 8px;">View Resume</button>
+          <button onclick="downloadResume()">Download PDF</button>
+        </div>
+        <div id="resume-container" style="margin-top: 16px; display: none;">
+          <div class="loading">Loading resume...</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+    // Upload functionality
+    document.getElementById('upload-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const formData = new FormData();
+      const fileInput = document.getElementById('file');
+      const statusDiv = document.getElementById('upload-status');
+
+      if (!fileInput.files[0]) {
+        statusDiv.innerHTML = '<div class="status error">Please select a file</div>';
+        return;
+      }
+
+      formData.append('file', fileInput.files[0]);
+      statusDiv.innerHTML = '<div class="status">Uploading...</div>';
+
+      try {
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          statusDiv.innerHTML = '<div class="status success">✓ ' + result.message + '</div>';
+          fileInput.value = '';
+          loadStats(); // Refresh stats after successful upload
+          loadStats(); // Refresh stats
+        } else {
+          statusDiv.innerHTML = '<div class="status error">✗ ' + result.error + '</div>';
+        }
+      } catch (error) {
+        statusDiv.innerHTML = '<div class="status error">✗ Upload failed: ' + error.message + '</div>';
+      }
+    });
+
+    // Quick session functionality
+    document.getElementById('quick-session-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const statusDiv = document.getElementById('quick-session-status');
+      const formData = {
+        topic: document.getElementById('topic').value,
+        study_mode: document.getElementById('study_mode').value,
+        time_spent_minutes: parseInt(document.getElementById('time_spent_minutes').value),
+        understanding_level: parseInt(document.getElementById('understanding_level').value),
+        retention_confidence: document.getElementById('retention_confidence').value ? parseInt(document.getElementById('retention_confidence').value) : null,
+        system_performance: document.getElementById('system_performance').value ? parseInt(document.getElementById('system_performance').value) : null,
+        what_worked: document.getElementById('what_worked').value,
+        what_needs_fixing: document.getElementById('what_needs_fixing').value,
+        notes_insights: document.getElementById('notes_insights').value
+      };
+
+      statusDiv.innerHTML = '<div class="status">Saving session...</div>';
+
+      try {
+        const response = await fetch('/api/quick_session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(formData)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          statusDiv.innerHTML = '<div class="status success">✓ Session saved successfully!</div>';
+          resetForm();
+          loadStats(); // Refresh stats
+        } else {
+          statusDiv.innerHTML = '<div class="status error">✗ ' + result.error + '</div>';
+        }
+      } catch (error) {
+        statusDiv.innerHTML = '<div class="status error">✗ Save failed: ' + error.message + '</div>';
+      }
+    });
+
+    function resetForm() {
+      document.getElementById('quick-session-form').reset();
+      document.getElementById('quick-session-status').innerHTML = '';
+    }
+
+    // Stats functionality
+    async function loadStats() {
+      const container = document.getElementById('stats-container');
+      container.innerHTML = '<div class="loading">Loading statistics...</div>';
+
+      try {
+        const response = await fetch('/api/stats');
+        const stats = await response.json();
+
+        if (response.ok) {
+          container.innerHTML = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+              <div class="stat-card">
+                <div class="stat-number">${stats.total_sessions}</div>
+                <div class="stat-label">Total Sessions</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number">${stats.total_study_time}</div>
+                <div class="stat-label">Total Study Time</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number">${stats.avg_understanding}</div>
+                <div class="stat-label">Avg Understanding</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number">${stats.total_documents}</div>
+                <div class="stat-label">Documents Processed</div>
+              </div>
+            </div>
+            <div style="margin-top: 20px;">
+              <h3>Recent Sessions</h3>
+              <div style="max-height: 300px; overflow-y: auto;">
+                ${stats.recent_sessions.map(session => `
+                  <div style="border: 1px solid #30363d; border-radius: 6px; padding: 12px; margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 4px;">
+                      <strong>${session.topic}</strong>
+                      <span style="color: var(--muted); font-size: 12px;">${session.date}</span>
+                    </div>
+                    <div style="color: var(--muted); font-size: 13px;">
+                      ${session.study_mode} • ${session.time_spent_minutes}min • Understanding: ${session.understanding_level}/5
+                    </div>
+                    ${session.what_worked ? `<div style="margin-top: 6px; font-size: 13px;"><strong>Worked:</strong> ${session.what_worked}</div>` : ''}
+                    ${session.what_needs_fixing ? `<div style="margin-top: 4px; font-size: 13px;"><strong>Needs fixing:</strong> ${session.what_needs_fixing}</div>` : ''}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        } else {
+          container.innerHTML = '<div class="status error">Failed to load statistics</div>';
+        }
+      } catch (error) {
+        container.innerHTML = '<div class="status error">Error loading statistics: ' + error.message + '</div>';
+      }
+    }
+
+    // Resume functionality
+    async function viewResume() {
+      const container = document.getElementById('resume-container');
+      container.style.display = 'block';
+      container.innerHTML = '<div class="loading">Loading resume...</div>';
+
+      try {
+        const response = await fetch('/api/resume');
+        const resume = await response.json();
+
+        if (response.ok) {
+          container.innerHTML = `<pre>${resume.content}</pre>`;
+        } else {
+          container.innerHTML = '<div class="status error">Failed to load resume</div>';
+        }
+      } catch (error) {
+        container.innerHTML = '<div class="status error">Error loading resume: ' + error.message + '</div>';
+      }
+    }
+
+    async function downloadResume() {
+      try {
+        const response = await fetch('/api/resume/download');
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'resume.pdf';
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        } else {
+          alert('Failed to download resume');
+        }
+      } catch (error) {
+        alert('Error downloading resume: ' + error.message);
+      }
+    }
+
+    // Load stats on page load
+    loadStats();
+    </script>
+  </body>
+</html>
+    """
+
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=5000)
       box-shadow: 0 6px 20px rgba(31,111,235,0.3);
       transition: transform 0.1s ease, box-shadow 0.1s ease;
     }

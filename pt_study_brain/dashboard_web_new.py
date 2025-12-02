@@ -30,6 +30,8 @@ from config import (
     RECENT_SESSIONS_COUNT,
     WEAK_THRESHOLD,
     STRONG_THRESHOLD,
+    SCORE_MIN,
+    SCORE_MAX,
 )
 from db_setup import init_database, get_connection
 from ingest_session import parse_markdown_session
@@ -250,6 +252,60 @@ def api_upload():
     ok, msg = insert_session_data(data)
     status = 200 if ok else 400
     return jsonify({"ok": ok, "message": msg, "filename": filename}), status
+
+
+@app.route("/api/quick_session", methods=["POST"])
+def api_quick_session():
+    """
+    Quick session entry endpoint for direct form input.
+    Accepts JSON data and creates a session entry.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"ok": False, "message": "No JSON data provided."}), 400
+
+        # Validate required fields
+        required_fields = ["topic", "study_mode", "time_spent_minutes", "understanding_level"]
+        for field in required_fields:
+            if field not in data or data[field] in [None, ""]:
+                return jsonify({"ok": False, "message": f"Missing required field: {field}"}), 400
+
+        # Set defaults for optional fields
+        session_data = {
+            "session_date": data.get("session_date", datetime.now().strftime("%Y-%m-%d")),
+            "session_time": data.get("session_time", datetime.now().strftime("%H:%M")),
+            "topic": data["topic"].strip(),
+            "study_mode": data["study_mode"],
+            "time_spent_minutes": int(data["time_spent_minutes"]),
+            "frameworks_used": data.get("frameworks_used", "").strip(),
+            "gated_platter_triggered": data.get("gated_platter_triggered", "No"),
+            "wrap_phase_reached": data.get("wrap_phase_reached", "No"),
+            "anki_cards_count": int(data.get("anki_cards_count", 0)),
+            "understanding_level": int(data["understanding_level"]),
+            "retention_confidence": int(data.get("retention_confidence", 3)),
+            "system_performance": int(data.get("system_performance", 3)),
+            "what_worked": data.get("what_worked", "").strip(),
+            "what_needs_fixing": data.get("what_needs_fixing", "").strip(),
+            "notes_insights": data.get("notes_insights", "").strip(),
+            "created_at": datetime.now().isoformat(),
+        }
+
+        # Validate score ranges
+        for score_field in ["understanding_level", "retention_confidence", "system_performance"]:
+            score = session_data[score_field]
+            if score < SCORE_MIN or score > SCORE_MAX:
+                return jsonify({"ok": False, "message": f"{score_field} must be between {SCORE_MIN} and {SCORE_MAX}"}), 400
+
+        # Insert into database
+        ok, msg = insert_session_data(session_data)
+        status = 200 if ok else 400
+        return jsonify({"ok": ok, "message": msg}), status
+
+    except ValueError as e:
+        return jsonify({"ok": False, "message": f"Invalid number format: {e}"}), 400
+    except Exception as e:
+        return jsonify({"ok": False, "message": f"Server error: {e}"}), 500
 
 
 # -----------------------------------------------------------------------------
@@ -684,6 +740,74 @@ _INDEX_HTML = r"""
       box-shadow: 0 8px 24px rgba(31, 111, 235, 0.4);
     }
 
+    .btn-secondary {
+      background: var(--card-bg);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Form Styles */
+    .form-section {
+      margin-top: 20px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--text-primary);
+      font-size: 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.1);
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
     /* Patterns Section */
     .patterns-section {
       margin-top: 24px;
@@ -1067,7 +1191,68 @@ _INDEX_HTML = r"""
       </div>
       <div id="upload-status"></div>
     </div>
-    
+
+    <!-- Quick Session Entry -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Quick Session Entry</h2>
+        <p class="card-subtitle">Document what worked, what didn't, or quick session notes directly.</p>
+      </div>
+      <form id="quick-session-form" class="form-section">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="topic" class="form-label">Topic *</label>
+            <input type="text" id="topic" class="form-input" required placeholder="e.g., Cardiovascular Physiology">
+          </div>
+          <div class="form-group">
+            <label for="study_mode" class="form-label">Study Mode</label>
+            <select id="study_mode" class="form-select">
+              <option value="Core">Core</option>
+              <option value="Sprint">Sprint</option>
+              <option value="Drill">Drill</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="time_spent_minutes" class="form-label">Time (minutes) *</label>
+            <input type="number" id="time_spent_minutes" class="form-input" required min="1" placeholder="30">
+          </div>
+          <div class="form-group">
+            <label for="understanding_level" class="form-label">Understanding * (1-5)</label>
+            <input type="number" id="understanding_level" class="form-input" required min="1" max="5" placeholder="3">
+          </div>
+          <div class="form-group">
+            <label for="retention_confidence" class="form-label">Retention (1-5)</label>
+            <input type="number" id="retention_confidence" class="form-input" min="1" max="5" placeholder="3">
+          </div>
+          <div class="form-group">
+            <label for="system_performance" class="form-label">System Performance (1-5)</label>
+            <input type="number" id="system_performance" class="form-input" min="1" max="5" placeholder="3">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="what_worked" class="form-label">What Worked / What You Liked</label>
+          <textarea id="what_worked" class="form-textarea" rows="3" placeholder="e.g., 'The gated platter really helped me focus', 'Love how it broke down the complex topic'"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="what_needs_fixing" class="form-label">What Needs Fixing / What It Didn't Do</label>
+          <textarea id="what_needs_fixing" class="form-textarea" rows="3" placeholder="e.g., 'It didn't explain the concept clearly', 'Need more examples on this topic'"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="notes_insights" class="form-label">Additional Notes & Insights</label>
+          <textarea id="notes_insights" class="form-textarea" rows="2" placeholder="Any other observations..."></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save Session</button>
+          <button type="button" class="btn btn-secondary" onclick="resetQuickForm()">Clear Form</button>
+        </div>
+      </form>
+      <div id="quick-session-status"></div>
+    </div>
+
     <!-- Resume Section -->
     <div class="card resume-section" id="resume">
       <div class="card-header">
@@ -1320,6 +1505,67 @@ _INDEX_HTML = r"""
         resumeBox.textContent = 'Failed to generate resume: ' + error.message;
       }
     });
+
+    // Quick session form handling
+    const quickSessionForm = document.getElementById('quick-session-form');
+    const quickSessionStatus = document.getElementById('quick-session-status');
+
+    quickSessionForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Collect form data
+      const formData = {
+        topic: document.getElementById('topic').value,
+        study_mode: document.getElementById('study_mode').value,
+        time_spent_minutes: parseInt(document.getElementById('time_spent_minutes').value),
+        understanding_level: parseInt(document.getElementById('understanding_level').value),
+        retention_confidence: parseInt(document.getElementById('retention_confidence').value) || 3,
+        system_performance: parseInt(document.getElementById('system_performance').value) || 3,
+        what_worked: document.getElementById('what_worked').value,
+        what_needs_fixing: document.getElementById('what_needs_fixing').value,
+        notes_insights: document.getElementById('notes_insights').value,
+        frameworks_used: "",  // Optional - can be added later if needed
+        gated_platter_triggered: "No",  // Default
+        wrap_phase_reached: "No",  // Default
+        anki_cards_count: 0  // Default
+      };
+
+      // Validate required fields
+      if (!formData.topic || !formData.time_spent_minutes || !formData.understanding_level) {
+        quickSessionStatus.innerHTML = '<div class="upload-status error">Please fill in all required fields (Topic, Time, Understanding).</div>';
+        return;
+      }
+
+      quickSessionStatus.innerHTML = '<div class="upload-status" style="background: var(--accent-light); color: var(--accent);">Saving session...</div>';
+
+      try {
+        const res = await fetch('/api/quick_session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+
+        const result = await res.json();
+
+        if (result.ok) {
+          quickSessionStatus.innerHTML = '<div class="upload-status success">✓ Session saved successfully!</div>';
+          resetQuickForm();
+          loadStats(); // Refresh the dashboard
+        } else {
+          quickSessionStatus.innerHTML = `<div class="upload-status error">✕ ${result.message}</div>`;
+        }
+      } catch (error) {
+        quickSessionStatus.innerHTML = `<div class="upload-status error">✕ Network error: ${error.message}</div>`;
+      }
+    });
+
+    function resetQuickForm() {
+      quickSessionForm.reset();
+      // Set some reasonable defaults
+      document.getElementById('study_mode').value = 'Core';
+      document.getElementById('retention_confidence').value = '3';
+      document.getElementById('system_performance').value = '3';
+    }
 
     // Initialize
     loadStats();

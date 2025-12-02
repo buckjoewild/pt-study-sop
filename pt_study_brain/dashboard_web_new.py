@@ -262,7 +262,13 @@ _INDEX_HTML = r"""
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<<<<<<< HEAD
   <meta name="color-scheme" content="dark" />
+=======
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+>>>>>>> 29e11b76751bb1119b72c00b4f28171c392f9496
   <title>PT Study Brain</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -303,8 +309,13 @@ _INDEX_HTML = r"""
 
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+<<<<<<< HEAD
       background: var(--bg) !important;
       color: var(--text-primary) !important;
+=======
+      background: linear-gradient(135deg, #0a0e27 0%, #0d1117 50%, #0f1419 100%);
+      color: var(--text-primary);
+>>>>>>> 29e11b76751bb1119b72c00b4f28171c392f9496
       min-height: 100vh;
       line-height: 1.5;
       color-scheme: dark !important;
@@ -434,10 +445,11 @@ _INDEX_HTML = r"""
       padding: 20px 24px;
       position: relative;
       transition: all 0.2s;
+      backdrop-filter: blur(10px);
     }
     
     .stat-card:hover {
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
       transform: translateY(-2px);
     }
     
@@ -454,10 +466,10 @@ _INDEX_HTML = r"""
       font-size: 20px;
     }
     
-    .stat-card .icon.blue { background: var(--accent-light); color: var(--accent); }
-    .stat-card .icon.purple { background: var(--purple-light); color: var(--purple); }
-    .stat-card .icon.cyan { background: var(--cyan-light); color: var(--cyan); }
-    .stat-card .icon.green { background: var(--success-light); color: var(--success); }
+    .stat-card .icon.blue { background: rgba(31, 111, 235, 0.15); color: var(--accent); }
+    .stat-card .icon.purple { background: rgba(188, 142, 249, 0.15); color: var(--purple); }
+    .stat-card .icon.cyan { background: rgba(88, 166, 255, 0.15); color: var(--cyan); }
+    .stat-card .icon.green { background: rgba(63, 185, 80, 0.15); color: var(--success); }
     
     .stat-card .label {
       font-size: 14px;
@@ -550,6 +562,7 @@ _INDEX_HTML = r"""
       border: 1px solid var(--border);
       border-radius: 16px;
       padding: 24px;
+      backdrop-filter: blur(10px);
     }
     
     .card-header {
@@ -609,22 +622,22 @@ _INDEX_HTML = r"""
     }
     
     .mode-badge.focus {
-      background: var(--purple-light);
+      background: rgba(188, 142, 249, 0.15);
       color: var(--purple);
     }
-    
+
     .mode-badge.pomodoro {
-      background: var(--success-light);
+      background: rgba(63, 185, 80, 0.15);
       color: var(--success);
     }
-    
+
     .mode-badge.review {
-      background: var(--accent-light);
-      color: var(--accent);
+      background: rgba(31, 111, 235, 0.15);
+      color: var(--cyan);
     }
-    
+
     .mode-badge.deep-work {
-      background: var(--cyan-light);
+      background: rgba(88, 166, 255, 0.15);
       color: var(--cyan);
     }
     
@@ -662,11 +675,13 @@ _INDEX_HTML = r"""
       background: var(--accent);
       color: white;
       border: none;
+      box-shadow: 0 6px 20px rgba(31, 111, 235, 0.3);
     }
-    
+
     .btn-primary:hover {
       background: #2563eb;
       color: white;
+      box-shadow: 0 8px 24px rgba(31, 111, 235, 0.4);
     }
 
     /* Patterns Section */
@@ -800,7 +815,7 @@ _INDEX_HTML = r"""
     
     .upload-zone:hover {
       border-color: var(--accent);
-      background: var(--accent-light);
+      background: rgba(31, 111, 235, 0.1);
     }
     
     .upload-zone .icon {
@@ -825,12 +840,12 @@ _INDEX_HTML = r"""
     }
     
     .upload-status.success {
-      background: var(--success-light);
+      background: rgba(63, 185, 80, 0.15);
       color: var(--success);
     }
-    
+
     .upload-status.error {
-      background: var(--error-light);
+      background: rgba(248, 81, 73, 0.15);
       color: var(--error);
     }
 

@@ -24,9 +24,9 @@ if errorlevel 1 (
   goto :EOF
 )
 
-echo [2/3] Starting dashboard server...
+echo [2/3] Starting dashboard server (new UI)...
 REM Start the server in a new window and keep this one for status.
-start "PT Study Brain Dashboard" cmd /k "cd /d \"%APP_DIR%\" && python dashboard_web.py"
+start "PT Study Brain Dashboard (New UI)" cmd /k "cd /d \"%APP_DIR%\" && python dashboard_web_new.py"
 
 echo [3/3] Opening browser at http://127.0.0.1:5000 ...
 start http://127.0.0.1:5000

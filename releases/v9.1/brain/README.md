@@ -1,193 +1,138 @@
-# PT Study Brain — Analytics & Tracking System
+# PT Study Brain v9.1
 
-## Purpose
-Track study sessions, identify patterns, measure progress, and inform metacognition. The Brain stores data locally and generates insights to guide your learning.
+Session tracking and analytics system for the PT Study SOP.
 
 ---
 
 ## Quick Start
 
-### After Each Session
-```bash
-# 1. Copy template
-cp brain/session_logs/TEMPLATE.md brain/session_logs/2025-12-04_rotator_cuff.md
+### Initialize Database
+```powershell
+cd brain
+python db_setup.py
+```
 
-# 2. Fill in session data (edit the file)
+### After a Study Session
+```powershell
+# 1. Create log file from template
+cp session_logs/TEMPLATE.md session_logs/2025-12-05_topic.md
+
+# 2. Fill in the log with your session data
 
 # 3. Ingest to database
-python brain/ingest_session.py brain/session_logs/2025-12-04_rotator_cuff.md
+python ingest_session.py session_logs/2025-12-05_topic.md
 ```
 
-### Before Starting a Session
-```bash
-# Generate resume for context
-python brain/generate_resume.py
-
-# Paste output into GPT at session start
-```
-
-### Review Progress
-```bash
-# Command line dashboard
-python brain/dashboard.py
-
-# Web dashboard (opens in browser)
-python brain/dashboard_web.py
+### Before Next Session
+```powershell
+python generate_resume.py
+# Paste output into GPT for context
 ```
 
 ---
 
-## File Structure
+## Directory Structure
 
 ```
 brain/
-├── README.md              ← You are here
-├── config.py              ← Database and path configuration
-├── db_setup.py            ← Initialize/reset database
-├── ingest_session.py      ← Parse and store session logs
-├── generate_resume.py     ← Create context for new sessions
-├── dashboard.py           ← CLI analytics
-├── dashboard_web.py       ← Browser-based dashboard
-├── data/
+├── config.py              ← Configuration settings
+├── db_setup.py            ← Database initialization
+├── ingest_session.py      ← Parse logs → database
+├── generate_resume.py     ← Generate session resume
+├── README.md              ← This file
+├── session_logs/          ← Your session logs
+│   └── TEMPLATE.md        ← Copy this for each session
+├── data/                  ← Database storage
 │   └── pt_study.db        ← SQLite database
-├── session_logs/
-│   ├── TEMPLATE.md        ← Copy this for each session
-│   └── [session files]    ← Your logged sessions
-└── output/
-    └── [generated files]  ← Resumes, reports, exports
+└── output/                ← Generated files
+    └── session_resume.md  ← Resume for GPT context
 ```
 
 ---
 
-## What Gets Tracked
+## Session Log Fields (v9.1)
 
-### Session-Level Data
-- Date, time, duration
-- Topic and study mode
-- Frameworks used
-- Gated Platter triggers
-- Cards created
-- Self-ratings (understanding, confidence, system)
+### Required
+- Date, Time, Duration
+- Study Mode (Core/Sprint/Drill)
+- Main Topic
 
-### Derived Analytics
-- Topic coverage map (what's been studied, what's missing)
-- Mode distribution (Core vs Sprint vs Drill usage)
-- Framework effectiveness (which frameworks correlate with higher ratings)
-- Calibration tracking (confidence vs actual performance over time)
-- Session efficiency (understanding gained per time spent)
-- Gap detection (topics not reviewed recently)
+### Planning Phase
+- Target Exam/Block
+- Source-Lock (materials used)
+- Plan of Attack
 
----
+### Anatomy-Specific
+- Region Covered
+- Landmarks Mastered
+- Muscles Attached
+- OIAN Completed For
+- Rollback Events (Yes/No)
+- Drawing Used (Yes/No)
 
-## Dashboard Metrics
+### Ratings (1-5)
+- Understanding Level
+- Retention Confidence
+- System Performance
+- Calibration Check
 
-### Coverage View
-Shows all topics studied and recency:
-- 🟢 Recent (within 7 days)
-- 🟡 Fading (8-14 days)
-- 🔴 Stale (15+ days)
-- ⚫ Never studied
+### Reflection
+- What Worked
+- What Needs Fixing
+- Gaps Identified
+- Notes/Insights
 
-### Readiness Score
-Estimates test readiness based on:
-- Topic coverage (% of target topics studied)
-- Recency (weighted by how recently studied)
-- Confidence ratings (self-assessed)
-- Review cycles (spaced repetition proxy)
-
-**Not a guarantee** — just an informed estimate to guide decisions.
-
-### Strength/Weakness Map
-Based on logged ratings and Gated Platter triggers:
-- **Strengths:** High ratings, no platter triggers, successful Sprint runs
-- **Weaknesses:** Low ratings, platter triggers, repeated misses
-
-### Pattern Detection
-Looks for:
-- Topics that always get low confidence
-- Frameworks that correlate with better outcomes
-- Time-of-day effects on ratings
-- Mode effectiveness by topic type
+### Next Session
+- Topic, Focus, Materials Needed
 
 ---
 
-## Calibration Tracking
+## Resume Output
 
-### What It Is
-Compares your **confidence rating** (how well you think you know it) with **actual performance** (Sprint misses, exam results if logged).
+The resume generator provides:
 
-### Why It Matters
-Poor calibration = bad study decisions. If you're overconfident on weak areas, you'll skip studying what you actually need.
-
-### How to Use
-- Log confidence honestly (don't inflate)
-- Track Sprint mode results
-- Review calibration trends in dashboard
-- Adjust study priorities based on gaps
+- **Readiness Score** (0-100) based on coverage, understanding, confidence
+- **Recent Sessions** with ratings and regions
+- **Topic Coverage** with freshness indicators (FRESH/FADING/STALE)
+- **Anatomy Coverage** by region with landmarks/muscles
+- **Weak Areas** needing attention
+- **Recommended Focus** for next session
 
 ---
 
-## Weekly Review Questions
+## Database Schema (v9.1)
 
-Run `python brain/dashboard.py --weekly` to see:
-
-1. **Coverage:** What topics did I study? What did I skip?
-2. **Patterns:** Any topics consistently weak? Any frameworks not used?
-3. **Calibration:** Was my confidence accurate? Where was I wrong?
-4. **Efficiency:** Time spent vs understanding gained?
-5. **Next week:** What should I prioritize?
+Key fields added in v9.1:
+- `target_exam` — Exam/block being studied for
+- `source_lock` — Materials used in session
+- `plan_of_attack` — Session plan
+- `region_covered` — Anatomy region
+- `landmarks_mastered` — Landmarks learned
+- `muscles_attached` — Muscles mapped
+- `oian_completed_for` — Full OIAN completed
+- `rollback_events` — Whether rollback occurred
+- `drawing_used` — Whether drawing was used
+- `calibration_check` — Confidence vs actual performance
 
 ---
 
 ## Commands
 
-```bash
-# Initialize database (first time or reset)
-python brain/db_setup.py
+| Command | What It Does |
+|---------|--------------|
+| `python db_setup.py` | Initialize or migrate database |
+| `python ingest_session.py <file>` | Add session to database |
+| `python generate_resume.py` | Generate resume for next session |
+| `python config.py` | Show configuration |
 
-# Ingest a session log
-python brain/ingest_session.py brain/session_logs/FILENAME.md
+---
 
-# Generate resume for GPT
-python brain/generate_resume.py
+## Migration from v8
 
-# View dashboard (CLI)
-python brain/dashboard.py
-
-# View dashboard (web)
-python brain/dashboard_web.py
-
-# Export data
-python brain/dashboard.py --export csv
+If you have existing v8 data, run:
+```powershell
+python db_setup.py
+# Answer 'y' when prompted to migrate
 ```
 
----
-
-## Integration with SOP
-
-### Session Start
-1. Run `generate_resume.py`
-2. Paste resume into GPT
-3. GPT knows your recent context
-
-### Session End
-1. Complete WRAP phase in GPT
-2. Copy session summary
-3. Fill template and ingest
-
-### Weekly Review
-1. Run dashboard
-2. Identify patterns and gaps
-3. Set priorities for next week
-
----
-
-## Data Privacy
-
-All data stays local on your machine. Nothing is sent anywhere.
-
-The database (`pt_study.db`) is a SQLite file you can:
-- Back up by copying the file
-- Reset by running `db_setup.py`
-- Export with dashboard commands
-- Delete entirely if needed
+Old data is preserved in `sessions_v8` table.

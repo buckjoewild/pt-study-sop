@@ -1,78 +1,99 @@
-# PT Study SOP v9.1
+# PT Study SOP
 
-AI-assisted active learning system for DPT students. Enforces structured protocols while adapting to your knowledge state.
+A structured study system for Doctor of Physical Therapy coursework, powered by the PERRIO protocol.
+
+## Current Version: 9.1 "Structured Architect + Anatomy Engine"
+
+---
 
 ## Quick Start
 
-1. **Set up CustomGPT:** Copy `sop/gpt-instructions.md` into your GPT's system prompt
-2. **Start a session:** Paste `sop/runtime-prompt.md` at the beginning of each conversation
-3. **Log sessions:** Use `brain/session_logs/TEMPLATE.md` after each study session
-4. **Run tests (optional):** From the repo root, install pytest (`pip install pytest`) and execute `pytest`
+**Everything you need is in:** `releases/v9.1/`
 
-## Structure
+1. Open `releases/v9.1/README.md` for setup instructions
+2. Copy `GPT-INSTRUCTIONS.md` into your CustomGPT
+3. Upload all files from `gpt-knowledge/` to GPT Knowledge
+4. Run `python brain/db_setup.py` to initialize tracking
+5. Start studying
+
+---
+
+## Repository Structure
 
 ```
 pt-study-sop/
-├── sop/                    ← The study system
-│   ├── MASTER.md           ← Full reference documentation
-│   ├── gpt-instructions.md ← CustomGPT system prompt
-│   ├── runtime-prompt.md   ← Session start script
+├── releases/
+│   └── v9.1/                    ← CURRENT RELEASE (start here)
+│       ├── README.md            ← Setup instructions
+│       ├── GPT-INSTRUCTIONS.md  ← Copy to GPT Instructions field
+│       ├── gpt-knowledge/       ← Upload to GPT Knowledge (14 files)
+│       └── brain/               ← Session tracking system
+├── sop/                         ← Source files (development)
+│   ├── MASTER.md
+│   ├── gpt-instructions.md      ← Full version (reference)
+│   ├── gpt-instructions-short.md← Condensed for 8k limit
+│   ├── runtime-prompt.md
 │   ├── modules/
-│   │   ├── M0-planning.md  ← Planning phase (NEW)
-│   │   ├── M1-M6           ← Protocol steps
-│   │   └── anatomy-engine.md ← Anatomy-specific protocol (NEW)
-│   ├── frameworks/         ← H-Series, M-Series, Levels
-│   ├── methods/            ← Learning science foundations
-│   └── examples/           ← Dialogue examples
-├── brain/                  ← Analytics & tracking
-│   ├── README.md           ← Brain documentation
-│   ├── session_logs/       ← Your logged sessions
-│   └── [Python scripts]    ← Dashboard, resume, ingest
-└── archive/                ← Previous versions
+│   ├── frameworks/
+│   ├── methods/
+│   └── examples/
+├── brain/                       ← Source brain system
+├── archive/                     ← Previous versions
+├── GAP_ANALYSIS.md              ← Known gaps and roadmap
+├── NEXT_STEPS.md                ← Implementation checklist
+├── RESEARCH_TOPICS.md           ← Learning science research guide
+└── CHANGELOG.md                 ← Version history
 ```
+
+---
 
 ## Core Concepts
 
-- **Planning Phase:** Target + Sources + Plan BEFORE teaching
-- **Seed-Lock:** You supply the hook/metaphor, not the AI
-- **Gated Platter:** If stuck, AI offers raw material you must edit
-- **Phonetic Override:** "What does this sound like?" before defining
-- **Level Gating:** Must teach-back at L2 before L4 clinical depth
-- **Function First:** Know what it DOES before what it IS
+| Concept | What It Means |
+|---------|---------------|
+| **Seed-Lock** | You must provide your own hook/metaphor before moving on |
+| **Function Before Structure** | Learn what it DOES before where it IS |
+| **Level Gating** | Prove understanding at L2 (teach-back) before advancing |
+| **Gated Platter** | If stuck, GPT offers raw metaphor you must personalize |
+| **Planning First** | No teaching until target + sources + plan established |
+| **Anatomy Order** | Bones → Landmarks → Attachments → OIAN → Clinical |
 
-## Anatomy Learning Engine (NEW in v9.1)
+---
 
-**Mandatory order for anatomy:**
-```
-BONES → LANDMARKS → ATTACHMENTS → OIAN → CLINICAL
-```
+## Study Modes
 
-**Key rules:**
-- Visual-first landmark recognition (shape, position, neighbors)
-- No OIAN until landmark map is solid
-- Rollback to landmarks if struggling with muscles
+| Mode | When to Use |
+|------|-------------|
+| **Core** | New material, guided learning |
+| **Sprint** | Test-first, rapid recall practice |
+| **Drill** | Deep practice on specific weakness |
 
-## Modes
+---
 
-| Mode | When | Behavior |
-|------|------|----------|
-| Core | New material | AI guides, full protocol |
-| Sprint | Exam prep | Test-first, teach on miss |
-| Drill | Weak areas | User-led reconstruction |
+## What's New in v9.1
+
+- **Planning Phase (M0):** Mandatory target/sources/plan before teaching
+- **Anatomy Engine:** Bone-first protocol with visual landmark recognition
+- **Rollback Rule:** Return to landmarks if OIAN struggles
+- **Drawing Protocol:** AI-generated drawing instructions for anatomy
+- **Condensed GPT Instructions:** Under 8k character limit
+- **Packaged Release:** All files in `releases/v9.1/`
+
+---
 
 ## Documentation
 
-- `sop/MASTER.md` — Complete system reference
-- `sop/modules/anatomy-engine.md` — Anatomy learning protocol
-- `brain/README.md` — Analytics and tracking guide
-- `sop/methods/` — Learning science foundations
+| Document | Purpose |
+|----------|---------|
+| `releases/v9.1/README.md` | Setup and usage guide |
+| `sop/MASTER.md` | Complete system reference |
+| `CHANGELOG.md` | Version history |
+| `GAP_ANALYSIS.md` | Known gaps and future work |
+| `RESEARCH_TOPICS.md` | Learning science research topics |
 
-## Version
+---
 
-**v9.1 "Structured Architect + Anatomy Engine"** — December 2025
+## Links
 
-New in v9.1:
-- M0 Planning Phase (front-loaded planning)
-- Anatomy Learning Engine (bone-first, visual-first)
-- Source-Lock mechanism
-- Rollback Rule for anatomy struggles
+- **GitHub:** https://github.com/Treytucker05/pt-study-sop
+- **Current Release:** `releases/v9.1/`

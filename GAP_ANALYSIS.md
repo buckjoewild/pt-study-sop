@@ -1,205 +1,130 @@
 # PT Study SOP v9.1 — Gap Analysis & Roadmap
 
-## Current State Assessment
+## Current State: v9.1 Complete
 
-### ✅ COMPLETE — Core SOP Structure
+### ✅ COMPLETE
 - [x] M0-M6 modules documented
 - [x] Anatomy Engine with bone-first protocol
 - [x] Frameworks (H-Series, M-Series, Levels)
 - [x] Methods library (5 learning science docs)
 - [x] Drawing protocol for anatomy
-- [x] gpt-instructions.md for CustomGPT
-- [x] runtime-prompt.md for session starts
-- [x] Examples (gated-platter, sprint-dialogue, commands)
-
-### ✅ COMPLETE — Brain Infrastructure
-- [x] SQLite database schema
-- [x] Session logging template
-- [x] Ingest script (parse markdown → database)
-- [x] Resume generator
-- [x] Basic dashboard scripts
-
-### ⚠️ GAPS — Needs Work
+- [x] Condensed GPT instructions (under 8k chars)
+- [x] Packaged release in `releases/v9.1/`
+- [x] Brain v9.1 schema with anatomy tracking
+- [x] Session template with all v9.1 fields
+- [x] Resume generator with readiness score
+- [x] Database migration from v8
 
 ---
 
-## GAP 1: Brain Database Schema Incomplete
+## Remaining Gaps
 
-**Current schema tracks:**
-- Session metadata (date, time, topic, mode, duration)
-- Ratings (understanding, confidence, system performance)
-- Frameworks used, gated platter triggers
-- Free-text reflections
+### GAP 1: Brain Analytics Dashboard
+**Status:** Not started  
+**Priority:** High
 
-**Missing for v9.1 features:**
-- [ ] Landmarks mastered per session
-- [ ] Attachment maps completed
-- [ ] Rollback events (when OIAN failed → returned to landmarks)
-- [ ] Source-Lock tracking (which materials were used)
-- [ ] Plan of Attack tracking
-- [ ] Drawing usage
-- [ ] Specific anatomy regions covered
-- [ ] Calibration data (predicted vs actual performance)
+**Current:** Basic resume generation only
 
-**Action:** Update `db_setup.py` with extended schema
+**Needed:**
+- [ ] Visual topic heat map
+- [ ] Readiness gauge visualization
+- [ ] Spacing alerts ("Topic X due for review")
+- [ ] Confidence vs performance calibration chart
+- [ ] Session history timeline
+
+**Action:** Rewrite `dashboard_web.py` with web UI
 
 ---
 
-## GAP 2: Brain Analytics Dashboard Outdated
-
-**Current dashboard shows:**
-- Recent sessions list
-- Topic coverage (basic)
-- Score averages
-
-**Missing analytics:**
-- [ ] Readiness Score calculation
-- [ ] Topic heat map visualization
-- [ ] Confidence vs performance calibration tracking
-- [ ] Anatomy-specific coverage (regions, landmarks, muscles)
-- [ ] Spacing analysis (time since last review per topic)
-- [ ] Weakness detection (repeated low scores, rollback patterns)
-- [ ] Framework effectiveness correlation
-- [ ] Weekly review summary generation
-
-**Action:** Rewrite `dashboard.py` and `dashboard_web.py` with new analytics
-
----
-
-## GAP 3: No Subject-Specific Engines
+### GAP 2: Subject-Specific Engines
+**Status:** Anatomy Engine complete, others not started  
+**Priority:** Medium
 
 **Current:** Only Anatomy Engine exists
 
-**Missing engines for other courses:**
+**Needed:**
 - [ ] Clinical Pathology Engine (diagnosis reasoning, mechanism chains)
 - [ ] Lifespan Development Engine (age-stage progressions)
-- [ ] Legal & Ethical Engine (case-based reasoning, decision trees)
-- [ ] Examination Skills Engine (procedure sequences, patient positioning)
+- [ ] Legal & Ethical Engine (case-based reasoning)
+- [ ] Examination Skills Engine (procedure sequences)
 
-**Action:** Create modular engine templates that can be enabled per session
+**Action:** Create engine template, build pathology engine first
 
 ---
 
-## GAP 4: No Pre-Built Content Libraries
+### GAP 3: Content Libraries
+**Status:** Not started  
+**Priority:** Medium
 
 **Current:** AI generates everything dynamically
 
-**Missing:**
-- [ ] Landmark library for common anatomy regions (pelvis, shoulder, knee, etc.)
-- [ ] Drawing instruction library (pre-built for high-yield structures)
+**Needed:**
+- [ ] Landmark library for common anatomy regions
+- [ ] Pre-built drawing instructions for high-yield structures
 - [ ] OIAN quick-reference sheets per region
-- [ ] Clinical pattern libraries (common injury → test → findings)
+- [ ] Clinical pattern libraries
 
-**Action:** Build content library structure in `sop/content/` or `sop/libraries/`
+**Action:** Create `sop/content/` directory structure
 
 ---
 
-## GAP 5: No Exam/Block Tracking System
+### GAP 4: Exam Tracking System
+**Status:** Not started  
+**Priority:** Lower
 
-**Current:** Sessions logged individually
+**Current:** Sessions logged individually, no exam grouping
 
-**Missing:**
-- [ ] Exam/block definitions (what topics belong to which exam)
+**Needed:**
+- [ ] Exam/block definitions (topics per exam)
 - [ ] Coverage tracking per exam
 - [ ] Countdown/urgency awareness
 - [ ] Learning objective mapping
 
-**Action:** Add `brain/exams/` structure with exam definitions and tracking
+**Action:** Create `brain/exams/` with exam definition files
 
 ---
 
-## GAP 6: No Integration Tests
+### GAP 5: Integration Tests
+**Status:** Not started  
+**Priority:** Lower
 
-**Current:** No way to verify SOP works correctly in CustomGPT
+**Current:** No way to verify GPT behavior
 
-**Missing:**
+**Needed:**
 - [ ] Test prompts with expected behaviors
 - [ ] Validation checklist for new GPT setup
-- [ ] Sample session transcripts showing correct behavior
+- [ ] Sample session transcripts
 
 **Action:** Create `sop/tests/` with validation scenarios
 
 ---
 
-## GAP 7: Brain Resume Format Needs Update
+## Implementation Priority
 
-**Current resume generator:** Basic session list
-
-**Needed for v9.1:**
-- [ ] Include landmarks mastered
-- [ ] Include anatomy regions covered
-- [ ] Include rollback events
-- [ ] Include readiness estimate
-- [ ] Prioritized weak areas
-
-**Action:** Update `generate_resume.py` to match new schema
+| Phase | Focus | Timeline |
+|-------|-------|----------|
+| **Current** | Test v9.1 with real sessions | This week |
+| **Phase 1** | Dashboard web UI | 2 weeks |
+| **Phase 2** | Content libraries | 2-4 weeks |
+| **Phase 3** | Additional engines | 1 month |
+| **Phase 4** | Exam tracking | As needed |
 
 ---
 
-## GAP 8: No Spaced Repetition Tracking
+## Next Immediate Steps
 
-**Current:** Anki card count logged, but no spacing analysis
-
-**Missing (even without in-GPT spaced repetition):**
-- [ ] Time-since-last-review per topic
-- [ ] Optimal review timing suggestions
-- [ ] Decay estimates based on confidence ratings
-- [ ] "Due for review" alerts
-
-**Action:** Add spacing calculations to dashboard analytics
+1. **Test v9.1** — Run 3 real study sessions with the CustomGPT
+2. **Note friction** — Document what doesn't work
+3. **Iterate** — Fix issues before building new features
+4. **Build dashboard** — Visual analytics for Brain data
 
 ---
 
-## IMPLEMENTATION PRIORITY
+## Files Reference
 
-### Phase 1: Brain Schema Update (Critical)
-1. Update `db_setup.py` with extended schema
-2. Update `ingest_session.py` to parse new fields
-3. Update `TEMPLATE.md` with new fields
-4. Migrate existing data (if any)
-
-### Phase 2: Dashboard Overhaul (High)
-1. Readiness Score calculation
-2. Topic heat map
-3. Spacing analysis
-4. Weakness detection
-
-### Phase 3: Content Libraries (Medium)
-1. Anatomy landmark library structure
-2. Drawing instruction library
-3. Clinical pattern templates
-
-### Phase 4: Additional Engines (Medium)
-1. Clinical Pathology Engine
-2. Generic engine template for other courses
-
-### Phase 5: Exam Tracking (Lower)
-1. Exam definition structure
-2. Coverage tracking
-3. LO mapping
-
----
-
-## NEXT IMMEDIATE STEPS
-
-1. **Update Brain schema** — Add new fields for v9.1 features
-2. **Update session template** — Match new schema
-3. **Test with 3 real sessions** — Validate full flow works
-4. **Iterate based on friction** — What's annoying? What's missing?
-
----
-
-## Files to Create/Update
-
-| File | Action | Priority |
-|------|--------|----------|
-| `brain/db_setup.py` | Add new columns | High |
-| `brain/ingest_session.py` | Parse new fields | High |
-| `brain/session_logs/TEMPLATE.md` | Add new fields | High |
-| `brain/generate_resume.py` | Include new data | High |
-| `brain/dashboard.py` | Full rewrite | High |
-| `brain/analytics.py` | New file for calculations | Medium |
-| `sop/modules/pathology-engine.md` | New engine | Medium |
-| `sop/content/landmarks/` | Content library | Medium |
-| `brain/exams/` | Exam tracking | Lower |
-| `sop/tests/` | Validation scenarios | Lower |
+| Document | Location |
+|----------|----------|
+| Current release | `releases/v9.1/` |
+| Research topics | `RESEARCH_TOPICS.md` |
+| Next steps checklist | `NEXT_STEPS.md` |
+| Changelog | `CHANGELOG.md` |

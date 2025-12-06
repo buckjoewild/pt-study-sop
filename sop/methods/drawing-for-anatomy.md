@@ -1,231 +1,162 @@
-# Drawing for Anatomy
+# Drawing for Anatomy — Visual Sketch Protocol
 
-## What It Means
-Using simple sketching during learning to visualize anatomical structures. The act of drawing forces you to understand spatial relationships and reinforces memory through motor encoding.
-
----
-
-## Why Drawing Works for Anatomy
-
-### 1. Forces Spatial Understanding
-You can't draw what you don't understand. Drawing reveals gaps in your mental model of where structures are and how they relate.
-
-### 2. Multi-Modal Encoding
-Drawing engages visual, motor, and cognitive systems simultaneously. More encoding pathways = stronger memory.
-
-### 3. Active Construction
-Drawing is generative. You're creating, not passively viewing. Generation effect applies.
-
-### 4. Retrieval Through Labeling
-Labeling your drawing forces retrieval of names and relationships while you draw.
+## Purpose
+Generate simple, clean reference images that the user can sketch from to build spatial understanding of anatomy.
 
 ---
 
-## The Drawing Protocol
+## How It Works
 
-### Core Principle
-**"Draw to understand, not to be artistic."**
+When user says "draw" or requests a drawing:
 
-Your drawings don't need to be pretty. They need to capture:
-- What the structure looks like (rough shape)
-- Where it attaches (origin/insertion)
-- What it does (function)
+1. **Generate an image** using DALL-E — simple, clean line drawing style
+2. **Display the image** for user to reference
+3. **Provide sketch instructions** — step-by-step what to draw
+4. **Label together** — user adds labels as they draw
 
-### When to Draw
-- During M4 (Build) phase for anatomy
-- When encoding muscle attachments
-- When spatial relationships are confusing
-- When you need to "see" a structure
+---
 
-### How AI Provides Instructions
-AI gives structured step-by-step instructions you can follow without artistic skill:
+## Image Generation Prompt Template
+
+When generating anatomy drawings, use this style:
 
 ```
-DRAW: [Structure Name]
-
-BASE: [Shape] — [size reference]
-
-STEP 1: [Action]
-STEP 2: [Action]
-...
-
-LABEL: [What] at [Where]
-
-FUNCTION: [One-line summary]
+Simple black and white line drawing for medical education. 
+Clean, minimal style like a textbook diagram. 
+White background. 
+No shading, no color, just outlines.
+[SPECIFIC STRUCTURE] shown from [VIEW/ANGLE].
+Key landmarks clearly visible.
+Simple and easy to sketch by hand.
 ```
 
 ---
 
-## Shape Vocabulary
+## Example: Rotator Cuff
 
-### Basic Shapes for Anatomy
+**User:** "Draw the rotator cuff"
 
-| Shape | Use For |
-|-------|---------|
-| Oval/Ellipse | Muscle bellies, bone heads, joint surfaces |
-| Rectangle | Bone shafts, flat muscles |
-| Triangle | Deltoid, trapezius, pennate muscles |
-| Line | Tendons, ligaments, nerve paths |
-| Curved line | Spine, ribs, muscle contours |
-| Circle | Small structures, landmarks |
+**GPT Action:**
+1. Generate image with prompt:
+   "Simple black and white line drawing for medical education. Clean, minimal style like a textbook diagram. White background. No shading, no color, just outlines. Posterior view of scapula and humerus showing rotator cuff muscle attachment sites. Key landmarks clearly visible: spine of scapula, acromion, greater tubercle, lesser tubercle. Simple and easy to sketch by hand."
 
-### Position References
-- **Clock positions:** 12 o'clock (top), 3 o'clock (right), 6 o'clock (bottom), 9 o'clock (left)
-- **Fractions:** top third, bottom half, left side, medial, lateral
-- **Relative:** above X, below Y, lateral to Z, deep to W
+2. Display the image
 
----
-
-## Instruction Format (For AI)
-
-When generating drawing instructions, use this exact format:
-
-```
-DRAW: [Structure Name]
-
-BASE: [Primary shape and orientation] — [size/proportion cue]
-
-STEP 1: [First drawing action] at [position]
-STEP 2: [Second action] at [position]
-STEP 3: [Third action] at [position]
-[Continue as needed — keep to 4-6 steps maximum]
-
-LABEL: "[Text]" at [specific location]
-LABEL: "[Text]" at [specific location]
-
-FUNCTION: [What this structure does — one line]
-```
-
----
-
-## Example: Rotator Cuff Muscles
-
-### Supraspinatus
-```
-DRAW: Supraspinatus
-
-BASE: Horizontal oval (scapula body, wider than tall)
-
-STEP 1: Draw oval tilted slightly down-right
-STEP 2: Add small bump at 1-2 o'clock (acromion process)
-STEP 3: Shade muscle belly along TOP edge of oval (supraspinous fossa)
-STEP 4: Draw tendon line from muscle → under acromion → to 3 o'clock
-
-LABEL: "O" at medial end of muscle (supraspinous fossa)
-LABEL: "I" at 3 o'clock point (greater tubercle)
-LABEL: "Acromion" at the bump
-
-FUNCTION: Initiates abduction (first 15°); stabilizes humeral head
-```
-
-### Infraspinatus
-```
-DRAW: Infraspinatus
-
-BASE: Same scapula oval from supraspinatus
-
-STEP 1: Use the same oval (scapula outline)
-STEP 2: Draw spine of scapula as horizontal line through middle of oval
-STEP 3: Shade muscle belly BELOW the spine (infraspinous fossa)
-STEP 4: Draw tendon from muscle → around to 3 o'clock (greater tubercle)
-
-LABEL: "O" in center of lower scapula (infraspinous fossa)
-LABEL: "I" at posterior greater tubercle
-LABEL: "Spine" on the horizontal line
-
-FUNCTION: External rotation of humerus; stabilizes humeral head
-```
+3. Provide instructions:
+   "Here's your reference. Sketch along with me:
+   
+   **Step 1: Scapula outline**
+   - Draw a triangle for the scapula body
+   - Add the spine running across horizontally
+   - Add the acromion hooking over the top
+   
+   **Step 2: Humerus**
+   - Draw a cylinder coming off laterally
+   - Mark the greater tubercle (lateral bump)
+   - Mark the lesser tubercle (anterior bump)
+   
+   **Step 3: Mark attachment sites**
+   - Supraspinatus fossa (above spine)
+   - Infraspinatus fossa (below spine)  
+   - Subscapularis fossa (anterior surface)
+   - Teres minor area (lateral border)
+   
+   **Step 4: Draw muscle lines**
+   - Supraspinatus: fossa → greater tubercle (top)
+   - Infraspinatus: fossa → greater tubercle (middle)
+   - Teres minor: lateral border → greater tubercle (bottom)
+   - Subscapularis: anterior scapula → lesser tubercle
+   
+   **Step 5: Label**
+   - Label each muscle
+   - Label O and I points
+   - Add action arrows if helpful"
 
 ---
 
-## Example: Knee Ligaments
+## Image Style Requirements
 
-### ACL
+**DO:**
+- Simple line drawings
+- Black on white
+- Clear landmarks
+- Anatomically accurate but simplified
+- Easy to replicate by hand
+
+**DON'T:**
+- Photorealistic images
+- Complex shading
+- Color (unless specifically requested)
+- Too much detail
+- 3D rendered images
+
+---
+
+## Views to Use
+
+| Structure | Best View |
+|-----------|-----------|
+| Rotator cuff | Posterior scapula |
+| Hip muscles | Posterior pelvis |
+| Knee ligaments | Anterior knee, flexed |
+| Ankle | Lateral and medial views |
+| Spine | Lateral view |
+| Brachial plexus | Anterior neck/shoulder |
+
+---
+
+## Workflow
+
 ```
-DRAW: ACL (Anterior Cruciate Ligament)
-
-BASE: Two rectangles stacked with gap (femur on top, tibia below)
-
-STEP 1: Draw upper rectangle (femur) — wider at bottom
-STEP 2: Draw lower rectangle (tibia) below, with joint space gap
-STEP 3: Draw diagonal line from BACK of femur → FRONT of tibia
-        (posterolateral femur → anteromedial tibia)
-
-LABEL: "ACL" along the diagonal
-LABEL: Arrow on tibia pointing forward: "Prevents this"
-
-FUNCTION: Prevents anterior tibial translation; resists internal rotation
-```
-
-### PCL
-```
-DRAW: PCL (Posterior Cruciate Ligament)
-
-BASE: Same two rectangles (femur/tibia) as ACL
-
-STEP 1: Use same femur/tibia rectangles
-STEP 2: Draw diagonal from FRONT of femur → BACK of tibia
-        (medial femoral condyle → posterior tibia)
-STEP 3: This diagonal crosses the ACL to form an "X"
-
-LABEL: "PCL" along the diagonal
-LABEL: Arrow on tibia pointing backward: "Prevents this"
-
-FUNCTION: Prevents posterior tibial translation
+User: "draw [structure]"
+     ↓
+GPT: Generates simple line drawing image
+     ↓
+GPT: Displays image
+     ↓
+GPT: "Here's your reference. Sketch along:"
+     ↓
+GPT: Step-by-step instructions (5-6 steps)
+     ↓
+User: Sketches while looking at image
+     ↓
+GPT: "Now label: [list key structures]"
+     ↓
+User: Adds labels
+     ↓
+GPT: "What does [structure] do?" (Seed-Lock)
 ```
 
 ---
 
-## Drawing Integration in Session
+## Commands
 
-### When User Requests
-```
-User: "draw" or "draw [structure name]"
-AI: [Provides structured instructions]
-User: [Draws, then confirms or asks questions]
-```
-
-### When AI Offers
-During M4 (Build), for anatomy:
-```
-AI: "This is a spatial concept. Want drawing instructions for [structure]?"
-User: "Yes"
-AI: [Provides instructions]
-```
-
-### After Drawing
-```
-AI: "Now, looking at your drawing, explain the function."
-User: [Explains while pointing to drawing]
-AI: "Good. Your drawing + explanation is your anchor for this."
-```
+| Command | Action |
+|---------|--------|
+| `draw [structure]` | Generate image + sketch instructions |
+| `another view` | Generate different angle |
+| `simpler` | Regenerate with less detail |
+| `label` | Get labeling checklist |
 
 ---
 
-## Tips for Effective Anatomy Drawing
+## Integration with Anatomy Engine
 
-### DO
-- Keep shapes simple (ovals, rectangles, lines)
-- Label as you go (forces retrieval)
-- Include function note on drawing
-- Draw from multiple angles if helpful
-- Use your own shorthand
+Drawing happens during **M4 Build** phase, after landmarks are mapped:
 
-### DON'T
-- Try to make it "pretty"
-- Include unnecessary detail
-- Copy exactly from textbook
-- Rush through without labeling
-- Draw without understanding
+1. Bones identified ✓
+2. Landmarks located ✓
+3. **→ Draw the region** (you are here)
+4. Attachments mapped on your drawing
+5. OIAN layered on
+6. Clinical patterns added
+
+The drawing becomes YOUR mental atlas — not a picture you looked at, but one you created.
 
 ---
 
-## The Point
+## Key Principle
 
-Drawing is not about art. It's about:
-1. **Understanding** — You can't draw what you don't get
-2. **Memory** — Motor + visual + verbal encoding
-3. **Retrieval** — Labeling forces recall
-4. **Ownership** — Your drawing = your anchor
+**You must draw it yourself.** 
 
-When you can draw a structure and explain it simultaneously, you truly know it.
+The generated image is a REFERENCE, not a replacement. Looking at an image ≠ learning. Sketching it yourself = spatial encoding + memory + ownership.

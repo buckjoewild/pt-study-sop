@@ -4,6 +4,8 @@ A structured study system for Doctor of Physical Therapy coursework, powered by 
 
 ## Current Version: 9.1 "Structured Architect + Anatomy Engine"
 
+**Master Plan (North Star):** See `MASTER_PLAN_PT_STUDY.md` for the stable vision, invariants, and contracts every release must honor.
+
 ---
 
 ## Quick Start

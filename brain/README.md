@@ -124,6 +124,7 @@ Key fields added in v9.1:
 | `python ingest_session.py <file>` | Add session to database |
 | `python generate_resume.py` | Generate resume for next session |
 | `python config.py` | Show configuration |
+| `../Run_Brain_Sync.bat` | One-click daily sync: move stray logs → ingest all → regenerate resume |
 
 ---
 

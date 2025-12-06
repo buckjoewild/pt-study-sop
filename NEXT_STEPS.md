@@ -1,6 +1,11 @@
-# Next Steps — Implementation Checklist
+# Next Steps – Implementation Checklist
 
-## ✅ COMPLETED (v9.1)
+> Guardrails (apply to every change)
+> - Check `MASTER_PLAN_PT_STUDY.md`: no invariant violations.
+> - Check contracts/schemas (session_log, card, RAG doc, resume): no breaking changes.
+> - If a contract must change, update `MASTER_PLAN_PT_STUDY.md` explicitly.
+
+## ƒo. COMPLETED (v9.1)
 
 - [x] Create condensed GPT instructions (under 8k chars)
 - [x] Package release in `releases/v9.1/`
@@ -51,13 +56,8 @@
 ```
 sop/content/
 ├── landmarks/
-│   ├── pelvis.md
-│   ├── hip.md
-│   └── ...
 ├── drawings/
-│   └── ...
 └── clinical/
-    └── ...
 ```
 
 ---
@@ -74,6 +74,7 @@ sop/content/
 - [ ] Define exam structure in `brain/exams/`
 - [ ] Coverage tracking per exam
 - [ ] Learning objective mapping
+- [ ] Countdown/urgency awareness
 
 ---
 
@@ -86,7 +87,6 @@ sop/content/
 - [ ] Test improvement in real sessions
 
 ### 9. Document Session Learnings
-After each study session:
 - [ ] Log to Brain
 - [ ] Note what worked/didn't
 - [ ] Identify SOP improvement opportunities
@@ -105,7 +105,7 @@ After each study session:
 6. Say "wrap" to end
 7. Create log file and run ingest
 
-**Document feedback in:** `brain/session_logs/test_session_YYYY-MM-DD.md`
+Document feedback in: `brain/session_logs/test_session_YYYY-MM-DD.md`
 
 ---
 
@@ -113,8 +113,8 @@ After each study session:
 
 After implementation, you should be able to:
 
-1. ✅ **Start a session** → GPT runs Planning Phase → Source-Lock established
-2. ✅ **Study anatomy** → Bone-first protocol enforced → Landmarks before OIAN
-3. ✅ **Log session** → All v9.1 fields captured → Database updated
-4. ✅ **Generate resume** → See readiness score → Know weak areas
-5. ⬜ **Check dashboard** → Visual coverage map → Spacing alerts (not yet built)
+1. Start a session → GPT runs Planning Phase → Source-Lock established
+2. Study anatomy → Bone-first protocol enforced → Landmarks before OIAN
+3. Log session → All v9.1 fields captured → Database updated
+4. Generate resume → See readiness score → Know weak areas
+5. Check dashboard → Visual coverage map → Spacing alerts (not yet built)

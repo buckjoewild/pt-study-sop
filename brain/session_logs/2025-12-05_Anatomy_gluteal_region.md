@@ -1,4 +1,4 @@
-﻿# Session Log - 2025-12-05
+# Session Log - 2025-12-05
 
 ## Session Info
 - Date: 2025-12-05
@@ -16,7 +16,7 @@
 - Subtopics: Pelvic landmarks (ischial tuberosity, ischial spine, greater trochanter); deep gluteal external rotators (piriformis, superior gemellus, obturator internus, inferior gemellus); sciatic nerve relationship
 
 ## Execution Details
-- Frameworks Used: H1 System Scan; Visual-First Anatomy Engine
+- Frameworks Used: H1 System Scan, Visual-First Anatomy Engine
 - Gated Platter Triggered: Yes
 - WRAP Phase Reached: Yes
 - Anki Cards Created: 0
@@ -49,7 +49,7 @@
 ## Reflection
 
 ### What Worked
-The slow breakdown, layering landmarks and relationships. Visual anchoring worked very well. The system referenced your own words effectively.
+The slow breakdown, layering landmarks + muscles + relationships. Visual anchoring worked very well. The system referenced your own words effectively.
 
 ### What Needs Fixing
 Start with images immediately in the next sessions. Visual-first must be enforced from the first step.
@@ -61,6 +61,6 @@ Not recorded.
 Deep gluteal region is now visually locked. Landmark anchoring greatly improved recognition of piriformis and gemelli. Next steps will build smoothly off this.
 
 ## Next Session Priority
-- Topic: Visual-first review of deep gluteal region and posterior thigh
-- Focus: Start with images immediately and keep visual-first throughout; reinforce sciatic nerve relationships to deep rotators
-- Materials Needed: Anatomy atlas or lab images of gluteal region; drawing tools if used
+- Topic: Finish Module 9 neurovascular
+- Focus: Begin with lab slide checklist; reinforce superior/inferior gluteal nerves & arteries
+- Materials Needed: Module 9 lab images; checklist; optional drawing tools

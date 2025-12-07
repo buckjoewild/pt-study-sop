@@ -11,7 +11,7 @@ Everything you need to set up and run the PT Study Tutor system (general-first; 
 **Knowledge files:** Upload ALL 14 files from the `gpt-knowledge/` folder.
 
 ### 2. Set Up Brain (Session Tracking)
-Use the root-level `brain/` (authoritative copy) for ingesting session logs and running the dashboard.
+Use the root-level `brain/` (authoritative copy) for ingesting session logs and running the dashboard (the dashboard lives there; the release package does not include its own copy).
 
 ```powershell
 cd brain
@@ -50,6 +50,8 @@ v9.1/
     drawing-for-anatomy.md
 README.md (this file)
 ```
+
+> The release package includes GPT instructions and knowledge files only; the live `brain/` system remains at the repo root.
 
 ---
 

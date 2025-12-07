@@ -1,4 +1,4 @@
-# PT Study SOP v9.1 — Master Reference
+﻿# PT Study SOP v9.1 - Master Reference
 **Version:** 9.1 "Structured Architect + Anatomy Engine"  
 **Updated:** December 4, 2025  
 **Owner:** Trey Tucker
@@ -6,7 +6,6 @@
 ---
 
 ## Quick Navigation
-
 | File | Purpose |
 |------|---------|
 | `gpt-instructions.md` | CustomGPT system prompt (paste into GPT settings) |
@@ -19,340 +18,98 @@
 
 ---
 
-## System Overview
+## System Overview (general-first)
+An AI-assisted study system that enforces active learning through structured protocols. Built on Justin Sung priming/plan-first ideas and Jim Kwik hooks.
 
-### What This Is
-An AI-assisted study system that enforces active learning through structured protocols. Built on Justin Sung's PERRO method and Jim Kwik's memory techniques.
+Core philosophy
+1) User generates, AI validates/scaffolds.
+2) Function before structure.
+3) Gated progression (show understanding before advancing).
+4) Desirable difficulties (productive struggle).
+5) Source-first (RAG): prefer user-provided snippets; if none, mark outputs **unverified**.
 
-### Core Philosophy
-1. **User generates, AI validates** — You build the understanding; AI spots and scaffolds
-2. **Function before structure** — Know what it DOES before memorizing what it IS
-3. **Gated progression** — Can't advance until you demonstrate understanding
-4. **Desirable difficulties** — Struggle is part of learning, not a bug
-5. **Visual-spatial first** — For anatomy: landmarks before lists
-
-### Session Flow
+Session flow
 ```
-M0 (Planning) → M1 (Entry) → M2 (Prime) → M3 (Encode) → M4 (Build) → M6 (Wrap)
-                                              ↑
-                                         M5 (Modes)
-                                      [Modifies behavior]
-```
-
-**For Anatomy Sessions:**
-```
-M0 (Planning) → Anatomy Engine → M6 (Wrap)
-                    ↓
-    BONES → LANDMARKS → ATTACHMENTS → OIAN → CLINICAL
+M0 (Planning) + M1 (Entry) + M2 (Prime) + M3 (Encode) + M4 (Build) + M6 (Wrap)
+                                             ^
+                                         M5 (Modes) modifies behavior
 ```
 
 ---
 
 ## Module Summary
 
-### M0: Planning Phase (NEW)
-**Purpose:** Establish targets, gather materials, and create plan BEFORE teaching
-
-**Rule:** "No teaching starts until Planning Phase has produced a target, sources, and a 3-5 step plan of attack."
-
-**Actions:**
-1. Identify session target (exam/block, time mode)
-2. Clarify current position (covered vs remaining)
-3. Gather required materials (LOs, slides, labs, practice Qs)
-4. Select sources for THIS session (Source-Lock)
-5. Produce plan of attack (3-5 steps)
-
-**Exit Condition:** Target clear, sources locked, plan agreed
-
----
+### M0: Planning Phase
+Purpose: establish target, sources, and plan before teaching.
+Actions: target, status, gather materials, source-lock, 3-5 step plan. Exit: plan agreed.
 
 ### M1: Entry
-**Purpose:** Initialize session state and select operating mode
+Purpose: initialize state and mode. Actions: state check, scope, time/pressure, knowledge rating 1-5, mode select (see Modes). Exit: mode selected, scope locked.
 
-**Actions:**
-- State check (focus level 1-10, motivation)
-- Scope confirmation (topic, materials, time available)
-- Mode selection based on readiness:
-  - **Core** → New material, guided learning
-  - **Sprint** → Exam prep, test-first
-  - **Drill** → Weak areas, deep practice
-- Load prior context if resuming
-
-**Exit Condition:** Mode selected, scope locked
-
----
-
-### M2: Prime (MAP Phase)
-**Purpose:** Survey the territory before learning
-
-**Actions:**
-- System Scan using H-Series frameworks
-- List parts/structures of the topic
-- User groups items into buckets
-- Instruction: "Don't memorize yet—just bucket"
-
-**Exit Condition:** Topic mapped into 2-5 manageable buckets
-
----
+### M2: Prime (MAP)
+Purpose: survey and bucket before learning. Actions: System Scan using H-series; user buckets (2-5 buckets); "don’t memorize yet—just bucket." Exit: buckets ready.
 
 ### M3: Encode
-**Purpose:** Attach meaning to one bucket at a time
+Purpose: attach meaning to one bucket. Actions: pick bucket; apply M-series; phonetic override after quick teach-back; user Seed required (or Gated Platter); mark unverified if no source snippet. Exit: user owns a Seed.
 
-**Actions:**
-- Select one bucket to encode
-- Apply M-Series framework (function-first)
-- Phonetic Override for unfamiliar terms ("What does this sound like?")
-- User supplies Seed (their own hook, metaphor, or connection)
-- If user stalls → Gated Platter offers raw Level 1 metaphor for user to edit
+### M4: Build (LOOP)
+Purpose: construct through levels. Levels: L1 Metaphor; L2 10-year-old (must teach-back); L3 High School; L4 Clinical. Drawing/visual stories when helpful. Exit: understanding at target level.
 
-**Exit Condition:** User has stated a Seed they own
-
----
-
-### M4: Build (LOOP Phase)
-**Purpose:** Construct understanding through levels
-
-**Level Progression:**
-- **L1 (Metaphor):** Raw analogy or image
-- **L2 (10-year-old):** Simple explanation in everyday words
-- **L3 (High School):** Add terminology and mechanisms
-- **L4 (Clinical/PT):** Full precision with edge cases
-
-**Gate:** Must teach-back at L2 before unlocking L4
-
-**Drawing Integration:** For anatomy, AI provides step-by-step drawing instructions during L2-L3
-
-**Exit Condition:** User demonstrates understanding at target level
-
----
-
-### M5: Modes (Behavior Modifier)
-**Purpose:** Adjust AI behavior based on user's current state
-
-**Core Mode** (New material, need guidance)
-- AI leads with priming
-- Full Prime → Encode → Build cycle
-- More scaffolding, explanations available
-
-**Sprint Mode** (Know it somewhat, testing gaps)
-- Fail-first: AI asks, user answers
-- If correct → next item immediately
-- If wrong → stop, build phonetic hook, retry
-- No teaching unless triggered by miss
-
-**Drill Mode** (Weak areas identified)
-- Focus on specific weak buckets
-- User-led reconstruction
-- Heavy use of phonetic hooks and user examples
-
-**Mode Selection Heuristic:**
-- "Haven't studied this yet" → Core
-- "I've seen it but not solid" → Sprint
-- "I keep missing this specific thing" → Drill
-
----
+### M5: Modes (behavior modifier)
+Purpose: pick posture based on time + knowledge.
+- Diagnostic Sprint (test-first) for short time and knowledge 3-5.
+- Teaching Sprint for short time and knowledge 1-2 (micro-teach + check).
+- Core for new/partial with normal time (full M2-M4 loop).
+- Drill for weak anchors/misses. Handoff: Sprint/Teaching miss -> Drill.
+Common: seed gate (override allowed with warning), RAG gate, visual stories optional for anatomy.
 
 ### M6: Wrap
-**Purpose:** Close session and prepare for next
-
-**Actions:**
-1. Review locked anchors (user's Seeds/hooks from session)
-2. User selects which items need Anki cards
-3. Co-create cards using user's specific hooks
-4. Generate session log for Brain ingestion
-5. Identify next priorities
-
-**Exit Condition:** Session logged, cards created (if any), next action clear
+Purpose: close and prep next. Actions: review locked anchors; select weak anchors; **draft Anki-ready cards by default for weak anchors**; confirm wording; generate session log; set next action. Exit: log complete, cards drafted, next step clear.
 
 ---
 
-## Anatomy Learning Engine
-
-> **See full documentation:** `modules/anatomy-engine.md`
-
-### Primary Goal for Anatomy
-Build a **clean mental atlas** of every exam-relevant bone landmark, where each landmark sits in space, and what muscles attach to that landmark — BEFORE trying to memorize OIAN lists.
-
-**OIAN should feel like a "read-off" from the mental atlas, not brute-force memorization.**
-
-### The Real Anatomy Learning Order
-
-**Mandatory sequence:**
-```
-1. BONES → 2. LANDMARKS → 3. ATTACHMENTS (O/I) → 4. ACTIONS (A) → 5. INNERVATION (N) → 6. CLINICAL
-```
-
-**Constraints:**
-- ❌ NOT ALLOWED: Jumping to OIAN before bone + landmark mapping complete
-- ❌ NOT ALLOWED: Clinical patterns before OIAN is stable
-- ❌ NOT ALLOWED: Muscle-first approaches (unless quick review)
-
-### Bone-First Attachment Loop
-
-1. **Select region** (Pelvis & Hip, Anterior Thigh, etc.)
-2. **List exam-required bones + landmarks** (from labs/LOs)
-3. **Run Landmark Pass** — Visual recognition → Spatial orientation → Attachment importance
-4. **Attach muscles** (names only, per landmark)
-5. **Layer OIAN** (only when attachment map is solid)
-6. **Add clinical patterns** (last)
-
-### Visual-First Landmark Protocol
-
-All landmark learning is VISUAL-FIRST:
-1. **Visual recognition cues** — Shape, size, how to spot in lab
-2. **Spatial orientation** — Superior/inferior, anterior/posterior, relation to neighbors
-3. **Attachment importance** — What muscles connect here
-
-> **Metaphors support visual understanding but cannot REPLACE the actual bone/landmark picture.**
-
-### Rollback Rule
-
-> **If struggling to recall OIAN, system MUST roll back to:**
-> 1. Visual landmark review → 2. Attachment mapping → 3. Re-layer O/A/N
+## Anatomy Engine (available, not default)
+When doing anatomy, follow bone/landmark-first order (see `modules/anatomy-engine.md`). For general study, anatomy engine is optional.
 
 ---
 
 ## Key Mechanisms
-
-### Seed-Lock
-User must supply their own hook/metaphor/connection before AI builds further. Prevents passive consumption.
-
-### Gated Platter
-If user stalls and can't produce a Seed:
-1. AI offers a "raw" Level 1 metaphor
-2. User MUST edit/improve it before proceeding
-3. "Okay" is not acceptable — user must add something
-
-### Phonetic Override
-For any complex or unfamiliar term:
-1. Ask "What does this sound like?" BEFORE defining
-2. Capture the sound-alike hook
-3. Then attach meaning to that hook
-
-### Level Gating
-- L1 and L2 are always accessible
-- L3 requires demonstrated L2 understanding
-- L4 requires teach-back at L2 first
-- This prevents false confidence from recognizing L4 terms without understanding
-
-### Source-Lock (NEW)
-At session start, explicitly declare which materials will be used:
-- "Tonight we use: [Lab PDF p.2-6 + Hip slides + LO list]"
-- Prevents scope creep, ensures exam alignment
-
-### Drawing Protocol
-For anatomy encoding, AI provides structured drawing instructions:
-- Simple geometric shapes as base
-- Sequential step-by-step building
-- Label as you draw (forces retrieval)
-- Function annotation on completed drawing
+- Seed-Lock (overrideable with warning)
+- Gated Platter for stalls (user must edit the raw L1 metaphor)
+- Phonetic Override ("What does it sound like?")
+- Level Gating (L2 teach-back before L4)
+- Source-Lock + RAG gate (mark unverified if no snippet)
+- Drawing/visual stories when appropriate to concept (optional for anatomy)
 
 ---
 
-## Frameworks Quick Reference
-
-### H-Series (Priming/Mapping)
-- **H1 (System):** System → Subsystem → Component → Element
-- **H2 (Anatomy):** Structure → Function → Behavior (opt-in only)
-
-### M-Series (Encoding/Logic)
-- **M2 (Trigger):** Trigger → Mechanism → Result → Implication
-- **M6 (Homeostasis):** Perturbation → Correction → Baseline
-- **M8 (Diagnosis):** Cause → Mechanism → Sign → Test → Confirmation
-- **Y1 (Generalist):** What is it → What does it do → How does it fail
-
-### Anatomy Order (NEW)
-- **Bones → Landmarks → Attachments → Actions → Nerves → Clinical**
-- Visual-first for all landmarks
-- OIAN only after spatial map is solid
-
-### Default: Function → Structure
-Always state the job/outcome first, then list the parts that accomplish it.
-
----
-
-## Commands
-
+## Commands (in-session; you can also speak naturally)
 | Command | Action |
 |---------|--------|
 | `plan` | Start/review planning phase |
 | `ready` | Move to next step |
 | `bucket` | Group/organize items |
-| `mold` | Fix my understanding (troubleshoot) |
-| `wrap` | End session, begin closing sequence |
-| `menu` | Show available commands |
 | `mode [core/sprint/drill]` | Switch operating mode |
-| `draw` | Request drawing instructions for current structure |
-| `landmark` | Run landmark pass for anatomy |
-| `rollback` | Return to earlier phase (anatomy: back to landmarks) |
+| `sprint` | Shortcut to Diagnostic Sprint |
+| `core` | Shortcut to Core mode |
+| `drill` | Shortcut to Drill mode |
+| `draw` | Request drawing instructions |
+| `landmark` | Run landmark pass (anatomy) |
+| `rollback` | Return to earlier phase/landmarks |
+| `wrap` | End session and start WRAP |
+| `skip` | Next item |
+| `menu` | Show commands |
 
 ---
 
-## Brain Integration
-
-### Current Gaps to Fix (from repo audit)
-- **Session log ingestion misses template fields** — Add storage + parsing for **Drawing Used**, **Anchors Locked**, and **Next Session Priority** so qualitative hooks and next steps persist through analytics.
-- **`db_setup.py` fails without `data/` directory** — Create the folder before initializing SQLite to match the web app behavior and avoid first-run errors.
-- **Markdown ingestion allows out-of-range scores** — Enforce 1–5 bounds (like the web quick-session endpoint) to keep ratings consistent.
-- **Web ingestion endpoints lack auth/CSRF** — Add authentication and request protection for `/api/upload`, `/api/quick_session`, and related routes before multi-user or shared-host use.
-
-After each session:
-1. Copy session log template from `brain/session_logs/TEMPLATE.md`
-2. Fill in session data
-3. Save as `brain/session_logs/YYYY-MM-DD_topic.md`
-4. Run `python brain/ingest_session.py brain/session_logs/YYYY-MM-DD_topic.md`
-
-Before starting a session:
-1. Run `python brain/generate_resume.py`
-2. Paste output into GPT for context
-
-Dashboard:
-- Run `python brain/dashboard.py` for analytics
-- Review weekly for patterns and gaps
+## Brain Integration (logs/resume)
+- Use `brain/session_logs/TEMPLATE.md` to log; ingest with `python brain/ingest_session.py session_logs/YYYY-MM-DD_topic.md`.
+- Generate resume: `python brain/generate_resume.py` before a session if you want context.
 
 ---
 
-## Version History
+## Version History (short)
+- 9.1 (Dec 2025): Added M0 Planning, Anatomy Engine, Source-Lock, drawing protocol.
+- 9.0 (Dec 2025): Restructure modules, methods, drawing protocol.
+- 8.6 (Nov 2025): Active Architect (Gated Platter, Phonetic Override, Modes).
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 9.1 | Dec 2025 | Added M0 Planning Phase, Anatomy Learning Engine, Source-Lock, Visual-First Landmark Protocol, Bone-First Attachment Loop |
-| 9.0 | Dec 2025 | Complete restructure: renumbered modules, added methods library, drawing protocol, cleaned file organization |
-| 8.6 | Nov 2025 | Active Architect: Gated Platter, Phonetic Override, Mode system |
-| 8.5.1 | Earlier | Spotter Prime: Seed-Lock enforcement |
-| 8.4 | Earlier | Tutor Edition with Safety Override |
-| 7.x | Earlier | Foundation versions with MAP/LOOP/WRAP |
-
----
-
-## Files in This System
-
-```
-sop/
-├── MASTER.md              ← You are here
-├── gpt-instructions.md    ← CustomGPT system prompt
-├── runtime-prompt.md      ← Session start script
-├── modules/
-│   ├── M0-planning.md     ← NEW: Planning phase
-│   ├── M1-entry.md
-│   ├── M2-prime.md
-│   ├── M3-encode.md
-│   ├── M4-build.md
-│   ├── M5-modes.md
-│   ├── M6-wrap.md
-│   └── anatomy-engine.md  ← NEW: Anatomy-specific protocol
-├── frameworks/
-│   ├── H-series.md
-│   ├── M-series.md
-│   └── levels.md
-├── methods/
-│   ├── desirable-difficulties.md
-│   ├── metacognition.md
-│   ├── elaborative-interrogation.md
-│   ├── retrieval-practice.md
-│   └── drawing-for-anatomy.md
-└── examples/
-    ├── gated-platter.md
-    ├── sprint-dialogue.md
-    └── commands.md
-```

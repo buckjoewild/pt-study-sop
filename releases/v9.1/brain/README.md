@@ -1,4 +1,4 @@
-# PT Study Brain v9.1
+﻿# PT Study Brain v9.1
 
 Session tracking and analytics system for the PT Study SOP.
 
@@ -35,17 +35,17 @@ python generate_resume.py
 
 ```
 brain/
-├── config.py              ← Configuration settings
-├── db_setup.py            ← Database initialization
-├── ingest_session.py      ← Parse logs → database
-├── generate_resume.py     ← Generate session resume
-├── README.md              ← This file
-├── session_logs/          ← Your session logs
-│   └── TEMPLATE.md        ← Copy this for each session
-├── data/                  ← Database storage
-│   └── pt_study.db        ← SQLite database
-└── output/                ← Generated files
-    └── session_resume.md  ← Resume for GPT context
+- config.py              # Configuration settings
+- db_setup.py            # Database initialization
+- ingest_session.py      # Parse logs -> database
+- generate_resume.py     # Generate session resume
+- README.md              # This file
+- session_logs/          # Your session logs
+    TEMPLATE.md          # Copy this for each session
+- data/                  # Database storage
+    pt_study.db          # SQLite database
+- output/                # Generated files
+    session_resume.md    # Resume for GPT context
 ```
 
 ---
@@ -54,13 +54,21 @@ brain/
 
 ### Required
 - Date, Time, Duration
-- Study Mode (Core/Sprint/Drill)
+- Study Mode (Core / Diagnostic Sprint / Teaching Sprint / Drill)
 - Main Topic
 
 ### Planning Phase
 - Target Exam/Block
 - Source-Lock (materials used)
 - Plan of Attack
+
+### Execution Details
+- Frameworks Used
+- Gated Platter Triggered (Yes/No)
+- WRAP Phase Reached (Yes/No)
+- Anki Cards Created (count)
+- Off-source drift? (Y/N)
+- Source snippets used? (Y/N)
 
 ### Anatomy-Specific
 - Region Covered
@@ -69,12 +77,17 @@ brain/
 - OIAN Completed For
 - Rollback Events (Yes/No)
 - Drawing Used (Yes/No)
+- Drawings Completed
 
 ### Ratings (1-5)
 - Understanding Level
 - Retention Confidence
 - System Performance
 - Calibration Check
+
+### Anchors
+- Anchors Locked
+- Weak Anchors (for WRAP cards)
 
 ### Reflection
 - What Worked
@@ -88,36 +101,16 @@ brain/
 ---
 
 ## Resume Output
-
-The resume generator provides:
-
-- **Readiness Score** (0-100) based on coverage, understanding, confidence
-- **Recent Sessions** with ratings and regions
-- **Topic Coverage** with freshness indicators (FRESH/FADING/STALE)
-- **Anatomy Coverage** by region with landmarks/muscles
-- **Weak Areas** needing attention
-- **Recommended Focus** for next session
+The resume generator provides readiness score, recent sessions, topic coverage freshness, anatomy coverage, weak areas, and recommended focus.
 
 ---
 
 ## Database Schema (v9.1)
-
-Key fields added in v9.1:
-- `target_exam` — Exam/block being studied for
-- `source_lock` — Materials used in session
-- `plan_of_attack` — Session plan
-- `region_covered` — Anatomy region
-- `landmarks_mastered` — Landmarks learned
-- `muscles_attached` — Muscles mapped
-- `oian_completed_for` — Full OIAN completed
-- `rollback_events` — Whether rollback occurred
-- `drawing_used` — Whether drawing was used
-- `calibration_check` — Confidence vs actual performance
+Key fields include target_exam, source_lock, plan_of_attack, region_covered, landmarks_mastered, muscles_attached, oian_completed_for, rollback_events, drawing_used, calibration_check, off_source_drift, source_snippets_used, weak_anchors.
 
 ---
 
 ## Commands
-
 | Command | What It Does |
 |---------|--------------|
 | `python db_setup.py` | Initialize or migrate database |
@@ -128,11 +121,9 @@ Key fields added in v9.1:
 ---
 
 ## Migration from v8
-
 If you have existing v8 data, run:
 ```powershell
 python db_setup.py
 # Answer 'y' when prompted to migrate
 ```
-
 Old data is preserved in `sessions_v8` table.

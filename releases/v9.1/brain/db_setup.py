@@ -46,6 +46,8 @@ def init_database():
             gated_platter_triggered TEXT,
             wrap_phase_reached TEXT,
             anki_cards_count INTEGER,
+            off_source_drift TEXT,
+            source_snippets_used TEXT,
             
             -- Anatomy-Specific (v9.1)
             region_covered TEXT,
@@ -64,6 +66,7 @@ def init_database():
             
             -- Anchors
             anchors_locked TEXT,
+            weak_anchors TEXT,
             
             -- Reflection
             what_worked TEXT,
@@ -83,6 +86,15 @@ def init_database():
             UNIQUE(session_date, session_time, main_topic)
         )
     ''')
+    # Ensure new columns exist if database was created before this patch
+    cursor.execute("PRAGMA table_info(sessions)")
+    columns = [col[1] for col in cursor.fetchall()]
+    if 'off_source_drift' not in columns:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN off_source_drift TEXT")
+    if 'source_snippets_used' not in columns:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN source_snippets_used TEXT")
+    if 'weak_anchors' not in columns:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN weak_anchors TEXT")
     
     # Create indexes for common queries
     cursor.execute('''

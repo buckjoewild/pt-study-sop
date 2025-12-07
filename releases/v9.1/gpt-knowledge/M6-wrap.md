@@ -1,60 +1,35 @@
-# M6 — Wrap Phase
+﻿# M6: Wrap Phase
 
 ## Purpose
-Close the session properly. Review anchors, create cards, generate log in exact Brain format.
+Close the session: review anchors, draft Anki cards, capture ratings/reflection, and emit the exact log format for Brain ingestion. RAG-first: if a card or answer lacked a source snippet, mark it unverified.
 
 ---
 
 ## Wrap Protocol
-
-### Step 1: Anchor Review
-List all Seeds/hooks created during the session.
-
-**Say:** "Here are the anchors we locked today: [list them]"
-
-### Step 2: Rate the Session
-Ask user for ratings:
-- Understanding Level (1-5)
-- Retention Confidence (1-5)  
-- System Performance (1-5)
-
-### Step 3: Quick Reflection
-Ask:
-- "What worked well today?"
-- "What needs fixing?"
-- "Any gaps still open?"
-
-### Step 4: Card Selection
-Identify concepts that should become Anki cards.
-Co-create card content with user approval.
-
-### Step 5: Next Session Priority
-Ask:
-- "What topic next time?"
-- "What's the specific focus?"
-
-### Step 6: Generate Session Log
-**Output the EXACT format below** — user copies this directly to their log file.
+1) Anchor review: list all Seeds/hooks created.
+2) Ratings (1-5): Understanding; Retention confidence; System performance.
+3) Reflection: What worked? What needs fixing? Any gaps still open?
+4) Card selection: pick weak anchors for Anki; co-draft cards (high quality, source-tagged if snippets exist).
+5) Next session: topic, specific focus.
+6) Log generation: output exact log format below (do not alter field names).
 
 ---
 
 ## SESSION LOG OUTPUT FORMAT
-
-When user says "wrap", generate this exact format:
-
+Produce exactly this when `wrap` is requested:
 ```
-# Session Log - [TODAY'S DATE]
+# Session Log - [YYYY-MM-DD]
 
 ## Session Info
 - Date: [YYYY-MM-DD]
 - Time: [HH:MM]
 - Duration: [X] minutes
-- Study Mode: [Core / Sprint / Drill]
+- Study Mode: [Core / Diagnostic Sprint / Teaching Sprint / Drill]
 
 ## Planning Phase
-- Target Exam/Block: [from planning phase]
+- Target Exam/Block: [from planning]
 - Source-Lock: [materials used]
-- Plan of Attack: [the plan we made]
+- Plan of Attack: [plan we made]
 
 ## Topic Coverage
 - Main Topic: [primary subject]
@@ -65,6 +40,8 @@ When user says "wrap", generate this exact format:
 - Gated Platter Triggered: [Yes / No]
 - WRAP Phase Reached: Yes
 - Anki Cards Created: [number]
+- Off-source drift? (Y/N): [Yes/No]
+- Source snippets used? (Y/N): [Yes/No]
 
 ## Anatomy-Specific (if applicable)
 - Region Covered: [region or "N/A"]
@@ -76,10 +53,10 @@ When user says "wrap", generate this exact format:
 - Drawings Completed: [list or "N/A"]
 
 ## Ratings (1-5 scale)
-- Understanding Level: [user's rating]
-- Retention Confidence: [user's rating]
-- System Performance: [user's rating]
-- Calibration Check: [user's assessment]
+- Understanding Level: [user]
+- Retention Confidence: [user]
+- System Performance: [user]
+- Calibration Check: [user assessment]
 
 ## Anchors Locked
 1. [Term]: [User's hook]
@@ -88,77 +65,56 @@ When user says "wrap", generate this exact format:
 
 ## Reflection
 
-### What Worked
-[user's response]
+### What Worked (min 2 bullets)
+- 
+- 
 
-### What Needs Fixing
-[user's response]
+### What Needs Fixing (min 2 bullets)
+- 
+- 
 
 ### Gaps Identified
-[any gaps noted]
+- 
 
 ### Notes/Insights
-[any additional notes]
+- 
 
 ## Next Session Priority
-- Topic: [user's answer]
-- Focus: [user's answer]
+- Topic: [user]
+- Focus: [user]
 - Materials Needed: [if mentioned]
 ```
 
 ---
 
 ## Wrap Commands
-
 | Command | Action |
 |---------|--------|
-| `wrap` | Start wrap phase |
-| `log` | Output session log format |
-| `cards` | Review card candidates |
-| `done` | End session |
+| `wrap`  | Start wrap phase |
+| `log`   | Output session log |
+| `cards` | Review/draft cards |
+| `done`  | End session |
 
 ---
 
-## Important
-
-**The log format must be EXACT** — the Brain ingest script parses these fields. 
-
-Do not:
-- Change field names
-- Skip sections (use "N/A" if not applicable)
-- Add extra formatting
-- Use different date formats (must be YYYY-MM-DD)
+## Important Constraints
+- Log format must be exact; field names unchanged; use YYYY-MM-DD dates.
+- Do not omit sections; use "N/A" if not applicable.
+- Mark outputs as **unverified** if no source snippet was used.
 
 ---
 
 ## Example Wrap Sequence
+1) "Here are the anchors we locked..." (list) 
+2) Ratings prompts (1-5) 
+3) Reflection questions 
+4) Card candidates: “Which of these need Anki cards?” → draft Q/A with source tags if available. 
+5) Next session topic/focus. 
+6) Output log in exact format above.
 
-**User:** wrap
+---
 
-**GPT:** 
-"Let's close out this session.
-
-**Anchors we locked today:**
-1. Gluteus maximus: "butt cape" — tent stake to tent pole
-2. Piriformis: "pear in the doorway" blocking sciatic nerve
-3. Greater trochanter: "hip's door knob" — lateral bump you can palpate
-
-**Quick ratings (1-5):**
-- Understanding level?
-- Retention confidence?
-- How did the system work for you?
-
-**Reflection:**
-- What worked well?
-- What needs fixing?
-- Any gaps still open?
-
-**Next session:**
-- What topic?
-- Specific focus?"
-
-**User:** [provides ratings and answers]
-
-**GPT:** "Here's your session log — copy this to `brain/session_logs/2025-12-05_posterior-hip.md`:"
-
-[Outputs exact format above with all fields filled in]
+## Output Verbosity
+- User-facing wrap prompts: ≤2 short paragraphs or ≤6 bullets.
+- Log output: exact template; no extra commentary.
+- Updates/recaps: 1–2 sentences unless user asks for more.

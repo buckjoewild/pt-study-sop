@@ -1,140 +1,39 @@
-# M-Series — Encoding/Logic Frameworks
+﻿# M-Series — Encoding/Logic Frameworks
 
 ## Purpose
-Convert information into understanding by framing with function-first logic. Used in M3 (Encode) and M4 (Build) phases.
+Apply function-first logic to turn information into understanding in M3 (Encode) and M4 (Build). RAG-first: cite user-provided snippets; mark unverified if none.
 
----
-
-## M2: Trigger (Default Encoding Tool)
-
-### Pattern
-```
-Trigger → Mechanism → Result → Implication
-```
-
-### When to Use
-- Processes and cause-effect relationships
-- Anything with a sequence of events
-- Most encoding situations (default)
-
-### Example: ACL Tear
-```
-Trigger: Pivot/twist with foot planted + valgus force
-Mechanism: ACL fibers exceed tensile strength → rupture
-Result: Anterior tibial translation, rotational instability
-Implication: Surgery often needed; high re-injury risk without proper rehab
-```
-
-### Instruction
-"Let's frame this with M2 — what TRIGGERS this? What's the mechanism?"
-
----
+## M2: Trigger (default)
+Pattern: Trigger -> Mechanism -> Result -> Implication
+When: processes, cause-effect chains. Prompt: “What triggers this? What’s the mechanism?”
+Example: ACL tear — pivot/valgus; fibers fail; anterior translation/instability; rehab/surgery implications.
 
 ## M6: Homeostasis
-
-### Pattern
-```
-Perturbation → Stability → Correction → Baseline
-```
-
-### When to Use
-- Regulatory systems
-- Feedback loops
-- Anything that maintains balance
-
-### Example: Blood Pressure Regulation
-```
-Perturbation: BP drops (hemorrhage, standing quickly)
-Stability: Baroreceptors detect drop
-Correction: SNS activation → vasoconstriction, increased HR
-Baseline: BP returns toward normal
-```
-
-### Instruction
-"What disturbs the system? How does it correct?"
-
----
+Pattern: Perturbation -> Stability sensor -> Correction -> Baseline
+When: regulation/feedback loops. Prompt: “What disturbs it? How is it corrected?”
+Example: BP drop -> baroreceptors -> SNS vasoconstriction/HR -> BP restored.
 
 ## M8: Diagnosis
+Pattern: Cause -> Mechanism -> Sign -> Test -> Confirmation
+When: pathology/clinical reasoning. Prompt: “Walk cause to confirmation.”
+Example: Rotator cuff tear — overuse/degeneration; tendon fails; pain/weakness; empty can/drop arm; MRI confirms.
 
-### Pattern
-```
-Cause → Mechanism → Sign → Test → Confirmation
-```
-
-### When to Use
-- Pathology
-- Clinical reasoning
-- Differential diagnosis
-
-### Example: Rotator Cuff Tear
-```
-Cause: Overuse, trauma, degeneration
-Mechanism: Tendon fibers fail → partial or full thickness tear
-Sign: Pain with overhead activity, weakness in abduction/rotation, night pain
-Test: Empty can test, drop arm test, imaging
-Confirmation: MRI shows tendon discontinuity
-```
-
-### Instruction
-"Walk through the clinical reasoning — cause to confirmation."
-
----
-
-## Y1: Generalist (Quick Overview)
-
-### Pattern
-```
-What is it → What does it do → How does it fail → What that looks like
-```
-
-### When to Use
-- Quick orientation to unfamiliar topic
-- Don't know which specific framework fits
-- Broad overview before deep dive
-
-### Example: Meniscus
-```
-What is it: C-shaped fibrocartilage pads in the knee (medial and lateral)
-What does it do: Shock absorption, load distribution, stability, lubrication
-How does it fail: Tear (degenerative or traumatic), typically medial meniscus
-What that looks like: Knee pain, catching/locking, swelling, McMurray's positive
-```
-
-### Instruction
-"Quick Y1 scan — what is it, what does it do, how does it fail?"
-
----
+## Y1: Generalist (quick overview)
+Pattern: What is it -> What does it do -> How does it fail -> What that looks like
+When: orientation or unknown framework fit. Prompt: “Quick Y1 scan.”
+Example: Meniscus — what; does; fails (tear); looks like (pain/locking/McMurray’s).
 
 ## Choosing a Framework
-
 | Situation | Use | Why |
 |-----------|-----|-----|
-| Process/sequence | M2 (Trigger) | Shows cause-effect chain |
-| Regulation/balance | M6 (Homeostasis) | Shows feedback loop |
-| Pathology/clinical | M8 (Diagnosis) | Clinical reasoning path |
-| Unknown/overview | Y1 (Generalist) | Quick orientation |
+| Process/sequence | M2 | Cause-effect chain |
+| Regulation/balance | M6 | Feedback loop |
+| Pathology/clinical | M8 | Clinical reasoning |
+| Unknown/overview | Y1 | Fast orientation |
+Default: start with M2 unless another clearly fits better.
 
-**Default:** Start with M2 unless another clearly fits better.
+## Function-before-Structure override
+State what it does before where/what it is. E.g., “ACL prevents anterior tibial translation; it runs posterior femur to anterior tibia.”
 
----
-
-## Function → Structure Override
-
-Regardless of framework, always state FUNCTION before STRUCTURE.
-
-**Wrong:** "The ACL attaches from the posterior femur to the anterior tibia."  
-**Right:** "The ACL prevents anterior tibial translation. It runs from posterior femur to anterior tibia."
-
-The job comes first. The anatomy supports the job.
-
----
-
-## Quick Reference
-
-| Framework | Pattern | Best For |
-|-----------|---------|----------|
-| M2 (Trigger) | Trigger → Mechanism → Result → Implication | Processes, cause-effect |
-| M6 (Homeostasis) | Perturbation → Correction → Baseline | Regulation, feedback |
-| M8 (Diagnosis) | Cause → Mechanism → Sign → Test → Confirmation | Pathology, clinical |
-| Y1 (Generalist) | What → Does → Fails → Looks like | Quick overview |
+## Output Verbosity
+Max 2 short paragraphs or 6 one-line bullets unless user asks for more; be concise but complete.

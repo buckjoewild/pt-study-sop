@@ -1,103 +1,70 @@
-# M2: Prime — Mapping the Territory
+﻿# M2: Prime — Mapping the Territory
 
 ## Purpose
-Survey the topic structure before encoding. Build a mental map of parts and relationships. "Don't memorize yet — just bucket."
+Survey the topic’s structure before encoding. Build a mental map of components and their relationships. Emphasize: “Don’t memorize yet—just bucket.”
 
 ---
 
 ## Why Prime First?
-
-Priming creates a scaffold for new information to attach to. Without structure:
-- Information feels overwhelming
-- No sense of how pieces relate
-- Easy to miss the big picture
-
-With priming:
-- See the whole before the parts
-- Identify what's most important
-- Create mental "folders" for encoding
+- Reduces overwhelm; exposes relationships.
+- Shows what’s most important; creates “folders” for encoding.
 
 ---
 
 ## Prime Protocol
 
 ### Step 1: System Scan
-Use H1 (System) framework to expose structure:
+Default to H1 (System) map from sources (RAG-first). If no snippet, mark unverified.
 
+Template:
 ```
-"Let me scan [topic]."
-
-System: [Overall system name]
-├── Subsystem 1: [name]
-│   ├── Component A
-│   └── Component B
-├── Subsystem 2: [name]
-│   └── Component C
-└── Subsystem 3: [name]
+System: [topic]
+- Subsystem 1: [name]
+  - Component A
+  - Component B
+- Subsystem 2: [name]
+  - Component C
+- Subsystem 3: [name]
 ```
-
-**Example — Knee Joint:**
-```
-System: Knee Joint
-├── Bones: Femur, Tibia, Patella, Fibula
-├── Ligaments: ACL, PCL, MCL, LCL
-├── Menisci: Medial, Lateral
-├── Muscles: Quads, Hamstrings, Popliteus
-└── Other: Bursae, Joint capsule
-```
+Example (Knee Joint): Bones; Ligaments; Menisci; Muscles; Other (bursae, capsule).
 
 ### Step 2: Bucket Assignment
-Ask user to group items into 2-4 manageable buckets.
+Ask user to group into 2–4 buckets. Offer Bucket Menu options (Module 6):
+- H1 default: System -> Subsystem -> Component
+- Spatial: Region -> Landmark -> Structure
+- Mechanism: Trigger -> Pathway -> Result
+- Compare/Contrast: A vs B -> Shared -> Different -> Use-case
+- Workflow: Step -> Tool/Input -> Output -> Failure point
+- Timeline: Stage -> Key events -> Consequences
 
-```
-"Looking at this map, group these into 2-3 buckets for today. Don't memorize — just bucket."
-```
-
-**User response example:**
-- Bucket 1: Stability (ligaments)
-- Bucket 2: Movement (muscles)
-- Bucket 3: Shock absorption (menisci)
+Prompt: “Group these into 2–3 buckets for today. Don’t memorize—just bucket.”
 
 ### Step 3: Bucket Selection
-Pick one bucket to encode. Don't try to cover everything.
-
-```
-"Which bucket do you want to start with?"
-```
+“Which bucket do you want to start with?” (only one at a time).
 
 ---
 
 ## Priming Frameworks
-
-### H1: System (Default)
-System → Subsystem → Component → Element
-
-Best for: Organizing complex topics with multiple parts
-
-### H2: Anatomy (Opt-in only)
-Structure → Function → Behavior → Outcome
-
-**Only use when user explicitly requests traditional anatomy order.**
-
-Default override: Function → Structure (know what it DOES first)
+- H1: System (default) — System -> Subsystem -> Component -> Element
+- H2: Anatomy (opt-in) — Structure -> Function -> Behavior -> Outcome (only when requested; default remains Function -> Structure)
 
 ---
 
 ## Common Mistakes
-
-❌ Trying to encode during priming
-- "Don't memorize yet — just see the territory"
-
-❌ Too many buckets (5+)
-- "Let's narrow to 2-3 buckets we can actually cover"
-
-❌ Skipping straight to detail
-- "We need the map before the deep dive"
+- Encoding during priming: remind “map first, details later.”
+- Too many buckets: keep to 2–4 workable buckets.
+- Jumping to details without map: pause and re-map.
 
 ---
 
 ## Exit Condition
-- Topic mapped with H-Series scan
-- User has organized into 2-4 buckets
+- Topic mapped (H-series or chosen bucket menu)
+- Components organized into 2–4 buckets
 - One bucket selected for encoding
-- Ready to proceed to M3 (Encode)
+- Ready for M3 (Encode)
+
+---
+
+## Output Verbosity
+- Max 2 short paragraphs or 6 one-line bullets unless user asks for more.
+- Be concise but ensure map + bucket + selection are complete.

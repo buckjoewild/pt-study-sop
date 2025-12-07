@@ -71,6 +71,8 @@ def parse_session_log(filepath):
     
     cards_str = extract_field(r'-\s*Anki Cards Created:\s*(\d+)', content)
     data['anki_cards_count'] = int(cards_str) if cards_str else 0
+    data['off_source_drift'] = extract_field(r'-\s*Off-source drift\?\s*\(Y/N\):\s*(.+)', content)
+    data['source_snippets_used'] = extract_field(r'-\s*Source snippets used\?\s*\(Y/N\):\s*(.+)', content)
     
     # Anatomy-Specific
     data['region_covered'] = extract_field(r'-\s*Region Covered:\s*(.+)', content)
@@ -104,6 +106,15 @@ def parse_session_log(filepath):
         data['anchors_locked'] = '\n'.join(anchors) if anchors else ''
     else:
         data['anchors_locked'] = ''
+
+    # Weak Anchors section
+    weak_match = re.search(r'## Weak Anchors.*?\n(.*?)(?=\n##|\Z)', content, re.DOTALL | re.IGNORECASE)
+    if weak_match:
+        weak_text = weak_match.group(1).strip()
+        weak_items = [w.strip('- ').strip() for w in weak_text.splitlines() if w.strip()]
+        data['weak_anchors'] = '\n'.join(weak_items)
+    else:
+        data['weak_anchors'] = ''
     
     # Reflection sections
     data['what_worked'] = extract_section('What Worked', content)
@@ -140,10 +151,25 @@ def validate_session_data(data):
         return False, f"Invalid date format: {data['session_date']} (expected YYYY-MM-DD)"
     
     # Validate study mode
-    valid_modes = ['Core', 'Sprint', 'Drill']
+    valid_modes = ['Core', 'Sprint', 'Drill', 'Diagnostic Sprint', 'Teaching Sprint']
     if data['study_mode'] not in valid_modes:
         return False, f"Invalid study mode: {data['study_mode']} (expected one of: {', '.join(valid_modes)})"
     
+    # Validate duration
+    if data.get('duration_minutes', 0) < 0:
+        return False, f"Duration must be non-negative minutes (got {data.get('duration_minutes')})"
+    
+    # Validate ratings are 1-5 when present
+    rating_fields = {
+        'Understanding Level': data.get('understanding_level'),
+        'Retention Confidence': data.get('retention_confidence'),
+        'System Performance': data.get('system_performance'),
+    }
+    for label, value in rating_fields.items():
+        if value is not None:
+            if value < 1 or value > 5:
+                return False, f"{label} must be between 1 and 5 (got {value})"
+
     return True, None
 
 def insert_session(data):
@@ -155,20 +181,22 @@ def insert_session(data):
     cursor = conn.cursor()
     
     try:
-        cursor.execute('''
+        placeholders = ", ".join(["?"] * 37)
+        cursor.execute(f'''
             INSERT INTO sessions (
                 session_date, session_time, duration_minutes, study_mode,
                 target_exam, source_lock, plan_of_attack,
                 main_topic, subtopics,
                 frameworks_used, gated_platter_triggered, wrap_phase_reached, anki_cards_count,
+                off_source_drift, source_snippets_used,
                 region_covered, landmarks_mastered, muscles_attached, oian_completed_for,
                 rollback_events, drawing_used, drawings_completed,
                 understanding_level, retention_confidence, system_performance, calibration_check,
-                anchors_locked,
+                anchors_locked, weak_anchors,
                 what_worked, what_needs_fixing, gaps_identified, notes_insights,
                 next_topic, next_focus, next_materials,
                 created_at, schema_version
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES ({placeholders})
         ''', (
             data.get('session_date'),
             data.get('session_time', ''),
@@ -183,6 +211,8 @@ def insert_session(data):
             data.get('gated_platter_triggered', ''),
             data.get('wrap_phase_reached', ''),
             data.get('anki_cards_count', 0),
+            data.get('off_source_drift', ''),
+            data.get('source_snippets_used', ''),
             data.get('region_covered', ''),
             data.get('landmarks_mastered', ''),
             data.get('muscles_attached', ''),
@@ -195,6 +225,7 @@ def insert_session(data):
             data.get('system_performance'),
             data.get('calibration_check', ''),
             data.get('anchors_locked', ''),
+            data.get('weak_anchors', ''),
             data.get('what_worked', ''),
             data.get('what_needs_fixing', ''),
             data.get('gaps_identified', ''),

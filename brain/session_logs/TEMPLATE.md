@@ -1,4 +1,4 @@
-# Session Log Template v9.1
+﻿# Session Log Template v9.1
 
 Copy this template for each study session.
 Save as: `brain/session_logs/YYYY-MM-DD_topic.md`
@@ -12,7 +12,7 @@ Then run: `python brain/ingest_session.py brain/session_logs/YYYY-MM-DD_topic.md
 - Date: YYYY-MM-DD
 - Time: HH:MM
 - Duration: [X] minutes
-- Study Mode: [Core / Sprint / Drill]
+- Study Mode: [Core / Diagnostic Sprint / Teaching Sprint / Drill]
 
 ## Planning Phase
 - Target Exam/Block: [e.g., Anatomy Final - Lower Limb]
@@ -24,10 +24,12 @@ Then run: `python brain/ingest_session.py brain/session_logs/YYYY-MM-DD_topic.md
 - Subtopics: [Comma-separated list of specific areas]
 
 ## Execution Details
-- Frameworks Used: [H1, M2, etc. — comma separated]
+- Frameworks Used: [H1, M2, etc.; comma separated]
 - Gated Platter Triggered: [Yes / No]
 - WRAP Phase Reached: [Yes / No]
 - Anki Cards Created: [Number]
+- Off-source drift? (Y/N): [Yes/No]
+- Source snippets used? (Y/N): [Yes/No]
 
 ## Anatomy-Specific (if applicable)
 - Region Covered: [e.g., Posterior Hip, Anterior Thigh, Knee]
@@ -52,6 +54,10 @@ Then run: `python brain/ingest_session.py brain/session_logs/YYYY-MM-DD_topic.md
 3. [Topic/Term]: [Your hook/metaphor]
 4. [Topic/Term]: [Your hook/metaphor]
 5. [Topic/Term]: [Your hook/metaphor]
+
+## Weak Anchors (for WRAP cards)
+- Weak anchor: [Term] because [reason]; needs card in WRAP.
+- Weak anchor: [Term] because [reason]; needs card in WRAP.
 
 ## Reflection
 

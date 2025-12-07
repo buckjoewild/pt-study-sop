@@ -155,6 +155,21 @@ def validate_session_data(data):
     if data['study_mode'] not in valid_modes:
         return False, f"Invalid study mode: {data['study_mode']} (expected one of: {', '.join(valid_modes)})"
     
+    # Validate duration
+    if data.get('duration_minutes', 0) < 0:
+        return False, f"Duration must be non-negative minutes (got {data.get('duration_minutes')})"
+    
+    # Validate ratings are 1-5 when present
+    rating_fields = {
+        'Understanding Level': data.get('understanding_level'),
+        'Retention Confidence': data.get('retention_confidence'),
+        'System Performance': data.get('system_performance'),
+    }
+    for label, value in rating_fields.items():
+        if value is not None:
+            if value < 1 or value > 5:
+                return False, f"{label} must be between 1 and 5 (got {value})"
+
     return True, None
 
 def insert_session(data):

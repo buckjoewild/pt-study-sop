@@ -54,13 +54,21 @@ brain/
 
 ### Required
 - Date, Time, Duration
-- Study Mode (Core/Sprint/Drill)
+- Study Mode (Core / Diagnostic Sprint / Teaching Sprint / Drill)
 - Main Topic
 
 ### Planning Phase
 - Target Exam/Block
 - Source-Lock (materials used)
 - Plan of Attack
+
+### Execution Details
+- Frameworks Used
+- Gated Platter Triggered (Yes/No)
+- WRAP Phase Reached (Yes/No)
+- Anki Cards Created (count)
+- Off-source drift? (Y/N)
+- Source snippets used? (Y/N)
 
 ### Anatomy-Specific
 - Region Covered
@@ -69,12 +77,17 @@ brain/
 - OIAN Completed For
 - Rollback Events (Yes/No)
 - Drawing Used (Yes/No)
+- Drawings Completed
 
 ### Ratings (1-5)
 - Understanding Level
 - Retention Confidence
 - System Performance
 - Calibration Check
+
+### Anchors
+- Anchors Locked
+- Weak Anchors (for WRAP cards)
 
 ### Reflection
 - What Worked
@@ -105,14 +118,17 @@ The resume generator provides:
 Key fields added in v9.1:
 - `target_exam` — Exam/block being studied for
 - `source_lock` — Materials used in session
-- `plan_of_attack` — Session plan
-- `region_covered` — Anatomy region
-- `landmarks_mastered` — Landmarks learned
-- `muscles_attached` — Muscles mapped
-- `oian_completed_for` — Full OIAN completed
-- `rollback_events` — Whether rollback occurred
-- `drawing_used` — Whether drawing was used
-- `calibration_check` — Confidence vs actual performance
+- `plan_of_attack` - Session plan
+- `region_covered` - Anatomy region
+- `landmarks_mastered` - Landmarks learned
+- `muscles_attached` - Muscles mapped
+- `oian_completed_for` - Full OIAN completed
+- `rollback_events` - Whether rollback occurred
+- `drawing_used` - Whether drawing was used
+- `calibration_check` - Confidence vs actual performance
+- `off_source_drift` - Whether you left declared sources
+- `source_snippets_used` - Whether source snippets were captured
+- `weak_anchors` - Anchors needing cards in WRAP
 
 ---
 

@@ -13,9 +13,9 @@ A structured study system for Doctor of Physical Therapy coursework, powered by 
 **Everything you need is in:** `releases/v9.1/`
 
 1. Open `releases/v9.1/README.md` for setup instructions
-2. Copy `GPT-INSTRUCTIONS.md` into your CustomGPT
-3. Upload all files from `gpt-knowledge/` to GPT Knowledge
-4. Run `python brain/db_setup.py` to initialize tracking
+2. From the repo root, run `python brain/db_setup.py` (Brain lives in the root repo; it is **not packaged** inside releases)
+3. Copy `GPT-INSTRUCTIONS.md` into your CustomGPT
+4. Upload all files from `gpt-knowledge/` to GPT Knowledge
 5. Start studying
 
 **One-click launcher:** Run `Run_Brain_All.bat` (repo root) to sync logs, regenerate resume, start the dashboard server, and open http://127.0.0.1:5000 automatically. Keep the new "PT Study Brain Dashboard" window open while using the site.
@@ -30,8 +30,7 @@ pt-study-sop/
 │   └── v9.1/                    ← CURRENT RELEASE (start here)
 │       ├── README.md            ← Setup instructions
 │       ├── GPT-INSTRUCTIONS.md  ← Copy to GPT Instructions field
-│       ├── gpt-knowledge/       ← Upload to GPT Knowledge (14 files)
-│       └── brain/               ← Session tracking system
+│       └── gpt-knowledge/       ← Upload to GPT Knowledge (14 files)
 ├── sop/                         ← Source files (development)
 │   ├── MASTER.md
 │   ├── gpt-instructions.md      ← Full version (reference)

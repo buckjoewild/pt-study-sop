@@ -41,6 +41,7 @@ pt-study-sop/
 │   ├── methods/
 │   └── examples/
 ├── brain/                       ← Source brain system
+├── tests/                       ← Unit tests for brain tooling
 ├── archive/                     ← Previous versions
 ├── GAP_ANALYSIS.md              ← Known gaps and roadmap
 ├── NEXT_STEPS.md                ← Implementation checklist

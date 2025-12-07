@@ -245,7 +245,7 @@ def insert_session(data):
     except sqlite3.IntegrityError as e:
         conn.close()
         if 'UNIQUE constraint' in str(e):
-            return False, "Session already exists (duplicate date/time/topic)"
+            return True, "Session already exists (skipped duplicate)"
         return False, f"Database error: {e}"
     except Exception as e:
         conn.close()

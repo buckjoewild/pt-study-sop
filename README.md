@@ -18,6 +18,8 @@ A structured study system for Doctor of Physical Therapy coursework, powered by 
 4. Run `python brain/db_setup.py` to initialize tracking
 5. Start studying
 
+**One-click launcher:** Run `Run_Brain_All.bat` (repo root) to sync logs, regenerate resume, start the dashboard server, and open http://127.0.0.1:5000 automatically. Keep the new "PT Study Brain Dashboard" window open while using the site.
+
 ---
 
 ## Repository Structure

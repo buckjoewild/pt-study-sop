@@ -1,5 +1,5 @@
 # Session Resume
-Generated: 2025-12-06 12:32
+Generated: 2025-12-06 22:58
 
 ## Readiness Score
 **57/100** (3 topics, 3 sessions in 30 days)
@@ -19,6 +19,10 @@ Generated: 2025-12-06 12:32
   - Landmarks: ischial tuberosity; ischial spine; greater trochanter; pelvic map flag shape
 - **Brain Regions (Topic 12)** (2025-02-15, 294d ago)
   - Mode: Core | Understanding: 4/5 | Confidence: 3/5
+- **Pelvis & Gluteal Region** (2025-02-06, 303d ago)
+  - Mode: Core | Understanding: 4/5 | Confidence: 4/5
+  - Region: Pelvis & gluteal region
+  - Landmarks: sacrospinous ligament; sacrotuberous ligament; greater & lesser sciatic foramina...
 
 ## Topic Coverage
 - **Anatomy - Gluteal Region & Posterior Thigh (bones + deep gluteal muscles)**: 1 sessions, last 1d ago [FRESH]
@@ -29,14 +33,19 @@ Generated: 2025-12-06 12:32
   - Avg Understanding: 3.0/5 | Avg Confidence: 3.0/5
 - **Brain Regions (Topic 12)**: 1 sessions, last 294d ago [STALE]
   - Avg Understanding: 4.0/5 | Avg Confidence: 3.0/5
+- **Pelvis & Gluteal Region**: 1 sessions, last 303d ago [STALE]
+  - Avg Understanding: 4.0/5 | Avg Confidence: 4.0/5
 
 ## Anatomy Coverage
 - **Gluteal region and posterior thigh**: 2 sessions, last 1d ago
   - Landmarks: ischial tuberosity; ischial spine; greater trochanter; pelvic map flag shape, Not recorded
-  - Muscles: quadratus femoris; piriformis; superior gemellus (review); obturator internus tendon (context), piriformis; superior gemellus; obturator internus tendon; inferior gemellus
+  - Muscles: piriformis; superior gemellus; obturator internus tendon; inferior gemellus, quadratus femoris; piriformis; superior gemellus (review); obturator internus tendon (context)
 - **Gluteal region, posterior thigh, popliteal fossa**: 1 sessions, last 1d ago
   - Landmarks: popliteal fossa borders; BF tendon lateral edge; semimembranosus bed; semitendinosus rope; pes anserinus
   - Muscles: semimembranosus; semitendinosus; biceps femoris long head; biceps femoris short head; adductor magnus
+- **Pelvis & gluteal region**: 1 sessions, last 303d ago
+  - Landmarks: sacrospinous ligament; sacrotuberous ligament; greater & lesser sciatic foramina boundaries
+  - Muscles: piriformis; obturator internus; superior gemellus; inferior gemellus
 
 ## Areas Needing Attention
 - **Anatomy - Gluteal Region & Posterior Thigh (wrap sprint + lab)**: Understanding 3.0/5, Confidence 3.0/5 (last: 1d ago)
@@ -45,6 +54,7 @@ Generated: 2025-12-06 12:32
 ## Recommended Focus
 **Due for review:**
 - Brain Regions (Topic 12) (last studied 294d ago)
+- Pelvis & Gluteal Region (last studied 303d ago)
 **Needs strengthening:**
 - Anatomy - Gluteal Region & Posterior Thigh (wrap sprint + lab) (confidence: 3.0/5)
 - Brain Regions (Topic 12) (confidence: 3.0/5)

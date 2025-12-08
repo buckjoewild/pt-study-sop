@@ -1,10 +1,10 @@
-# PT Study SOP
+﻿# PT Study SOP
 
 A structured study system for Doctor of Physical Therapy coursework, powered by the PERRIO protocol.
 
 ## Current Version: 9.1 "Structured Architect + Anatomy Engine"
 
-**Master Plan (North Star):** See `MASTER_PLAN_PT_STUDY.md` for the stable vision, invariants, and contracts every release must honor.
+**Master Plan (North Star):** See `sop/MASTER_PLAN_PT_STUDY.md` for the stable vision, invariants, and contracts every release must honor.
 
 ---
 
@@ -15,7 +15,7 @@ A structured study system for Doctor of Physical Therapy coursework, powered by 
 1. Open `releases/v9.1/README.md` for setup instructions
 2. From the repo root, run `python brain/db_setup.py` (Brain lives in the root repo; it is **not packaged** inside releases)
 3. Copy `GPT-INSTRUCTIONS.md` into your CustomGPT
-4. Upload all files from `gpt-knowledge/` to GPT Knowledge
+4. Upload all files from `gpt-knowledge/` to GPT Knowledge (or just upload the combined `PT_Study_SOP_v9.1_ALL.md` bundle)
 5. Start studying
 
 **One-click launcher:** Run `Run_Brain_All.bat` (repo root) to sync logs, regenerate resume, start the dashboard server, and open http://127.0.0.1:5000 automatically. Keep the new "PT Study Brain Dashboard" window open while using the site.
@@ -24,30 +24,25 @@ A structured study system for Doctor of Physical Therapy coursework, powered by 
 
 ## Repository Structure
 
-```
 pt-study-sop/
-├── releases/
-│   └── v9.1/                    ← CURRENT RELEASE (start here)
-│       ├── README.md            ← Setup instructions
-│       ├── GPT-INSTRUCTIONS.md  ← Copy to GPT Instructions field
-│       └── gpt-knowledge/       ← Upload to GPT Knowledge (14 files)
-├── sop/                         ← Source files (development)
-│   ├── MASTER.md
-│   ├── gpt-instructions.md      ← Full version (reference)
-│   ├── gpt-instructions-short.md← Condensed for 8k limit
-│   ├── runtime-prompt.md
-│   ├── modules/
-│   ├── frameworks/
-│   ├── methods/
-│   └── examples/
-├── brain/                       ← Source brain system
-├── tests/                       ← Unit tests for brain tooling
-├── archive/                     ← Previous versions
-├── GAP_ANALYSIS.md              ← Known gaps and roadmap
-├── NEXT_STEPS.md                ← Implementation checklist
-├── RESEARCH_TOPICS.md           ← Learning science research guide
-└── CHANGELOG.md                 ← Version history
-```
+- v9.1/ (current release bundle)
+- sop/ (source / development)
+  - MASTER_PLAN_PT_STUDY.md
+  - RESEARCH_TOPICS.md
+  - modules/
+  - frameworks/
+  - methods/
+  - examples/
+  - working/ (dev notes, PLAN_v9.2_dev.md)
+- brain/ (brain system)
+  - data/, output/, session_logs/
+  - tests/ (brain unit tests)
+- LEGACY VERSIONS/ (frozen legacy sets; referenced by SOP library)
+
+### Library & Versions (inside `sop/`)
+- Current source: modules/frameworks/methods/examples; research notes in modules/research/.
+- Legacy references: version-tagged files in protocols/, modes/, engines/, examples/, frameworks/, mechanisms/, prompts/, versions/ (sourced from LEGACY VERSIONS/).
+- Planning/Improvements: sop/working/ (ROADMAP, PLAN_v9.2_dev with approved v9.2 enhancements; Next Session Checklist).
 
 ---
 
@@ -60,7 +55,7 @@ pt-study-sop/
 | **Level Gating** | Prove understanding at L2 (teach-back) before advancing |
 | **Gated Platter** | If stuck, GPT offers raw metaphor you must personalize |
 | **Planning First** | No teaching until target + sources + plan established |
-| **Anatomy Order** | Bones → Landmarks → Attachments → OIAN → Clinical |
+| **Anatomy Order** | Bones â†’ Landmarks â†’ Attachments â†’ OIAN â†’ Clinical |
 
 ---
 
@@ -91,19 +86,23 @@ pt-study-sop/
 |----------|---------|
 | `releases/v9.1/README.md` | Setup and usage guide |
 | `sop/MASTER.md` | Complete system reference |
-| `MASTER_PLAN_PT_STUDY.md` | Stable North Star vision/invariants/contracts |
-| `CHANGELOG.md` | Version history |
-| `GAP_ANALYSIS.md` | Known gaps and future work |
-| `RESEARCH_TOPICS.md` | Learning science research topics |
+| `sop/MASTER_PLAN_PT_STUDY.md` | Stable North Star vision/invariants/contracts |
+| `sop/CHANGELOG.md` | Version history |
+| `sop/RESEARCH_TOPICS.md` | Learning science research topics |
+| `sop/working/ROADMAP.md` | Current gaps and next steps |
 
 ---
 
 ## Housekeeping (safe deletes)
-- `__pycache__/`, `.pytest_cache/` (auto-regenerated)
-- `brain/data/`, `brain/output/`, `brain/session_logs/` (generated; back up logs before deleting)
-- `archive/*.zip` are cold-storage copies of old versions; unzip only if you need them.
+- __pycache__/, .pytest_cache/ (auto-regenerated)
+- brain/data/, brain/output/, brain/session_logs/ (generated; back up logs before deleting)
 
 ## Links
+- GitHub: https://github.com/Treytucker05/pt-study-sop
+- Current Release: releases/v9.1/
 
-- **GitHub:** https://github.com/Treytucker05/pt-study-sop
-- **Current Release:** `releases/v9.1/`
+
+
+
+
+

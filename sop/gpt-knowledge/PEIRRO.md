@@ -6,7 +6,7 @@ Status: Canonical
 PEIRRO provides structure for deep learning architecture through its Prepare, Encode, Interrogate, Retrieve, Refine, Overlearn sequence.
 
 # Steps
-1. Prepare – Unspecified in source.
+1. Prepare – Orient attention by clarifying scope, relevance, and expectations before learning begins.
 2. Encode – PEIRRO method encodes knowledge.
 3. Interrogate – Unspecified in source.
 4. Retrieve – Unspecified in source.

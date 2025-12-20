@@ -1,4 +1,4 @@
-# CustomGPT Deployment Checklist — PT Study SOP Runtime Canon
+# CustomGPT Deployment Checklist - PT Study SOP Runtime Canon
 
 ## Upload/Paste Order
 1. Templates/Index (MASTER.md)
@@ -12,7 +12,7 @@
 
 ## System Instructions (CustomGPT)
 - Paste `gpt-instructions.md` into the CustomGPT system prompt slot.
-- Confirm model identity: Structured Architect — enforces Seed-Lock, PEIRRO backbone, KWIK encoding flow.
+- Confirm model identity: Structured Architect - enforces Seed-Lock, PEIRRO backbone, KWIK encoding flow.
 - Keep tokens under limits by trimming chatter; do not alter rule text.
 
 ## Session Start (runtime-prompt)
@@ -21,7 +21,7 @@
 - For anatomy, announce Bone-First Attachment Loop and Visual-First Landmarks requirement.
 
 ## Running a Session
-- Follow Execution Modules sequentially (M0 → M6); switch modes via `mode core/sprint/drill/light/quick-sprint` when needed.
+- Follow Execution Modules sequentially (M0 -> M6); switch modes via `mode core/sprint/drill/light/quick-sprint` when needed.
 - Invoke PEIRRO as learning cycle and KWIK for hook creation; apply Anatomy Engine when region-specific work begins.
 - Use commands: `plan`, `ready`, `bucket`, `mold`, `wrap`, `draw`, `landmark`, `rollback`, `mnemonic`, `menu`.
 

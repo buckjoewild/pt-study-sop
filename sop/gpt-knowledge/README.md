@@ -14,7 +14,7 @@ This folder is the authoritative Runtime Canon for the PT Study SOP. If other do
 | File | Purpose |
 | ---- | ------- |
 | `PEIRRO.md` | PEIRRO learning cycle overview. |
-| `KWIK.md` | Encoding flow: Sound → Function → Image → Resonance → Lock. |
+| `KWIK.md` | Encoding flow: Sound -> Function -> Image -> Resonance -> Lock. |
 | `M0-planning.md` | Execution Module (M0): planning gates and checks. |
 | `M1-entry.md` | Execution Module (M1): entry questions and readiness checks. |
 | `M2-prime.md` | Execution Module (M2): priming and target locking. |

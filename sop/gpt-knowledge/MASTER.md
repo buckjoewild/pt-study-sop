@@ -1,4 +1,4 @@
-# PT Study SOP — Runtime Canon Index
+# PT Study SOP - Runtime Canon Index
 
 ## What this is
 This folder is the Runtime Canon for PT Study SOP: the authoritative, in-use set of prompts, modules, and engines. Use this index to find the right file to load into GPT and to understand the sequence for building a session. If conflicting instructions appear elsewhere in the repo, defer to the files listed here.
@@ -11,7 +11,7 @@ This folder is the Runtime Canon for PT Study SOP: the authoritative, in-use set
 | MASTER.md | Lightweight index of Runtime Canon materials |
 | gpt-instructions.md | CustomGPT system instructions for PT Study SOP (Runtime Canon) |
 | runtime-prompt.md | Session start prompt to paste at the beginning of each run |
-| PEIRRO.md | Core learning backbone (Prepare → Encode → Interrogate → Retrieve → Refine → Overlearn) |
+| PEIRRO.md | Core learning backbone (Prepare -> Encode -> Interrogate -> Retrieve -> Refine -> Overlearn) |
 | KWIK.md | Encoding flow for hooks/terms and memory cues |
 | H-series.md | Hierarchy frameworks for priming and mapping topics |
 | M-series.md | Mechanism frameworks for encoding and causal logic |
@@ -29,7 +29,7 @@ This folder is the Runtime Canon for PT Study SOP: the authoritative, in-use set
 ## How to use
 - Paste `gpt-instructions.md` into your CustomGPT system instructions.
 - Paste `runtime-prompt.md` at the start of each session.
-- Follow Execution Modules M0–M6 in order, adding `anatomy-engine.md` when studying anatomy.
+- Follow Execution Modules M0-M6 in order, adding `anatomy-engine.md` when studying anatomy.
 - Use PEIRRO as the backbone for the learning cycle and KWIK as the encoding flow for hooks/terms.
 
 ## Source of truth

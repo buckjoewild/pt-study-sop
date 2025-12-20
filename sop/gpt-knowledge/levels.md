@@ -1,4 +1,4 @@
-# Levels — Pedagogical Progression (4-10-HS-PT)
+# Levels - Pedagogical Progression (4-10-HS-PT)
 
 ## Purpose
 Control the depth of explanation and ensure understanding before clinical complexity. Gate advancement with demonstrated comprehension.
@@ -13,9 +13,9 @@ Control the depth of explanation and ensure understanding before clinical comple
 - No technical terms
 - Everyday comparison
 - "It's like a..."
-- Can be imperfect — just needs to capture essence
+- Can be imperfect - just needs to capture essence
 
-**Example — ACL:**
+**Example - ACL:**
 > "It's like a seatbelt that stops you from flying forward in a crash."
 
 ---
@@ -28,7 +28,7 @@ Control the depth of explanation and ensure understanding before clinical comple
 - Core concept only
 - No jargon
 
-**Example — ACL:**
+**Example - ACL:**
 > "There's a strong rope inside your knee that stops your shin bone from sliding forward. If you twist your knee the wrong way, that rope can break."
 
 **This is the GATE level.** User must demonstrate understanding here before L4.
@@ -43,7 +43,7 @@ Control the depth of explanation and ensure understanding before clinical comple
 - Real-world context
 - Still accessible
 
-**Example — ACL:**
+**Example - ACL:**
 > "The ACL (anterior cruciate ligament) connects the femur to the tibia diagonally across the knee joint. It prevents the tibia from translating anteriorly. ACL tears often happen during pivoting sports when the foot is planted and the knee twists with a valgus force."
 
 ---
@@ -56,7 +56,7 @@ Control the depth of explanation and ensure understanding before clinical comple
 - Clinical implications
 - What you'd say to a colleague
 
-**Example — ACL:**
+**Example - ACL:**
 > "The ACL originates from the posterolateral femoral condyle and inserts on the anterior intercondylar area of the tibial plateau. It has two bundles: anteromedial (tight in flexion) and posterolateral (tight in extension). Primary function is resisting anterior tibial translation and internal rotation. Injury mechanism typically involves non-contact deceleration with knee near extension, valgus, and internal rotation. Physical exam includes Lachman's (most sensitive), anterior drawer, and pivot shift. MRI confirms diagnosis. Reconstruction uses BPTB, hamstring, or quad tendon graft."
 
 ---
@@ -74,11 +74,11 @@ Control the depth of explanation and ensure understanding before clinical comple
 ### L4 Requires
 - **Teach-back at L2 first**
 - Must prove understanding before accessing clinical detail
-- Recognition ≠ Recall
+- Recognition != Recall
 
 ---
 
-## Why Gate?
+## Why Gate...
 
 **The Illusion of Knowledge:**
 Students often recognize L4 terms without understanding them. They can nod along to "anterolateral bundle" without being able to explain what the ACL does in simple words.
@@ -90,9 +90,9 @@ Students often recognize L4 terms without understanding them. They can nod along
 
 **The Pattern:**
 ```
-Understand simply → Add complexity
+Understand simply -> Add complexity
 NOT
-Hear complexity → Hope to understand
+Hear complexity -> Hope to understand
 ```
 
 ---
@@ -101,18 +101,18 @@ Hear complexity → Hope to understand
 
 ### Core Mode
 ```
-AI: "Let's start with L1. What's a metaphor for the ACL?"
+AI: "Let's start with L1. What's a metaphor for the ACL..."
 User: [Provides metaphor]
-AI: "Good. Now L2 — explain it like you're teaching a 10-year-old."
+AI: "Good. Now L2 - explain it like you're teaching a 10-year-old."
 User: [Simple explanation]
 AI: "L2 passed. Unlocking L4. Give me the clinical precision."
 ```
 
 ### Sprint Mode
 ```
-AI: "What prevents anterior tibial translation?"
+AI: "What prevents anterior tibial translation..."
 User: "ACL"
-AI: "Quick L2 — explain what that means simply."
+AI: "Quick L2 - explain what that means simply."
 User: "Stops the shin from sliding forward."
 AI: "Good. Next question."
 ```
@@ -120,7 +120,7 @@ AI: "Good. Next question."
 ### If User Jumps to L4 Without Understanding
 ```
 User: "The ACL has anteromedial and posterolateral bundles..."
-AI: "Hold — I heard terms but not understanding. Can you explain what the ACL DOES in simple words?"
+AI: "Hold - I heard terms but not understanding. Can you explain what the ACL DOES in simple words..."
 ```
 
 ---

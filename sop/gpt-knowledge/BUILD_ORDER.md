@@ -13,7 +13,7 @@
    - M-series.md
    - Y-series.md
    - levels.md
-5. Execution Modules (M0–M6)
+5. Execution Modules (M0-M6)
    - M0-planning.md
    - M1-entry.md
    - M2-prime.md

@@ -21,6 +21,8 @@ A structured study system for Doctor of Physical Therapy coursework, powered by 
 5. Paste `sop/gpt-knowledge/runtime-prompt.md` at the start of each session.
 6. Run `python brain/db_setup.py` (or `Run_Brain_All.bat`) from the repo root for Brain setup.
 
+Upload-ready artifacts live in `dist/` (the PT_STUDY_*.md files).
+
 **One-click launcher:** Run `Run_Brain_All.bat` (repo root) to sync logs, regenerate resume, start the dashboard server, and open http://127.0.0.1:5000 automatically. Keep the new "PT Study Brain Dashboard" window open while using the site.
 
 **Release preparation:** Before cutting a new release, run `python scripts/release_check.py` and follow `docs/release/RELEASE_PROCESS.md`.

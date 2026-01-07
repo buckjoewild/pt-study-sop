@@ -40,6 +40,11 @@ Then run: `python brain/ingest_session.py brain/session_logs/YYYY-MM-DD_topic.md
 - Prompt Drift? (Y/N):
 - Prompt Drift Notes:
 
+- Errors / Misconceptions (required):
+  - Conceptual:
+  - Discrimination (X vs Y):
+  - Recall:
+
 ## Anatomy-Specific (if applicable)
 - Region Covered: [e.g., Posterior Hip, Anterior Thigh, Knee]
 - Landmarks Mastered: [List landmarks you can now identify and locate]

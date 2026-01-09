@@ -422,9 +422,11 @@ if (btnTutorSend && tutorQuestion && tutorAnswerBox) {
 }
 
 // Syllabus intake form handling
-syllabusForm.addEventListener('submit', async (e) => {
+if (syllabusForm) syllabusForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  syllabusStatus.innerHTML = '<div class="upload-status" style="background: var(--accent-light); color: var(--accent);">Saving...</div>';
+  if (syllabusStatus) {
+    syllabusStatus.innerHTML = '<div class="upload-status" style="background: var(--accent-light); color: var(--accent);">Saving...</div>';
+  }
 
   const payload = {
     name: document.getElementById('course_name').value,
@@ -442,7 +444,9 @@ syllabusForm.addEventListener('submit', async (e) => {
   };
 
   if (!payload.name || !payload.event_title) {
-    syllabusStatus.innerHTML = '<div class="upload-status error">Course name and event title are required.</div>';
+    if (syllabusStatus) {
+      syllabusStatus.innerHTML = '<div class="upload-status error">Course name and event title are required.</div>';
+    }
     return;
   }
 
@@ -454,17 +458,23 @@ syllabusForm.addEventListener('submit', async (e) => {
     });
     const data = await res.json();
     if (!data.ok) {
-      syllabusStatus.innerHTML = `<div class="upload-status error">[ERROR] ${data.message || 'Syllabus save failed.'}</div>`;
+      if (syllabusStatus) {
+        syllabusStatus.innerHTML = `<div class="upload-status error">[ERROR] ${data.message || 'Syllabus save failed.'}</div>`;
+      }
       return;
     }
-    syllabusStatus.innerHTML = `<div class="upload-status success">[OK] ${data.message}</div>`;
+    if (syllabusStatus) {
+      syllabusStatus.innerHTML = `<div class="upload-status success">[OK] ${data.message}</div>`;
+    }
   } catch (error) {
-    syllabusStatus.innerHTML = `<div class="upload-status error">[ERROR] ${error.message}</div>`;
+    if (syllabusStatus) {
+      syllabusStatus.innerHTML = `<div class="upload-status error">[ERROR] ${error.message}</div>`;
+    }
   }
 });
 
 // Syllabus JSON import (ChatGPT helper)
-btnSyllabusJsonImport.addEventListener('click', async () => {
+if (btnSyllabusJsonImport && syllabusJsonInput && syllabusJsonStatus) btnSyllabusJsonImport.addEventListener('click', async () => {
   const raw = (syllabusJsonInput.value || '').trim();
   if (!raw) {
     syllabusJsonStatus.innerHTML = '<div class="upload-status error">Paste JSON from ChatGPT first.</div>';
@@ -498,7 +508,7 @@ btnSyllabusJsonImport.addEventListener('click', async () => {
 });
 
 // Copy syllabus prompt to clipboard
-btnSyllabusPromptCopy.addEventListener('click', async () => {
+if (btnSyllabusPromptCopy && syllabusPromptTemplate) btnSyllabusPromptCopy.addEventListener('click', async () => {
   try {
     await navigator.clipboard.writeText(syllabusPromptTemplate.value);
     btnSyllabusPromptCopy.textContent = 'Copied!';

@@ -98,31 +98,84 @@ def init_database():
         )
     """
     )
-    # Ensure new columns exist if database was created before this patch
+    # Ensure all columns exist (migration for older databases)
     cursor.execute("PRAGMA table_info(sessions)")
-    columns = [col[1] for col in cursor.fetchall()]
-    if "off_source_drift" not in columns:
-        cursor.execute("ALTER TABLE sessions ADD COLUMN off_source_drift TEXT")
-    if "source_snippets_used" not in columns:
-        cursor.execute("ALTER TABLE sessions ADD COLUMN source_snippets_used TEXT")
-    if "sop_modules_used" not in columns:
-        cursor.execute("ALTER TABLE sessions ADD COLUMN sop_modules_used TEXT")
-    if "engines_used" not in columns:
-        cursor.execute("ALTER TABLE sessions ADD COLUMN engines_used TEXT")
-    if "core_learning_modules_used" not in columns:
-        cursor.execute("ALTER TABLE sessions ADD COLUMN core_learning_modules_used TEXT")
-    if "prompt_drift" not in columns:
-        cursor.execute("ALTER TABLE sessions ADD COLUMN prompt_drift TEXT")
-    if "prompt_drift_notes" not in columns:
-        cursor.execute("ALTER TABLE sessions ADD COLUMN prompt_drift_notes TEXT")
-    if "weak_anchors" not in columns:
-        cursor.execute("ALTER TABLE sessions ADD COLUMN weak_anchors TEXT")
-    if "topic" not in columns:
-        cursor.execute("ALTER TABLE sessions ADD COLUMN topic TEXT")
-    if "time_spent_minutes" not in columns:
-        cursor.execute(
-            "ALTER TABLE sessions ADD COLUMN time_spent_minutes INTEGER DEFAULT 0"
-        )
+    existing_columns = {col[1] for col in cursor.fetchall()}
+    
+    # Define all required columns with their types (from CREATE TABLE above)
+    required_columns = {
+        "id": "INTEGER PRIMARY KEY AUTOINCREMENT",
+        "session_date": "TEXT NOT NULL",
+        "session_time": "TEXT NOT NULL",
+        "time_spent_minutes": "INTEGER NOT NULL DEFAULT 0",
+        "duration_minutes": "INTEGER DEFAULT 0",
+        "study_mode": "TEXT NOT NULL",
+        "topic": "TEXT",
+        "target_exam": "TEXT",
+        "source_lock": "TEXT",
+        "plan_of_attack": "TEXT",
+        "main_topic": "TEXT",
+        "subtopics": "TEXT",
+        "frameworks_used": "TEXT",
+        "sop_modules_used": "TEXT",
+        "engines_used": "TEXT",
+        "core_learning_modules_used": "TEXT",
+        "gated_platter_triggered": "TEXT",
+        "wrap_phase_reached": "TEXT",
+        "anki_cards_count": "INTEGER",
+        "off_source_drift": "TEXT",
+        "source_snippets_used": "TEXT",
+        "prompt_drift": "TEXT",
+        "prompt_drift_notes": "TEXT",
+        "region_covered": "TEXT",
+        "landmarks_mastered": "TEXT",
+        "muscles_attached": "TEXT",
+        "oian_completed_for": "TEXT",
+        "rollback_events": "TEXT",
+        "drawing_used": "TEXT",
+        "drawings_completed": "TEXT",
+        "understanding_level": "INTEGER",
+        "retention_confidence": "INTEGER",
+        "system_performance": "INTEGER",
+        "calibration_check": "TEXT",
+        "anchors_locked": "TEXT",
+        "weak_anchors": "TEXT",
+        "what_worked": "TEXT",
+        "what_needs_fixing": "TEXT",
+        "gaps_identified": "TEXT",
+        "notes_insights": "TEXT",
+        "next_topic": "TEXT",
+        "next_focus": "TEXT",
+        "next_materials": "TEXT",
+        "created_at": "TEXT NOT NULL",
+        "schema_version": "TEXT DEFAULT '9.1'",
+    }
+    
+    # Add missing columns (skip id and constraints that can't be added via ALTER TABLE)
+    added_count = 0
+    for col_name, col_type in required_columns.items():
+        if col_name not in existing_columns and col_name != "id":
+            # Simplify type for ALTER TABLE (avoid NOT NULL on existing tables with data)
+            if "INTEGER" in col_type:
+                if "DEFAULT 0" in col_type:
+                    sql_type = "INTEGER DEFAULT 0"
+                else:
+                    sql_type = "INTEGER"
+            elif "DEFAULT '9.1'" in col_type:
+                sql_type = "TEXT DEFAULT '9.1'"
+            else:
+                sql_type = "TEXT"
+            
+            try:
+                cursor.execute(f"ALTER TABLE sessions ADD COLUMN {col_name} {sql_type}")
+                added_count += 1
+                print(f"[INFO] Added missing column: {col_name}")
+            except sqlite3.OperationalError:
+                # Column might already exist - skip silently
+                pass
+    
+    if added_count > 0:
+        print(f"[INFO] Added {added_count} missing column(s) to sessions table")
 
     # ------------------------------------------------------------------
     # Additive tables for courses, events, topics, study tasks, and RAG
@@ -384,21 +437,24 @@ def get_schema_version():
     conn.close()
     return version
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("PT Study Brain - Database Setup")
     print("=" * 40)
-    
+
     if os.path.exists(DB_PATH):
         print(f"[INFO] Existing database found at: {DB_PATH}")
         version = get_schema_version()
         print(f"[INFO] Current schema version: {version}")
-        
+
         if version != "9.1":
             response = input("Migrate to v9.1 schema? (y/n): ")
-            if response.lower() == 'y':
+            if response.lower() == "y":
                 migrate_from_v8()
             else:
                 print("[INFO] Skipping migration")
     else:
         print("[INFO] No existing database found")
-        init_database()
+
+    # Always run init_database() to ensure schema is fully up to date
+    # (adds any missing columns and creates new planning/RAG tables).
+    init_database()

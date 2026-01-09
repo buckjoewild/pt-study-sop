@@ -1,4 +1,11 @@
 {
+  "safe_mode": false,
+  "repo_paths": [
+    "sop/",
+    "scholar/",
+    "brain/",
+    "dist/"
+  ],
   "tutor_paths": [
     "sop/gpt-knowledge/gpt-instructions.md",
     "sop/gpt-knowledge/runtime-prompt.md",

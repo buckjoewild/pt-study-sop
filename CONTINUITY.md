@@ -1,48 +1,37 @@
 Goal (incl. success criteria):
-- Execute Scholar Orchestrator unattended runbook for pt-study-sop.
+- Add trend visualization to Brain dashboard Overview tab.
 - Success criteria:
-  1. Read `scholar/workflows/orchestrator_loop.md` and `scholar/inputs/audit_manifest.json`.
-  2. Initialize run paths and empty questions file.
-  3. Refresh repo index and coverage checklist.
-  4. Select scope per Coverage Selection Policy and produce at least one required artifact outside `orchestrator_runs/`.
-  5. Log actions to `scholar/outputs/orchestrator_runs/run_<YYYY-MM-DD>.md` and update checklist status.
+  1. Add `get_trend_data(days=30)` function in dashboard/stats.py. ✓
+  2. Add `GET /api/trends?days=30` endpoint in dashboard/routes.py. ✓
+  3. Add "Study Trends" section with canvas and period dropdown in dashboard.html. ✓
+  4. Add JS to fetch and render line chart with understanding/retention in dashboard.js. ✓
+  5. Add CSS styles for trends section in dashboard.css. ✓
 
 Constraints/Assumptions:
-- Unattended, non-interactive; do not ask questions in terminal.
-- Read-only for `sop/`, `brain/`, and `dist/`.
-- Use defaults: module group M0–M6 cycle + bridges; no Promotion Queue unless authorized and safe_mode true.
-- If clarification needed, write to `scholar/outputs/orchestrator_runs/questions_needed_<run>.md` and continue.
-- Safe mode: do not generate Promotion Queue artifacts when `safe_mode` is false.
+- Use simple canvas line chart (no external libs).
+- Reuse existing chart patterns from modeChart.
+- Handle empty data gracefully.
+- Make chart responsive.
 
 Key decisions:
-- `audit_manifest.json` safe_mode=false; do not create Promotion Queue artifacts.
-- Run date set to 2026-01-09.
+- Query sessions table, group by date, calculate daily averages.
+- Purple line for understanding, blue line for retention.
+- Support 7/14/30 day periods via dropdown.
 
 State:
-  - Done:
-    - Read required inputs (`orchestrator_loop.md`, `audit_manifest.json`).
-    - Created `scholar/outputs/orchestrator_runs/questions_needed_2026-01-09.md` (empty).
-    - Refreshed `scholar/outputs/system_map/repo_index_2026-01-09.md` from sop/, scholar/, brain/ scan.
-    - Updated `scholar/outputs/system_map/coverage_checklist_2026-01-09.md` and marked Frameworks (Levels, H/M/Y) complete.
-    - Created dossier `scholar/outputs/module_dossiers/frameworks_levels_hmy_dossier_2026-01-09.md`.
-    - Appended run summary to `scholar/outputs/orchestrator_runs/run_2026-01-09.md`.
-  - Now:
-    - Await next unattended run or additional scope.
-  - Next:
-    - If run continues, process remaining in-progress item (Infrastructure: gpt-instructions).
+  - Done: Trend visualization feature complete.
+  - Now: Ready for testing.
+  - Next: User validation.
 
 Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
-- CONTINUITY.md
-- scholar/workflows/orchestrator_loop.md
-- scholar/inputs/audit_manifest.json
-- scholar/outputs/orchestrator_runs/questions_needed_2026-01-09.md
-- scholar/outputs/system_map/repo_index_2026-01-09.md
-- scholar/outputs/system_map/coverage_checklist_2026-01-09.md
-- scholar/outputs/module_dossiers/frameworks_levels_hmy_dossier_2026-01-09.md
-- scholar/outputs/orchestrator_runs/run_2026-01-09.md
+- brain/dashboard/stats.py
+- brain/dashboard/routes.py
+- brain/templates/dashboard.html
+- brain/static/js/dashboard.js
+- brain/static/css/dashboard.css
 
 Notes:
 - Study RAG directory can be overridden via env var PT_STUDY_RAG_DIR (currently set in Run_Brain_All.bat to C:\Users\treyt\OneDrive\Desktop\PT School)

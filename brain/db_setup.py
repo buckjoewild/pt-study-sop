@@ -5,7 +5,6 @@ Database setup and schema initialization for PT Study Brain v9.1.
 
 import sqlite3
 import os
-from datetime import datetime
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "data", "pt_study.db")
 
@@ -452,6 +451,36 @@ def init_database():
         """
         CREATE INDEX IF NOT EXISTS idx_tutor_turns_topic
         ON tutor_turns(topic_id)
+    """
+    )
+
+    # ------------------------------------------------------------------
+    # Topic Mastery tracking table (for relearning/weak area detection)
+    # ------------------------------------------------------------------
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS topic_mastery (
+            topic TEXT PRIMARY KEY,
+            study_count INTEGER DEFAULT 1,
+            last_studied TEXT,
+            first_studied TEXT,
+            avg_understanding REAL,
+            avg_retention REAL
+        )
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_topic_mastery_count
+        ON topic_mastery(study_count)
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_topic_mastery_last_studied
+        ON topic_mastery(last_studied)
     """
     )
 

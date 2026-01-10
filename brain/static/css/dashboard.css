@@ -15,9 +15,13 @@
   --primary-rgb: 59, 130, 246; 
   --primary-glow: 0 0 20px rgba(59, 130, 246, 0.3);
   
-  --accent: #8B5CF6;          
-  --accent-rgb: 139, 92, 246;
-  --accent-glow: 0 0 20px rgba(139, 92, 246, 0.3);
+  --accent: #EF4444;          
+  --accent-rgb: 239, 68, 68;
+  --accent-glow: 0 0 20px rgba(239, 68, 68, 0.3);
+  
+  /* Legacy color variables (for compatibility) */
+  --purple: #EF4444;
+  --cyan: #94A3B8;
   
   --success: #10B981;
   --success-rgb: 16, 185, 129;
@@ -135,7 +139,7 @@
     .logo-icon {
       width: 36px;
       height: 36px;
-      background: linear-gradient(135deg, var(--accent), var(--purple));
+      background: linear-gradient(135deg, var(--accent), #B91C1C);
       border-radius: 10px;
       display: flex;
       align-items: center;
@@ -195,7 +199,7 @@
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      background: linear-gradient(135deg, var(--cyan), var(--accent));
+      background: linear-gradient(135deg, #64748B, var(--accent));
       display: flex;
       align-items: center;
       justify-content: center;
@@ -993,5 +997,52 @@
     .bento-grid { grid-template-columns: 1fr; }
     .stat-card.mini, .hero-section, .upload-slim { grid-column: span 1; }
     .insights-grid { grid-template-columns: 1fr; }
+}
+
+/* Trends Chart Section */
+#trends-container {
+    position: relative;
+    width: 100%;
+    min-height: 180px;
+}
+
+#trends-chart {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+#trends-empty {
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+#trends-period {
+    background: var(--surface-2);
+    border: 1px solid var(--surface-3);
+    border-radius: 6px;
+    padding: 6px 12px;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+#trends-period:hover {
+    border-color: var(--primary);
+}
+
+#trends-period:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.2);
+}
+
+#trends-legend {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
 }
 

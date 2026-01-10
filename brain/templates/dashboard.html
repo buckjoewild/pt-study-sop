@@ -48,98 +48,209 @@
     
     <!-- Overview Tab -->
     <section id="tab-overview" class="tab-panel active">
-      <div class="overview-header" style="margin-bottom: 24px;">
-        <h2 class="page-title" style="margin:0; font-size: 1.5rem; color: var(--text-primary);">Dashboard Overview</h2>
-      </div>
+      <style>
+        #overview-wrapper {
+          /* Force Dark Theme & Font locally */
+          --bg-deep: #0b0c10;
+          --card-bg: rgba(30, 35, 45, 0.6);
+          --border-color: rgba(255, 255, 255, 0.1);
+          --text-main: #f1f5f9;
+          --text-muted: #94a3b8;
+          --accent-red: #EF4444;
+          
+          /* Red/black gradient for Glassmorphism */
+          background: radial-gradient(circle at 15% 50%, rgba(239, 68, 68, 0.15), transparent 25%),
+                      radial-gradient(circle at 85% 30%, rgba(100, 116, 139, 0.15), transparent 25%),
+                      var(--bg-deep);
+          
+          color: var(--text-main);
+          font-family: system-ui, -apple-system, sans-serif;
+          padding: 32px;
+          border-radius: 12px;
+          box-sizing: border-box;
+        }
 
-      <div class="bento-grid">
-        <div class="stat-card mini">
-          <div class="stat-icon blue">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-          </div>
-          <div>
-            <div class="stat-value" id="total-sessions">-</div>
-            <div class="stat-label">Total Sessions</div>
-            <div class="stat-sub" id="sessions-subtitle">Last 30 days</div>
-          </div>
+        #overview-wrapper * { box-sizing: border-box; }
+
+        /* Grid System */
+        .dashboard-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr); /* Force 4 columns */
+          gap: 24px;
+          margin-top: 24px;
+        }
+
+        /* Cards */
+        .d-card {
+          background: var(--card-bg);
+          border: 1px solid var(--border-color);
+          border-radius: 16px;
+          padding: 20px;
+          backdrop-filter: blur(12px); /* The Glass Blur */
+          -webkit-backdrop-filter: blur(12px);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Mini Stats */
+        .d-card.mini {
+          grid-column: span 1;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          transition: transform 0.2s;
+        }
+        .d-card.mini:hover {
+          transform: translateY(-4px);
+          border-color: var(--accent-red);
+        }
+
+        /* Spanning Cards */
+        .d-card.hero { grid-column: span 4; min-height: 250px; }
+        .d-card.upload { grid-column: span 4; cursor: pointer; border-style: dashed; }
+
+        /* Icons */
+        .d-icon {
+          width: 48px; height: 48px;
+          background: rgba(255,255,255,0.05);
+          border-radius: 12px;
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0;
+        }
+        .d-icon svg { width: 24px; height: 24px; stroke: var(--text-main); }
+
+        /* Chart Container (Prevent Explosion) */
+        .chart-box { height: 120px; width: 120px; position: relative; }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+          .dashboard-grid { grid-template-columns: 1fr 1fr; }
+          .d-card.hero, .d-card.upload { grid-column: span 2; }
+        }
+        @media (max-width: 600px) {
+          .dashboard-grid { display: flex; flex-direction: column; }
+        }
+      </style>
+
+      <div id="overview-wrapper">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h2 style="margin:0;">Dashboard Overview</h2>
+          <span style="font-size:0.85rem; color:#94a3b8;">Welcome back</span>
         </div>
 
-        <div class="stat-card mini">
-          <div class="stat-icon purple">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-          </div>
-          <div>
-            <div class="stat-value" id="total-time">-</div>
-            <div class="stat-label">Total Time</div>
-            <div class="stat-sub" id="time-subtitle">Avg. -/day</div>
-          </div>
-        </div>
-
-        <div class="stat-card mini">
-          <div class="stat-icon cyan">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-          </div>
-          <div style="display:flex; gap:12px; align-items:center;">
-            <div class="progress-ring small" style="position:relative; width:48px; height:48px;">
-              <svg width="48" height="48" viewBox="0 0 64 64" style="transform: rotate(-90deg);">
-                <circle cx="32" cy="32" r="26" stroke="var(--surface-3)" stroke-width="6" fill="none"></circle>
-                <circle id="progress-circle" cx="32" cy="32" r="26" stroke="var(--primary)" stroke-width="6" fill="none" stroke-dasharray="163.36" stroke-dashoffset="163.36"></circle>
-              </svg>
-              <div id="avg-score" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:10px; font-weight:bold; color:var(--text-primary);">-%</div>
+        <div class="dashboard-grid">
+          
+          <div class="d-card mini">
+            <div class="d-icon" style="color:#EF4444;">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             </div>
-            <div class="score-details" style="font-size:10px; color:var(--text-secondary);">
-              <div>U: <span id="avg-u" style="color:var(--text-primary)">-</span></div>
-              <div>R: <span id="avg-r" style="color:var(--text-primary)">-</span></div>
-              <div>S: <span id="avg-s" style="color:var(--text-primary)">-</span></div>
+            <div>
+              <div style="font-size:1.5rem; font-weight:700;" id="total-sessions">0</div>
+              <div style="font-size:0.85rem; color:#94a3b8;">Total Sessions</div>
             </div>
           </div>
-        </div>
 
-        <div class="stat-card mini">
-          <div class="stat-icon green">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+          <div class="d-card mini">
+            <div class="d-icon" style="color:#64748B;">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            </div>
+            <div>
+              <div style="font-size:1.5rem; font-weight:700;" id="total-time">0h</div>
+              <div style="font-size:0.85rem; color:#94a3b8;">Study Time</div>
+            </div>
           </div>
-          <div>
-            <div class="stat-value" id="anki-cards">-</div>
-            <div class="stat-label">Cards Reviewed</div>
-            <div class="stat-sub" id="anki-subtitle">Due today: -</div>
-          </div>
-        </div>
 
-        <div class="glass-card hero-section" id="patterns">
-          <div class="insights-grid">
-            <div class="insight-col center">
-              <div style="height:120px; width:120px; position:relative;">
-                <canvas id="modeChart"></canvas>
+          <div class="d-card mini">
+            <div class="d-icon" style="color:#10b981;">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            </div>
+            <div>
+              <div style="font-size:1.5rem; font-weight:700;" id="avg-score">-%</div>
+              <div style="font-size:0.85rem; color:#94a3b8;">Avg. Score</div>
+            </div>
+          </div>
+
+          <div class="d-card mini">
+            <div class="d-icon" style="color:#f59e0b;">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            </div>
+            <div>
+              <div style="font-size:1.5rem; font-weight:700;" id="anki-cards">0</div>
+              <div style="font-size:0.85rem; color:#94a3b8;">Cards Due</div>
+            </div>
+          </div>
+
+          <div class="d-card hero" id="patterns">
+            <div style="border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px; margin-bottom:20px;">
+              <h3 style="margin:0; font-size:1.1rem;">Patterns & Insights</h3>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; align-items:start;">
+              <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
+                 <div class="chart-box"><canvas id="modeChart"></canvas></div>
+                 <div id="mode-legend" style="display:flex; flex-wrap:wrap; gap:12px; font-size:0.75rem; color:#94a3b8;"></div>
+              </div>
+              
+              <div>
+                <h4 style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8; margin-bottom:8px;">Focus Areas</h4>
+                <div style="font-size:0.9rem;">
+                  <div style="margin-bottom:5px;"><span style="color:#ef4444;">•</span> Weak: <span id="weak-topics">-</span></div>
+                  <div><span style="color:#10b981;">•</span> Strong: <span id="strong-topics">-</span></div>
+                </div>
+              </div>
+              
+              <div>
+                <h4 style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8; margin-bottom:8px;">Retrospective</h4>
+                 <ul id="what-worked" style="padding-left:15px; margin:0; list-style:none; font-size:0.9rem; color:#94a3b8;">
+                     <li>waiting for data...</li>
+                 </ul>
               </div>
             </div>
-            <div class="insight-col">
-              <h4 style="font-size:0.75rem; font-weight:bold; color:var(--text-tertiary); text-transform:uppercase; mb-2">Top Frameworks</h4>
-              <div id="frameworks-list" class="framework-chips"></div>
-            </div>
-            <div class="insight-col">
-              <h4 style="font-size:0.75rem; font-weight:bold; color:var(--text-tertiary); text-transform:uppercase; mb-2">Focus Areas</h4>
-              <div class="topic-group"><span class="text-error" style="font-size:0.75rem;">Weak:</span> <span id="weak-topics" style="font-size:0.875rem;">-</span></div>
-              <div class="topic-group mt-2"><span class="text-success" style="font-size:0.75rem;">Strong:</span> <span id="strong-topics" style="font-size:0.875rem;">-</span></div>
-            </div>
-            <div class="insight-col">
-              <h4 style="font-size:0.75rem; font-weight:bold; color:var(--text-tertiary); text-transform:uppercase; mb-2">Retrospective</h4>
-              <div class="mb-2"><span class="text-muted" style="font-size:0.75rem;">Worked:</span> <ul id="what-worked" class="bullet-list success"></ul></div>
-              <div><span class="text-muted" style="font-size:0.75rem;">Issues:</span> <ul id="issues-list" class="bullet-list error"></ul></div>
-            </div>
           </div>
-        </div>
 
-        <div class="glass-card upload-slim" id="dropzone">
-          <div class="flex items-center gap-4">
-            <div class="icon-box">DB</div>
-            <div>
-              <h4 class="text-sm font-bold text-white">Upload Session Log</h4>
-              <p class="text-xs text-muted">Drag & drop markdown files here</p>
+          <!-- Study Trends Section -->
+          <div class="d-card" style="grid-column: span 4;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px; margin-bottom:20px;">
+              <h3 style="margin:0; font-size:1.1rem;">Study Trends</h3>
+              <select id="trends-period" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 6px 12px; color: #f1f5f9; font-size: 0.85rem; cursor: pointer;">
+                <option value="7">Last 7 days</option>
+                <option value="14">Last 14 days</option>
+                <option value="30" selected>Last 30 days</option>
+              </select>
+            </div>
+            <div id="trends-container" style="position: relative; width: 100%; height: 200px;">
+              <canvas id="trends-chart" style="width: 100%; height: 100%;"></canvas>
+              <div id="trends-empty" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #94a3b8; text-align: center;">
+                <div style="font-size: 2rem; margin-bottom: 8px;">📊</div>
+                <div>No trend data yet</div>
+                <div style="font-size: 0.85rem;">Complete some study sessions to see your progress</div>
+              </div>
+            </div>
+            <div id="trends-legend" style="display: flex; justify-content: center; gap: 24px; margin-top: 16px; font-size: 0.85rem; color: #94a3b8;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="width: 12px; height: 3px; background: #a855f7; border-radius: 2px;"></span>
+                Understanding
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="width: 12px; height: 3px; background: #3b82f6; border-radius: 2px;"></span>
+                Retention
+              </div>
             </div>
           </div>
-          <div id="upload-status" class="text-xs"></div>
-          <input type="file" id="file-input" style="display:none;" accept=".md,.markdown,.txt" />
+
+          <div class="d-card upload" id="dropzone">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div style="display:flex; align-items:center; gap:15px;">
+                 <div class="d-icon">📂</div>
+                 <div>
+                   <div style="font-weight:bold;">Upload Session Log</div>
+                   <div style="font-size:0.75rem; color:#94a3b8;">Drag & drop .md files here</div>
+                 </div>
+              </div>
+              <div id="upload-status" style="font-size:0.75rem;"></div>
+              <input type="file" id="file-input" style="display:none;" />
+            </div>
+          </div>
+
         </div>
       </div>
     </section>
@@ -672,10 +783,24 @@ Now say: “Paste your syllabus text here (one course at a time).” Then wait f
       </div>
       
       <!-- Latest Run Summary -->
-      <div>
+      <div style="margin-bottom: 24px;">
         <h4 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">Latest Run Summary</h4>
         <div id="scholar-latest-run" style="padding: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-family: monospace; font-size: 13px; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">
           <div style="color: var(--text-muted);">Loading latest run...</div>
+        </div>
+      </div>
+      
+      <!-- Weekly Digest Section -->
+      <div style="margin-bottom: 24px; padding: 16px; background: rgba(63, 185, 80, 0.1); border: 1px solid var(--success); border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h4 style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin: 0;">📊 Weekly Digest</h4>
+          <button id="btn-generate-digest" class="btn btn-primary" style="margin: 0;">Generate Digest</button>
+        </div>
+        <div id="scholar-digest-status" style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">
+          Click "Generate Digest" to summarize the past 7 days of Scholar activity
+        </div>
+        <div id="scholar-digest-content" style="display: none; padding: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; max-height: 400px; overflow-y: auto;">
+          <div id="scholar-digest-text" style="font-size: 13px; line-height: 1.6;"></div>
         </div>
       </div>
     </div>

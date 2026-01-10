@@ -67,6 +67,7 @@ let calendarData = { events: [], sessions: [], planned: [] };
 let syllabusEvents = [];
 let syllabusViewMode = 'calendar';
 let currentScholarQuestions = [];
+let modeChartInstance = null; // Global chart instance for updates
 
 // DOM Elements
 const totalSessions = document.getElementById('total-sessions');
@@ -179,32 +180,36 @@ async function loadStats() {
 
 function renderStats(data) {
   // Total Sessions
-  totalSessions.textContent = formatNumber(data.counts.sessions);
-  sessionsSubtitle.textContent = `${data.counts.sessions_30d} in last 30 days`;
+  if (totalSessions) totalSessions.textContent = formatNumber(data.counts.sessions);
+  if (sessionsSubtitle) sessionsSubtitle.textContent = `${data.counts.sessions_30d} in last 30 days`;
 
   // Total Time
-  totalTime.textContent = formatMinutes(data.counts.total_minutes);
-  timeSubtitle.textContent = `Avg. ${formatMinutes(data.counts.avg_daily_minutes)}/day`;
+  if (totalTime) totalTime.textContent = formatMinutes(data.counts.total_minutes);
+  if (timeSubtitle) timeSubtitle.textContent = `Avg. ${formatMinutes(data.counts.avg_daily_minutes)}/day`;
 
   // Score with progress ring
   const overallScore = Math.round(data.averages.overall) || 0;
-  avgScore.textContent = `${overallScore}%`;
+  if (avgScore) avgScore.textContent = `${overallScore}%`;
 
-  // Update progress ring
-  const circumference = 2 * Math.PI * 26;
-  const offset = circumference - (overallScore / 100) * circumference;
-  progressCircle.style.strokeDashoffset = offset;
+  // Update progress ring (if present)
+  if (progressCircle) {
+    const circumference = 2 * Math.PI * 26;
+    const offset = circumference - (overallScore / 100) * circumference;
+    progressCircle.style.strokeDashoffset = offset;
+  }
 
-  // Individual scores (convert 1-5 to percentage)
-  avgU.textContent = `${Math.round(data.averages.understanding * 20)}%`;
-  avgR.textContent = `${Math.round(data.averages.retention * 20)}%`;
-  avgS.textContent = `${Math.round(data.averages.performance * 20)}%`;
+  // Individual scores (convert 1-5 to percentage) - only if present
+  if (avgU) avgU.textContent = `${Math.round(data.averages.understanding * 20)}%`;
+  if (avgR) avgR.textContent = `${Math.round(data.averages.retention * 20)}%`;
+  if (avgS) avgS.textContent = `${Math.round(data.averages.performance * 20)}%`;
 
   // Anki cards
-  ankiCards.textContent = formatNumber(data.counts.anki_cards);
+  if (ankiCards) ankiCards.textContent = formatNumber(data.counts.anki_cards);
 }
 
 function renderSessions(data) {
+  if (!sessionsTbody) return; // Guard clause for new simplified HTML
+  
   const sessions = data.recent_sessions || [];
   sessionsTbody.innerHTML = sessions.map(s => {
     const modeClass = getModeClass(s.study_mode);
@@ -232,48 +237,74 @@ function renderSessions(data) {
 }
 
 function renderPatterns(data) {
-  // Mode frequencies legend
+  // Mode frequencies - define colors for each study mode
   const modes = data.mode_percentages || {};
   const modeColors = {
-    'Focus': '#8b5cf6',
-    'Deep Work': '#8b5cf6',
-    'Pomodoro': '#22c55e',
+    'Core': '#EF4444',      // Red
+    'Sprint': '#64748B',    // Grey
+    'Drill': '#10B981',     // Green
+    'Focus': '#EF4444',
+    'Deep Work': '#EF4444',
+    'Pomodoro': '#10B981',
     'Review': '#3b82f6'
   };
 
-  modeLegend.innerHTML = Object.entries(modes).map(([mode, pct]) => `
-        <div class="legend-item">
-          <span class="legend-dot" style="background: ${modeColors[mode] || '#64748b'}"></span>
+  // Update legend with study mode percentages
+  if (modeLegend) {
+    const entries = Object.entries(modes);
+    if (entries.length > 0) {
+      modeLegend.innerHTML = entries.map(([mode, pct]) => `
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="width:10px; height:10px; border-radius:50%; background:${modeColors[mode] || '#64748b'};"></span>
           <span>${mode}: ${pct}%</span>
         </div>
-      `).join('') || '<div style="color: var(--text-muted);">No data yet</div>';
+      `).join('');
+    } else {
+      modeLegend.innerHTML = '<div>No data yet</div>';
+    }
+  }
 
-  // Draw pie chart
-  drawPieChart(modes, modeColors);
+  // Update the Chart.js doughnut with real data
+  if (modeChartInstance && Object.keys(modes).length > 0) {
+    const labels = Object.keys(modes);
+    const dataValues = Object.values(modes);
+    const colors = labels.map(m => modeColors[m] || '#64748b');
+    
+    modeChartInstance.data.labels = labels;
+    modeChartInstance.data.datasets[0].data = dataValues;
+    modeChartInstance.data.datasets[0].backgroundColor = colors;
+    modeChartInstance.update();
+  }
 
-  // Frameworks
+  // Frameworks (if present)
   const frameworks = data.frameworks || [];
-  frameworksList.innerHTML = frameworks.map(([name, count]) => `
+  if (frameworksList) {
+    frameworksList.innerHTML = frameworks.map(([name, count]) => `
         <div class="framework-item">${name}</div>
       `).join('') || '<div style="color: var(--text-muted);">No data yet</div>';
+  }
 
   // Weak topics
   const weak = data.weak_areas || [];
-  weakTopics.textContent = weak.map(w => w.topic).join(', ') || 'None flagged';
+  if (weakTopics) weakTopics.textContent = weak.map(w => w.topic).join(', ') || 'None flagged';
 
   // Strong topics
   const strong = data.strong_areas || [];
-  strongTopics.textContent = strong.map(s => s.topic).join(', ') || 'None yet';
+  if (strongTopics) strongTopics.textContent = strong.map(s => s.topic).join(', ') || 'None yet';
 
   // What worked
   const worked = data.what_worked || [];
-  whatWorked.innerHTML = worked.map(w => `<li>${w.split('\\n')[0]}</li>`).join('')
-    || '<li>No notes yet</li>';
+  if (whatWorked) {
+    whatWorked.innerHTML = worked.map(w => `<li>${w.split('\\n')[0]}</li>`).join('')
+      || '<li>No notes yet</li>';
+  }
 
-  // Issues
+  // Issues (if present)
   const issues = data.common_issues || [];
-  issuesList.innerHTML = issues.map(i => `<li>${i.split('\\n')[0]}</li>`).join('')
-    || '<li>No issues logged</li>';
+  if (issuesList) {
+    issuesList.innerHTML = issues.map(i => `<li>${i.split('\\n')[0]}</li>`).join('')
+      || '<li>No issues logged</li>';
+  }
 }
 
 function drawPieChart(modes, colors) {
@@ -306,6 +337,209 @@ function drawPieChart(modes, colors) {
     startAngle += sliceAngle;
   });
 }
+
+// ============================================
+// TRENDS CHART
+// ============================================
+let trendsChartData = null;
+
+async function loadTrends(days = 30) {
+  const canvas = document.getElementById('trends-chart');
+  const emptyMsg = document.getElementById('trends-empty');
+  const legend = document.getElementById('trends-legend');
+  
+  if (!canvas) return;
+  
+  try {
+    const res = await fetch(`/api/trends?days=${days}`);
+    const data = await res.json();
+    trendsChartData = data;
+    
+    // Check if we have any data
+    const hasData = data.dates && data.dates.length > 0;
+    
+    if (!hasData) {
+      canvas.style.display = 'none';
+      if (emptyMsg) emptyMsg.style.display = 'block';
+      if (legend) legend.style.display = 'none';
+      return;
+    }
+    
+    canvas.style.display = 'block';
+    if (emptyMsg) emptyMsg.style.display = 'none';
+    if (legend) legend.style.display = 'flex';
+    
+    drawTrendsChart(canvas, data);
+  } catch (error) {
+    console.error('Failed to load trends:', error);
+  }
+}
+
+function drawTrendsChart(canvas, data) {
+  const ctx = canvas.getContext('2d');
+  const container = canvas.parentElement;
+  
+  // Set canvas size for sharp rendering
+  const dpr = window.devicePixelRatio || 1;
+  const rect = container.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  
+  const width = rect.width;
+  const height = rect.height;
+  const padding = { top: 20, right: 20, bottom: 40, left: 40 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  
+  // Clear canvas
+  ctx.clearRect(0, 0, width, height);
+  
+  // Filter out null values and find min/max
+  const understanding = data.understanding.map(v => v !== null ? v : NaN);
+  const retention = data.retention.map(v => v !== null ? v : NaN);
+  
+  const allValues = [...understanding, ...retention].filter(v => !isNaN(v));
+  if (allValues.length === 0) return;
+  
+  const minVal = Math.max(0, Math.floor(Math.min(...allValues) - 0.5));
+  const maxVal = Math.min(5, Math.ceil(Math.max(...allValues) + 0.5));
+  const valueRange = maxVal - minVal || 1;
+  
+  // Draw grid lines and y-axis labels
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '11px Inter, system-ui, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  
+  const gridLines = 5;
+  for (let i = 0; i <= gridLines; i++) {
+    const y = padding.top + (chartHeight * i / gridLines);
+    const value = maxVal - (valueRange * i / gridLines);
+    
+    ctx.beginPath();
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(width - padding.right, y);
+    ctx.stroke();
+    
+    ctx.fillText(value.toFixed(1), padding.left - 8, y);
+  }
+  
+  // Draw x-axis labels (dates)
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  const dates = data.dates;
+  const labelInterval = Math.ceil(dates.length / 7); // Show ~7 labels max
+  
+  dates.forEach((date, i) => {
+    if (i % labelInterval === 0 || i === dates.length - 1) {
+      const x = padding.left + (chartWidth * i / (dates.length - 1 || 1));
+      // Format date as MM/DD
+      const parts = date.split('-');
+      const label = `${parts[1]}/${parts[2]}`;
+      ctx.fillText(label, x, height - padding.bottom + 8);
+    }
+  });
+  
+  // Helper function to draw a line
+  function drawLine(values, color) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    
+    ctx.beginPath();
+    let started = false;
+    
+    values.forEach((val, i) => {
+      if (isNaN(val)) return;
+      
+      const x = padding.left + (chartWidth * i / (values.length - 1 || 1));
+      const y = padding.top + chartHeight - ((val - minVal) / valueRange) * chartHeight;
+      
+      if (!started) {
+        ctx.moveTo(x, y);
+        started = true;
+      } else {
+        ctx.lineTo(x, y);
+      }
+    });
+    
+    ctx.stroke();
+    
+    // Draw dots
+    values.forEach((val, i) => {
+      if (isNaN(val)) return;
+      
+      const x = padding.left + (chartWidth * i / (values.length - 1 || 1));
+      const y = padding.top + chartHeight - ((val - minVal) / valueRange) * chartHeight;
+      
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    });
+  }
+  
+  // Draw understanding line (purple)
+  drawLine(understanding, '#a855f7');
+  
+  // Draw retention line (blue)
+  drawLine(retention, '#3b82f6');
+  
+  // Add tooltip functionality
+  canvas.onmousemove = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Find closest data point
+    const dataX = (x - padding.left) / chartWidth;
+    const index = Math.round(dataX * (dates.length - 1));
+    
+    if (index >= 0 && index < dates.length) {
+      const u = understanding[index];
+      const r = retention[index];
+      const date = dates[index];
+      
+      // Update cursor
+      canvas.style.cursor = 'crosshair';
+      
+      // Show tooltip (using title for simplicity)
+      let tip = `${date}`;
+      if (!isNaN(u)) tip += ` | Understanding: ${u}`;
+      if (!isNaN(r)) tip += ` | Retention: ${r}`;
+      canvas.title = tip;
+    }
+  };
+  
+  canvas.onmouseleave = () => {
+    canvas.style.cursor = 'default';
+    canvas.title = '';
+  };
+}
+
+// Set up trends period selector
+const trendsPeriodSelect = document.getElementById('trends-period');
+if (trendsPeriodSelect) {
+  trendsPeriodSelect.addEventListener('change', (e) => {
+    loadTrends(parseInt(e.target.value, 10));
+  });
+}
+
+// Handle window resize for trends chart
+let trendsResizeTimeout;
+window.addEventListener('resize', () => {
+  clearTimeout(trendsResizeTimeout);
+  trendsResizeTimeout = setTimeout(() => {
+    if (trendsChartData && trendsChartData.dates && trendsChartData.dates.length > 0) {
+      const canvas = document.getElementById('trends-chart');
+      if (canvas) drawTrendsChart(canvas, trendsChartData);
+    }
+  }, 200);
+});
 
 // Upload handling
 if (dropzone && fileInput) {
@@ -1452,6 +1686,56 @@ if (btnToggleSafeMode) btnToggleSafeMode.addEventListener('click', async () => {
   }
 });
 
+// Weekly Digest generation
+const btnGenerateDigest = document.getElementById('btn-generate-digest');
+const scholarDigestStatus = document.getElementById('scholar-digest-status');
+const scholarDigestContent = document.getElementById('scholar-digest-content');
+const scholarDigestText = document.getElementById('scholar-digest-text');
+
+if (btnGenerateDigest) btnGenerateDigest.addEventListener('click', async () => {
+  btnGenerateDigest.disabled = true;
+  btnGenerateDigest.textContent = 'Generating...';
+  if (scholarDigestStatus) scholarDigestStatus.textContent = 'Generating digest...';
+  if (scholarDigestContent) scholarDigestContent.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/scholar/digest');
+    const data = await res.json();
+
+    if (data.ok) {
+      if (scholarDigestStatus) {
+        scholarDigestStatus.textContent = `Digest generated for ${data.period} (${data.runs_count} runs)`;
+      }
+      if (scholarDigestContent && scholarDigestText) {
+        // Convert markdown to HTML (basic)
+        const html = data.digest
+          .replace(/^# (.+)$/gm, '<h2 style="margin-top: 0; margin-bottom: 12px; font-size: 18px; color: var(--text-primary);">$1</h2>')
+          .replace(/^## (.+)$/gm, '<h3 style="margin-top: 16px; margin-bottom: 8px; font-size: 15px; font-weight: 600; color: var(--text-primary);">$1</h3>')
+          .replace(/^\*\*(.+?)\*\*/gm, '<strong>$1</strong>')
+          .replace(/^\*\*Period:\*\* (.+)$/gm, '<div style="color: var(--text-muted); font-size: 12px; margin-bottom: 12px;">$1</div>')
+          .replace(/^- (.+)$/gm, '<div style="padding-left: 12px; margin-bottom: 4px;">• $1</div>')
+          .replace(/^  - (.+)$/gm, '<div style="padding-left: 24px; margin-bottom: 4px; color: var(--text-secondary);">◦ $1</div>')
+          .replace(/\n\n/g, '<br>');
+        scholarDigestText.innerHTML = html;
+        scholarDigestContent.style.display = 'block';
+      }
+      btnGenerateDigest.textContent = 'Regenerate';
+    } else {
+      if (scholarDigestStatus) {
+        scholarDigestStatus.textContent = `Error: ${data.message || 'Unknown error'}`;
+      }
+      btnGenerateDigest.textContent = 'Generate Digest';
+    }
+  } catch (error) {
+    if (scholarDigestStatus) {
+      scholarDigestStatus.textContent = `Network error: ${error.message}`;
+    }
+    btnGenerateDigest.textContent = 'Generate Digest';
+  }
+
+  btnGenerateDigest.disabled = false;
+});
+
 // Save answers handling
 const saveAnswersBtn = document.getElementById('btn-save-answers');
 if (saveAnswersBtn) saveAnswersBtn.addEventListener('click', async () => {
@@ -2032,6 +2316,7 @@ function initDashboard() {
 
   // Load Data
   loadStats();
+  loadTrends();
   loadScholar();
   if (typeof loadApiKeyStatus === 'function') loadApiKeyStatus();
   loadCoursesForCalendar();
@@ -2134,7 +2419,7 @@ function clearScholarChatHistory(questionIndex, mode) {
   }
 }
 
-window.clearChatAndReset = function(index) {
+window.clearChatAndReset = function (index) {
   const mode = chatModes[index] || 'clarify';
   clearScholarChatHistory(index, mode);
   if (chatHistories[index] && chatHistories[index][mode]) {
@@ -2246,15 +2531,15 @@ window.sendChatMessage = async function (index) {
       : '/api/scholar/questions/clarify';
     const payload = mode === 'generate'
       ? {
-          question: msg,
-          context: scholarQuestion ? `Primary Scholar Question: ${scholarQuestion}` : '',
-          messages: history
-        }
+        question: msg,
+        context: scholarQuestion ? `Primary Scholar Question: ${scholarQuestion}` : '',
+        messages: history
+      }
       : {
-          scholar_question: scholarQuestion,
-          clarifying_question: msg, // Legacy
-          messages: history
-        };
+        scholar_question: scholarQuestion,
+        clarifying_question: msg, // Legacy
+        messages: history
+      };
 
     const res = await fetch(endpoint, {
       method: 'POST',
@@ -2343,49 +2628,49 @@ console.log("%c Dashboard JS v2.1 LOADED ", "background: #22c55e; color: #ffffff
 initDashboard();
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Progress Ring Helper
-    const circle = document.getElementById('progress-circle');
-    // Circumference = 2 * PI * r (r=26)  163.36
-    const circumference = 163.36; 
+  // 1. Progress Ring Helper
+  const circle = document.getElementById('progress-circle');
+  // Circumference = 2 * PI * r (r=26)  163.36
+  const circumference = 163.36;
 
-    function setScore(percent) {
-        if(!circle) return;
-        const offset = circumference - (percent / 100) * circumference;
-        circle.style.strokeDashoffset = offset;
-        const label = document.getElementById('avg-score');
-        if(label) label.textContent = \\%\;
-    }
-    
-    // Test Init (remove if you load real data immediately)
-    setScore(0); 
+  function setScore(percent) {
+    if (!circle) return;
+    const offset = circumference - (percent / 100) * circumference;
+    circle.style.strokeDashoffset = offset;
+    const label = document.getElementById('avg-score');
+    if (label) label.textContent = `${percent}%`;
+  }
 
-    // 2. Chart.js Init
-    const ctx = document.getElementById('modeChart');
-    if(ctx) {
-        new Chart(ctx.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Deep Work', 'Light', 'Review'],
-                datasets: [{
-                    data: [12, 5, 3], // Placeholder data
-                    backgroundColor: ['#3B82F6', '#8B5CF6', '#10B981'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false, // REQUIRED for this layout
-                cutout: '75%', 
-                plugins: { legend: { display: false } }
-            }
-        });
-    }
+  // Test Init (remove if you load real data immediately)
+  setScore(0);
 
-    // 3. Upload Click Trigger
-    const dropzone = document.getElementById('dropzone');
-    const fileInput = document.getElementById('file-input');
-    if(dropzone && fileInput) {
-        dropzone.addEventListener('click', () => fileInput.click());
-    }
+  // 2. Chart.js Init - Store globally for updates from API
+  const ctx = document.getElementById('modeChart');
+  if (ctx) {
+    modeChartInstance = new Chart(ctx.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Loading...'],
+        datasets: [{
+          data: [100],
+          backgroundColor: ['#2D3340'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '70%',
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
+
+  // 3. Upload Click Trigger
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('file-input');
+  if (dropzone && fileInput) {
+    dropzone.addEventListener('click', () => fileInput.click());
+  }
 });
 

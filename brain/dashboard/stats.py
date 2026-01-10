@@ -156,3 +156,175 @@ def build_stats():
         "recent_sessions": sessions[:5],
         "thresholds": {"weak": WEAK_THRESHOLD, "strong": STRONG_THRESHOLD},
     }
+
+
+def get_mastery_stats():
+    """
+    Get topic mastery statistics for identifying weak areas and relearning needs.
+    
+    Returns:
+        dict with:
+        - repeatedly_studied: Topics with highest study_count (potential weak areas)
+        - lowest_understanding: Topics with lowest avg_understanding
+        - stale_topics: Topics not studied in 14+ days
+    """
+    import sqlite3
+    from db_setup import DB_PATH
+    
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    results = {
+        "repeatedly_studied": [],
+        "lowest_understanding": [],
+        "stale_topics": [],
+    }
+    
+    try:
+        # Topics with highest study_count (repeatedly relearned - potential weak areas)
+        cursor.execute(
+            """
+            SELECT topic, study_count, last_studied, first_studied, avg_understanding, avg_retention
+            FROM topic_mastery
+            WHERE study_count > 1
+            ORDER BY study_count DESC
+            LIMIT 10
+            """
+        )
+        results["repeatedly_studied"] = [
+            {
+                "topic": row["topic"],
+                "study_count": row["study_count"],
+                "last_studied": row["last_studied"],
+                "first_studied": row["first_studied"],
+                "avg_understanding": round(row["avg_understanding"], 2) if row["avg_understanding"] else None,
+                "avg_retention": round(row["avg_retention"], 2) if row["avg_retention"] else None,
+            }
+            for row in cursor.fetchall()
+        ]
+        
+        # Topics with lowest avg_understanding
+        cursor.execute(
+            """
+            SELECT topic, study_count, last_studied, avg_understanding, avg_retention
+            FROM topic_mastery
+            WHERE avg_understanding IS NOT NULL
+            ORDER BY avg_understanding ASC
+            LIMIT 10
+            """
+        )
+        results["lowest_understanding"] = [
+            {
+                "topic": row["topic"],
+                "study_count": row["study_count"],
+                "last_studied": row["last_studied"],
+                "avg_understanding": round(row["avg_understanding"], 2),
+                "avg_retention": round(row["avg_retention"], 2) if row["avg_retention"] else None,
+            }
+            for row in cursor.fetchall()
+        ]
+        
+        # Topics not studied in 14+ days (getting stale)
+        stale_cutoff = (datetime.now() - timedelta(days=14)).strftime("%Y-%m-%d")
+        cursor.execute(
+            """
+            SELECT topic, study_count, last_studied, avg_understanding, avg_retention
+            FROM topic_mastery
+            WHERE last_studied < ?
+            ORDER BY last_studied ASC
+            LIMIT 10
+            """,
+            (stale_cutoff,)
+        )
+        results["stale_topics"] = [
+            {
+                "topic": row["topic"],
+                "study_count": row["study_count"],
+                "last_studied": row["last_studied"],
+                "days_since": (datetime.now() - datetime.strptime(row["last_studied"], "%Y-%m-%d")).days if row["last_studied"] else None,
+                "avg_understanding": round(row["avg_understanding"], 2) if row["avg_understanding"] else None,
+                "avg_retention": round(row["avg_retention"], 2) if row["avg_retention"] else None,
+            }
+            for row in cursor.fetchall()
+        ]
+        
+    except Exception as e:
+        print(f"[WARN] Error fetching mastery stats: {e}")
+    finally:
+        conn.close()
+    
+    return results
+
+
+def get_trend_data(days=30):
+    """
+    Get trend data for session metrics over time.
+    
+    Args:
+        days: Number of days to look back (default 30)
+    
+    Returns:
+        dict with:
+        - dates: List of date strings
+        - understanding: Daily average understanding levels
+        - retention: Daily average retention confidence
+        - session_count: Number of sessions per day
+        - duration_avg: Average session duration per day (minutes)
+    """
+    import sqlite3
+    from db_setup import DB_PATH
+    
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    results = {
+        "dates": [],
+        "understanding": [],
+        "retention": [],
+        "session_count": [],
+        "duration_avg": [],
+    }
+    
+    try:
+        cutoff_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+        
+        # Query daily aggregates from sessions table
+        cursor.execute(
+            """
+            SELECT 
+                session_date,
+                COUNT(*) as session_count,
+                AVG(understanding_level) as avg_understanding,
+                AVG(retention_confidence) as avg_retention,
+                AVG(COALESCE(duration_minutes, time_spent_minutes, 0)) as avg_duration
+            FROM sessions
+            WHERE session_date >= ?
+            GROUP BY session_date
+            ORDER BY session_date ASC
+            """,
+            (cutoff_date,)
+        )
+        
+        rows = cursor.fetchall()
+        
+        for row in rows:
+            results["dates"].append(row["session_date"])
+            results["understanding"].append(
+                round(row["avg_understanding"], 2) if row["avg_understanding"] else None
+            )
+            results["retention"].append(
+                round(row["avg_retention"], 2) if row["avg_retention"] else None
+            )
+            results["session_count"].append(row["session_count"] or 0)
+            results["duration_avg"].append(
+                round(row["avg_duration"]) if row["avg_duration"] else 0
+            )
+    
+    except Exception as e:
+        print(f"[WARN] Error fetching trend data: {e}")
+    finally:
+        conn.close()
+    
+    return results

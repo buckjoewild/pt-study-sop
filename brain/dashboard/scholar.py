@@ -640,3 +640,276 @@ def run_scholar_orchestrator():
         "log_file": str(log_path.relative_to(repo_root)),
         "final_file": str(final_path.relative_to(repo_root)),
     }
+
+
+def generate_weekly_digest(days: int = 7) -> dict:
+    """
+    Generate a weekly digest aggregating Scholar outputs from the past N days.
+    
+    Scans scholar/outputs/ subdirectories and extracts key sections:
+    - orchestrator_runs/unattended_final_*.md: Completed, Next, Blockers
+    - module_dossiers/*_dossier_*.md: Improvement Candidates
+    - research_notebook/*.md: Key Findings or first 3 bullets
+    - reports/*.md: Executive summaries
+    
+    Returns dict with:
+    - ok: bool
+    - digest: str (markdown formatted)
+    - period: str (date range)
+    - runs_count: int
+    """
+    repo_root = Path(__file__).parent.parent.parent.resolve()
+    scholar_outputs = repo_root / "scholar" / "outputs"
+    
+    cutoff = datetime.now() - timedelta(days=days)
+    end_date = datetime.now().strftime("%Y-%m-%d")
+    start_date = cutoff.strftime("%Y-%m-%d")
+    
+    # Collectors
+    runs_info = []          # (timestamp, completed, next_steps, blockers)
+    improvement_candidates = []
+    key_findings = []
+    report_summaries = []
+    pending_questions = []
+    topics_to_review = []
+    
+    def get_recent_files(folder: Path, pattern: str) -> list:
+        """Get files matching pattern modified after cutoff."""
+        if not folder.exists():
+            return []
+        files = []
+        for f in folder.glob(pattern):
+            if f.stat().st_mtime >= cutoff.timestamp():
+                files.append(f)
+        return sorted(files, key=lambda x: x.stat().st_mtime, reverse=True)
+    
+    # --- 1. Orchestrator Runs (unattended_final_*.md) ---
+    orch_folder = scholar_outputs / "orchestrator_runs"
+    for f in get_recent_files(orch_folder, "unattended_final_*.md"):
+        try:
+            content = f.read_text(encoding="utf-8")
+            run_date = f.stem.replace("unattended_final_", "")
+            
+            completed = []
+            next_steps = []
+            blockers = []
+            
+            # Parse Work Completed or Completed section
+            in_section = None
+            for line in content.split("\n"):
+                line_lower = line.lower().strip()
+                
+                # Detect section headers
+                if "work completed" in line_lower or line_lower.startswith("**completed"):
+                    in_section = "completed"
+                    continue
+                elif "next" in line_lower and ("step" in line_lower or "follow" in line_lower):
+                    in_section = "next"
+                    continue
+                elif "blocker" in line_lower or "open question" in line_lower:
+                    in_section = "blockers"
+                    continue
+                elif line.startswith("##") or line.startswith("**") and in_section:
+                    in_section = None
+                    continue
+                
+                # Collect items
+                if in_section and line.strip().startswith("-"):
+                    item = line.strip().lstrip("-").strip()
+                    if item:
+                        if in_section == "completed":
+                            completed.append(item[:100])
+                        elif in_section == "next":
+                            next_steps.append(item[:100])
+                        elif in_section == "blockers":
+                            blockers.append(item[:100])
+            
+            runs_info.append({
+                "date": run_date,
+                "completed": completed[:5],
+                "next": next_steps[:3],
+                "blockers": blockers[:3],
+            })
+        except Exception:
+            pass
+    
+    # --- 2. Module Dossiers (*_dossier_*.md) ---
+    dossier_folder = scholar_outputs / "module_dossiers"
+    for f in get_recent_files(dossier_folder, "*_dossier_*.md"):
+        try:
+            content = f.read_text(encoding="utf-8")
+            module_name = f.stem.split("_dossier_")[0].replace("_", " ").title()
+            
+            in_improvement = False
+            for line in content.split("\n"):
+                if "improvement candidates" in line.lower():
+                    in_improvement = True
+                    continue
+                if in_improvement and line.startswith("##"):
+                    break
+                if in_improvement and line.strip().startswith("-"):
+                    item = line.strip().lstrip("-").strip()
+                    if item:
+                        improvement_candidates.append(f"[{module_name}] {item[:80]}")
+        except Exception:
+            pass
+    
+    # --- 3. Research Notebook (*.md) ---
+    research_folder = scholar_outputs / "research_notebook"
+    for f in get_recent_files(research_folder, "*.md"):
+        try:
+            content = f.read_text(encoding="utf-8")
+            topic = f.stem.replace("_", " ").title()
+            
+            # Look for "Key Findings", "Findings Summary", or first bullets
+            in_findings = False
+            bullets = []
+            for line in content.split("\n"):
+                if "finding" in line.lower() or "summary" in line.lower():
+                    in_findings = True
+                    continue
+                if in_findings and line.startswith("##"):
+                    break
+                if line.strip().startswith("-") or line.strip().startswith("*"):
+                    item = line.strip().lstrip("-*").strip()
+                    if item and len(item) > 10:
+                        bullets.append(item[:100])
+            
+            if bullets:
+                key_findings.append({
+                    "topic": topic,
+                    "findings": bullets[:3],
+                })
+        except Exception:
+            pass
+    
+    # --- 4. Reports (*.md) ---
+    reports_folder = scholar_outputs / "reports"
+    for f in get_recent_files(reports_folder, "*.md"):
+        try:
+            content = f.read_text(encoding="utf-8")
+            report_name = f.stem.replace("_", " ").title()
+            
+            # Look for summary section or first 3 bullets
+            in_summary = False
+            summary_items = []
+            for line in content.split("\n"):
+                if "summary" in line.lower() and line.strip().startswith("#"):
+                    in_summary = True
+                    continue
+                if in_summary and line.startswith("##"):
+                    break
+                if line.strip().startswith("-") or line.strip().startswith("*"):
+                    item = line.strip().lstrip("-*").strip()
+                    if item:
+                        summary_items.append(item[:100])
+            
+            if summary_items:
+                report_summaries.append({
+                    "name": report_name,
+                    "summary": summary_items[:3],
+                })
+        except Exception:
+            pass
+    
+    # --- 5. Questions Pending (questions_needed_*.md) ---
+    for f in get_recent_files(orch_folder, "questions_needed_*.md"):
+        try:
+            content = f.read_text(encoding="utf-8").strip()
+            if content and content != "(none)":
+                for line in content.split("\n"):
+                    if line.strip().startswith("Q:"):
+                        q = line.replace("Q:", "").strip()
+                        if q and q not in pending_questions:
+                            pending_questions.append(q[:120])
+        except Exception:
+            pass
+    
+    # --- 6. Topics to Review (from friction or gaps) ---
+    # Check for friction_alerts or gap_analysis files
+    gap_folder = scholar_outputs / "gap_analysis"
+    for f in get_recent_files(gap_folder, "*.md"):
+        try:
+            content = f.read_text(encoding="utf-8")
+            for line in content.split("\n"):
+                if line.strip().startswith("-") and ("gap" in line.lower() or "review" in line.lower()):
+                    item = line.strip().lstrip("-").strip()
+                    if item:
+                        topics_to_review.append(item[:80])
+        except Exception:
+            pass
+    
+    # --- Build Digest ---
+    digest_parts = []
+    digest_parts.append(f"# Scholar Weekly Digest")
+    digest_parts.append(f"**Period:** {start_date} to {end_date}\n")
+    
+    # Section 1: This Week's Runs
+    digest_parts.append("## This Week's Runs")
+    if runs_info:
+        digest_parts.append(f"- **{len(runs_info)} orchestrator runs** processed")
+        for run in runs_info[:3]:
+            digest_parts.append(f"- Run {run['date']}: {len(run['completed'])} items completed")
+    else:
+        digest_parts.append("- No orchestrator runs in this period")
+    digest_parts.append("")
+    
+    # Section 2: Key Findings
+    digest_parts.append("## Key Findings")
+    if key_findings:
+        for finding in key_findings[:5]:
+            digest_parts.append(f"**{finding['topic']}:**")
+            for bullet in finding['findings'][:2]:
+                digest_parts.append(f"  - {bullet}")
+    else:
+        digest_parts.append("- No new research findings this week")
+    digest_parts.append("")
+    
+    # Section 3: Action Items
+    digest_parts.append("## Action Items")
+    action_items = []
+    # Collect from improvement candidates
+    for item in improvement_candidates[:5]:
+        action_items.append(item)
+    # Collect from run next steps
+    for run in runs_info[:2]:
+        for step in run.get("next", [])[:2]:
+            action_items.append(step)
+    
+    if action_items:
+        for item in action_items[:5]:
+            digest_parts.append(f"- {item}")
+    else:
+        digest_parts.append("- No action items identified")
+    digest_parts.append("")
+    
+    # Section 4: Questions Pending
+    digest_parts.append("## Questions Pending")
+    if pending_questions:
+        for q in pending_questions[:5]:
+            digest_parts.append(f"- {q}")
+    else:
+        digest_parts.append("- No unanswered questions")
+    digest_parts.append("")
+    
+    # Section 5: Topics to Review
+    digest_parts.append("## Topics to Review")
+    if topics_to_review:
+        for topic in topics_to_review[:5]:
+            digest_parts.append(f"- {topic}")
+    elif report_summaries:
+        # Fall back to report summaries if no explicit gaps
+        digest_parts.append("Based on recent reports:")
+        for report in report_summaries[:3]:
+            digest_parts.append(f"- {report['name']}")
+    else:
+        digest_parts.append("- No specific review topics flagged")
+    
+    digest_text = "\n".join(digest_parts)
+    
+    return {
+        "ok": True,
+        "digest": digest_text,
+        "period": f"{start_date} to {end_date}",
+        "runs_count": len(runs_info),
+    }

@@ -1,107 +1,97 @@
-# Scholar Orchestrator: Unattended Runbook Prompt
+# Scholar Orchestrator: Unattended Runbook
 
-- Role: The Scholar Meta-System
-- Context: Continuous improvement loop for Tutor/SOP.
+Role: Scholar Meta-System — continuous improvement loop for Tutor/SOP.
 
-## UNATTENDED MODE (Non-Interactive)
+---
 
-- You are running non-interactively. Do **NOT** ask questions in the terminal.
-- **Workflow**: Automated Repository Scan & Analysis.
+## UNATTENDED MODE
 
-### Questions Never Block Execution
+- Running non-interactively. Do **NOT** ask questions in terminal.
+- Write questions to `scholar/outputs/orchestrator_runs/questions_needed_<run>.md` and continue.
+- Use defaults: Module group M0–M6 + bridges. No Promotion Queue unless `safe_mode: true` in `audit_manifest.json`.
 
-- If you need clarification, write questions to `scholar/outputs/orchestrator_runs/questions_needed_<run>.md`.
-- At run start, create the `questions_needed_<run>.md` file (empty) so it always exists.
-- Continue best-effort using defaults and repository evidence.
-- Do **NOT** pause or wait for answers during unattended runs.
+---
 
-- Use defaults **WITHOUT** prompting:
-  - **Module group**: M0–M6 cycle + bridges.
-  - **Promotion Queue generation**: NO (unless explicitly authorized later).
-- If you need clarification:
-  - Write all questions to: `scholar/outputs/orchestrator_runs/questions_needed_<run>.md`.
-  - Continue best-effort using repository evidence and existing Scholar artifacts.
+## OUTPUT FORMAT (Every Run)
 
-## Runtime Instructions for Cortex/Codex
+End each run with these sections in the run log:
 
-1. **Initialize**: Read `scholar/workflows/orchestrator_loop.md` and `scholar/inputs/audit_manifest.json`.
-2. **Safe Mode Check**: Check `audit_manifest.json`.
-   - If `safe_mode` is `false` (default), do **NOT** generate Promotion Queue artifacts (RFCs/Experiments/Patches).
-   - If `safe_mode` is `true`, you may draft ONE RFC/Experiment/Patch per run if strictly necessary.
-3. **Execution Gate**: Immediately proceed to the **Execution Cycle (Auto-Advance)** below.
+### What I Learned This Run (5 bullets max)
+Plain English summary of insights discovered.
 
-## Execution Cycle (Auto-Advance)
+### Action Items
+Mark with ⚡: `⚡ [action description]`
 
-Follow these steps sequentially in every run:
+### Warnings
+Mark with ⚠️: `⚠️ [warning description]`
 
-1. **Initialize Run Paths**:
-    - Set the `<run>` identifier and resolve output paths (log, final, questions).
+---
 
-2. **Initialize questions_needed_<run>.md as empty**:
-    - Create/overwrite `scholar/outputs/orchestrator_runs/questions_needed_<run>.md` with empty content (or a single line like `(none)`).
+## EXECUTION PHASES
 
-3. **Refresh Repo Index**:
-    - Scan the full repository tree (`sop/`, `scholar/`, `brain/`).
-    - Update/Create `scholar/outputs/system_map/repo_index_<YYYY-MM-DD>.md` with a comprehensive list of all modules, engines, and documents.
+### Phase 1: AUDIT
+1. Read recent session logs from `brain/session_logs/` (last 7 days or since last run).
+2. Check for friction patterns: confusion, rework, low ratings, skipped steps.
+3. Apply the **Probe-Before-Teach Rule**: When auditing Tutor sessions, verify that retrieval was attempted BEFORE explanation was given. Flag violations.
+4. Apply the **High-Utility Technique Checklist** (see below). Flag sessions missing these.
 
-4. **Refresh Coverage Checklist**:
-    - Read the new `repo_index` and the previous `coverage_checklist` (if exists).
-    - Update/Create `scholar/outputs/system_map/coverage_checklist_<YYYY-MM-DD>.md`.
-    - Mark items as `[x]` (done), `[/]` (in-progress), or `[ ]` (not started).
+### Phase 2: RESEARCH (Skip if no questions)
+1. If audit reveals unknowns or gaps, research them (web search).
+2. Produce a research note: `scholar/outputs/research_notebook/note_<topic>.md` (5–10 bullets, not essays).
+3. If no research needed, skip to Phase 3.
 
-### Coverage Selection Policy (No Prompting)
+### Phase 3: SYNTHESIZE
+1. Produce **ONE** artifact with clear recommendations. Choose from:
+   - Module Dossier (1–2 pages max): `scholar/outputs/module_dossiers/<group>_dossier.md`
+   - Audit Report: `scholar/outputs/module_audits/<group>_audit.md`
+   - Gap Analysis: `scholar/outputs/gap_analysis/<topic>.md`
+2. Update run log: `scholar/outputs/orchestrator_runs/run_<YYYY-MM-DD>.md`
+3. If artifact not produced, write blocker summary explaining why.
 
-- If `coverage_checklist_<date>.md` exists:
-  - Select the **first** item with status `Not started`.
-  - If none are `Not started`, select the **first** item with status `In progress`.
-  - If all items are `Complete`, stop the run and write a completion summary to `scholar/outputs/orchestrator_runs/`.
-- Mark the selected item as `In progress` before processing.
+---
 
-1. **Auto-Select Group**:
-    - Select the **NEXT** uncompleted group or module from the checklist.
-    - If checklist is new, start with **M0–M6 cycle + bridges**.
-    - Log selected scope to `scholar/outputs/orchestrator_runs/run_<YYYY-MM-DD>.md`.
+## HIGH-UTILITY TECHNIQUE CHECKLIST (Dunlosky Research)
 
-2. **Process Selected Group**:
-    - **Model**: Build an internal model of the target.
-    - **Analyze**: Identify unknowns, gaps, or pedagogical misalignments.
-    - **Research**: Use web search to resolve unknowns.
-    - **Synthesize**: Warning: You MUST produce at least ONE concrete artifact:
-        - **Module Dossier**: `scholar/outputs/module_dossiers/<group>_dossier.md`
-        - **Module Audit**: `scholar/outputs/module_audits/<group>_audit.md`
-        - **Research Note**: `scholar/outputs/research_notebook/note_<topic>.md` (if unknowns exist)
+Flag sessions that don't use at least one of these proven techniques:
 
-### Mandatory Artifact Rule (Progress Guarantee)
+| Technique | What to look for |
+|-----------|------------------|
+| **Retrieval practice** | Testing yourself before reviewing answers |
+| **Spaced practice** | Distributed learning across days, not cramming |
+| **Elaborative interrogation** | Asking "why" and "how" questions |
+| **Self-explanation** | Explaining concepts in own words |
+| **Interleaved practice** | Mixing different problem types |
 
-- This run must create/update **at least ONE** artifact outside `orchestrator_runs/`, choosing from:
-  - `scholar/outputs/system_map/` (e.g., refreshed `repo_index_*.md`)
-  - `scholar/outputs/module_dossiers/`
-  - `scholar/outputs/research_notebook/`
-  - `scholar/outputs/reports/`
-  - `scholar/outputs/gap_analysis/`
-- If no new artifact is produced, treat the run as **FAILED** and write a blocker summary to `scholar/outputs/orchestrator_runs/` explaining why.
+---
 
-1. **Log & Report**:
-    - Append summary of actions to `scholar/outputs/orchestrator_runs/run_<YYYY-MM-DD>.md`.
-    - Update the `coverage_checklist` to reflect progress (`[/]` or `[x]`).
+## WEEKLY DIGEST TRIGGER
 
-### Loop Boundary (Auto-Advance)
+If this is the last run of the week (Friday+) OR 7+ days since last digest:
+- Also produce `scholar/outputs/reports/weekly_digest_<YYYY-MM-DD>.md`
+- Include: patterns across sessions, technique usage stats, top recommendations
 
-- When the selected item is processed:
-  - Mark it `Complete` in the coverage checklist.
-  - Select the next item using the Coverage Selection Policy.
-- Stop the run when either:
-  - You complete the current selected item and there are no remaining `Not started` items for this run window, OR
-  - You hit the stuck-loop > 60 minutes rule, OR
-  - You hit a maximum runtime budget for this run (default: 60 minutes), whichever occurs first.
+---
 
-## Stalling Rule
+## ARTIFACT SIZING
 
-- If stuck in a logical loop or waiting > 60 minutes for clarity, STOP.
-- Output a "BLOCKER SUMMARY" to `scholar/outputs/orchestrator_runs/blocker_<DATE>.md`.
+Keep outputs focused and scannable:
+- **Dossiers**: 1–2 pages max (not exhaustive)
+- **Research notes**: 5–10 bullets
+- **Audits**: Key findings + recommendations, not transcripts
 
-## Guardrails
+---
+
+## STOP CONDITIONS
+
+Stop the run when:
+- Current phase complete and no urgent next item
+- Stuck > 60 minutes → write blocker to `scholar/outputs/orchestrator_runs/blocker_<DATE>.md`
+- Runtime > 60 minutes
+
+---
+
+## GUARDRAILS
 
 - **READ-ONLY**: Never modify files in `sop/`, `brain/`, or `dist/`.
-- **BOUNDED**: Each proposal candidate must be a ONE-change proposal.
-- **UNATTENDED CONTEXT**: You are running in a non-interactive shell. Output results clearly to the designated lanes.
+- **BOUNDED**: Each proposal = ONE change.
+- **UNATTENDED**: Output to designated lanes only.

@@ -196,6 +196,94 @@ def parse_session_log(filepath):
     
     return data
 
+def normalize_topic_name(topic):
+    """
+    Normalize topic name for consistent mastery tracking.
+    Lowercase and strip whitespace.
+    """
+    if not topic:
+        return ""
+    return topic.strip().lower()
+
+
+def update_topic_mastery(topic, understanding, retention, session_date):
+    """
+    Update topic_mastery table after a session is ingested.
+    Uses UPSERT pattern to increment study_count and recalculate averages.
+    
+    Args:
+        topic: The main topic studied (will be normalized)
+        understanding: Understanding level (1-5) or None
+        retention: Retention confidence (1-5) or None  
+        session_date: ISO date string (YYYY-MM-DD)
+    """
+    normalized_topic = normalize_topic_name(topic)
+    if not normalized_topic:
+        return
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    try:
+        # Check if topic exists
+        cursor.execute(
+            "SELECT study_count, avg_understanding, avg_retention, first_studied FROM topic_mastery WHERE topic = ?",
+            (normalized_topic,)
+        )
+        existing = cursor.fetchone()
+        
+        if existing:
+            old_count, old_avg_u, old_avg_r, first_studied = existing
+            new_count = old_count + 1
+            
+            # Recalculate running averages (handle None values)
+            if understanding is not None:
+                if old_avg_u is not None:
+                    new_avg_u = (old_avg_u * old_count + understanding) / new_count
+                else:
+                    new_avg_u = float(understanding)
+            else:
+                new_avg_u = old_avg_u
+            
+            if retention is not None:
+                if old_avg_r is not None:
+                    new_avg_r = (old_avg_r * old_count + retention) / new_count
+                else:
+                    new_avg_r = float(retention)
+            else:
+                new_avg_r = old_avg_r
+            
+            cursor.execute(
+                """
+                UPDATE topic_mastery 
+                SET study_count = ?, last_studied = ?, avg_understanding = ?, avg_retention = ?
+                WHERE topic = ?
+                """,
+                (new_count, session_date, new_avg_u, new_avg_r, normalized_topic)
+            )
+        else:
+            # New topic - insert
+            cursor.execute(
+                """
+                INSERT INTO topic_mastery (topic, study_count, last_studied, first_studied, avg_understanding, avg_retention)
+                VALUES (?, 1, ?, ?, ?, ?)
+                """,
+                (
+                    normalized_topic,
+                    session_date,
+                    session_date,
+                    float(understanding) if understanding is not None else None,
+                    float(retention) if retention is not None else None
+                )
+            )
+        
+        conn.commit()
+    except Exception as e:
+        print(f"[WARN] Failed to update topic mastery: {e}")
+    finally:
+        conn.close()
+
+
 def validate_session_data(data):
     """
     Validate required fields are present.
@@ -321,6 +409,17 @@ def insert_session(data):
         conn.commit()
         session_id = cursor.lastrowid
         conn.close()
+        
+        # Update topic mastery tracking
+        topic = data.get('main_topic') or data.get('topic')
+        if topic:
+            update_topic_mastery(
+                topic=topic,
+                understanding=data.get('understanding_level'),
+                retention=data.get('retention_confidence'),
+                session_date=data.get('session_date')
+            )
+        
         return True, f"Session ingested successfully (ID: {session_id})"
         
     except sqlite3.IntegrityError as e:

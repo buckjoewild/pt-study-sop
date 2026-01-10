@@ -44,11 +44,12 @@ from rag_notes import (
 
 # Dashboard modules
 from dashboard.utils import allowed_file, load_api_config, save_api_config
-from dashboard.stats import build_stats
+from dashboard.stats import build_stats, get_mastery_stats
 from dashboard.scholar import (
     build_scholar_stats, 
     generate_ai_answer, 
     run_scholar_orchestrator,
+    generate_weekly_digest,
     MAX_CONTEXT_CHARS,
 )
 from dashboard.syllabus import fetch_all_courses_and_events, attach_event_analytics
@@ -98,6 +99,29 @@ def api_stats():
 @dashboard_bp.route("/api/scholar")
 def api_scholar():
     return jsonify(build_scholar_stats())
+
+
+@dashboard_bp.route("/api/scholar/digest")
+def api_scholar_digest():
+    """Generate weekly digest of Scholar outputs from the past 7 days."""
+    result = generate_weekly_digest(days=7)
+    return jsonify(result)
+
+
+@dashboard_bp.route("/api/mastery")
+def api_mastery():
+    """Get topic mastery statistics for identifying weak areas and relearning needs."""
+    return jsonify(get_mastery_stats())
+
+
+@dashboard_bp.route("/api/trends")
+def api_trends():
+    """Get trend data for session metrics over time."""
+    from dashboard.stats import get_trend_data
+    days = request.args.get("days", 30, type=int)
+    # Clamp to reasonable range
+    days = max(7, min(days, 90))
+    return jsonify(get_trend_data(days))
 
 
 @dashboard_bp.route("/api/scholar/api-key", methods=["GET", "POST"])

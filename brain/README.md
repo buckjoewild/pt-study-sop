@@ -186,6 +186,7 @@ The web dashboard (`dashboard_web.py`) provides a modern UI for managing your st
 - **Syllabus Intake**: 
   - Single event form for quick entry of courses and events
   - Bulk JSON import: Use ChatGPT prompt to format syllabus, then paste JSON
+- **Duplicate guard**: Bulk and single imports skip duplicate events for a course; use `python dedupe_course_events.py --apply` to clean existing duplicates if a syllabus was imported twice.
 - **Calendar View**: 
   - Month-view calendar showing course events, study sessions, and planned spaced repetition
   - Filters by course, event type, and date range
@@ -236,6 +237,7 @@ The dashboard exposes REST API endpoints:
 | `python rag_notes.py ingest <file>` | Ingest markdown note into RAG |
 | `python rag_notes.py search <query>` | Search RAG notes |
 | `../Run_Brain_Sync.bat` | One-click daily sync: move stray logs + ingest all + regenerate resume |
+| `python dedupe_course_events.py [--course-id N] --apply` | Remove duplicate syllabus events (dry-run without --apply) |
 | `../Run_Brain_All.bat` | One-click: sync + resume + start dashboard and open browser (http://127.0.0.1:5000) |
 
 ---

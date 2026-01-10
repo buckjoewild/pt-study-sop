@@ -43,6 +43,8 @@ function openTab(evt, tabName) {
 let allCourses = [];
 let currentCalendarDate = new Date();
 let calendarData = { events: [], sessions: [], planned: [] };
+let syllabusEvents = [];
+let syllabusViewMode = 'calendar';
 let currentScholarQuestions = [];
 
 // DOM Elements
@@ -78,6 +80,14 @@ const syllabusJsonStatus = document.getElementById('syllabus-json-status');
 const btnSyllabusJsonImport = document.getElementById('btn-syllabus-json-import');
 const btnSyllabusPromptCopy = document.getElementById('btn-syllabus-prompt-copy');
 const syllabusPromptTemplate = document.getElementById('syllabus_prompt_template');
+const btnViewCalendar = document.getElementById('btn-view-calendar');
+const btnViewList = document.getElementById('btn-view-list');
+const syllabusListCourse = document.getElementById('syllabus-list-course');
+const syllabusListType = document.getElementById('syllabus-list-type');
+const syllabusListSearch = document.getElementById('syllabus-list-search');
+const syllabusListBody = document.getElementById('syllabus-list-body');
+const syllabusListEmpty = document.getElementById('syllabus-list-empty');
+const btnRefreshSyllabusList = document.getElementById('btn-refresh-syllabus-list');
 
 // Helpers
 const formatMinutes = (m) => {
@@ -986,7 +996,7 @@ if (btnSaveApiKey && apiKeyInput && apiKeyStatus) btnSaveApiKey.addEventListener
   }
 
   const apiProvider = apiProviderSelect ? apiProviderSelect.value : 'openrouter';
-  const model = apiProvider === 'openrouter' ? 'zai-ai/glm-4.7' : 'gpt-4o-mini';
+  const model = apiProvider === 'openrouter' ? 'openrouter/auto' : 'gpt-4o-mini';
 
   btnSaveApiKey.disabled = true;
   btnSaveApiKey.textContent = 'Saving...';
@@ -1033,7 +1043,7 @@ if (btnTestApiKey && apiKeyInput && apiKeyTestResult) btnTestApiKey.addEventList
 
   try {
     const apiProvider = apiProviderSelect ? apiProviderSelect.value : 'openrouter';
-    const model = apiProvider === 'openrouter' ? 'zai-ai/glm-4.7' : 'gpt-4o-mini';
+    const model = apiProvider === 'openrouter' ? 'openrouter/auto' : 'gpt-4o-mini';
 
     // Test by generating a simple answer with the provided key (no save)
     const res = await fetch('/api/scholar/questions/generate', {
@@ -1203,6 +1213,69 @@ async function loadCalendar() {
   }
 }
 
+function renderSyllabusList() {
+  if (!syllabusListBody || !syllabusListEmpty) return;
+
+  const courseId = syllabusListCourse ? syllabusListCourse.value : '';
+  const eventType = syllabusListType ? syllabusListType.value : '';
+  const search = syllabusListSearch ? syllabusListSearch.value.toLowerCase() : '';
+
+  const filtered = syllabusEvents.filter(ev => {
+    const matchesCourse = !courseId || String(ev.course_id) === String(courseId);
+    const matchesType = !eventType || (ev.type || '').toLowerCase() === eventType;
+    const haystack = `${ev.title || ''} ${ev.raw_text || ''}`.toLowerCase();
+    const matchesSearch = !search || haystack.includes(search);
+    return matchesCourse && matchesType && matchesSearch;
+  }).sort((a, b) => {
+    const ad = a.date || a.due_date || '';
+    const bd = b.date || b.due_date || '';
+    return ad.localeCompare(bd);
+  });
+
+  syllabusListBody.innerHTML = filtered.map(ev => {
+    const dateDisplay = ev.date || ev.due_date || '';
+    const weightDisplay = (ev.weight || 0).toFixed(2);
+    const courseName = (ev.course || {}).name || '';
+    return `
+      <tr>
+        <td>${dateDisplay || '—'}</td>
+        <td>${courseName || '—'}</td>
+        <td>${ev.type || ''}</td>
+        <td>${ev.title || ''}</td>
+        <td>${weightDisplay}</td>
+        <td>${ev.status || 'pending'}</td>
+        <td>${ev.raw_text || ''}</td>
+      </tr>
+    `;
+  }).join('');
+
+  syllabusListEmpty.style.display = filtered.length ? 'none' : 'block';
+}
+
+function setSyllabusView(mode) {
+  syllabusViewMode = mode;
+  const calendarBox = document.getElementById('syllabus-calendar-container');
+  const listBox = document.getElementById('syllabus-list-container');
+  if (calendarBox && listBox) {
+    calendarBox.style.display = mode === 'calendar' ? 'block' : 'none';
+    listBox.style.display = mode === 'list' ? 'block' : 'none';
+  }
+  if (btnViewCalendar && btnViewList) {
+    if (mode === 'calendar') {
+      btnViewCalendar.classList.add('btn-primary');
+      btnViewList.classList.remove('btn-primary');
+    } else {
+      btnViewList.classList.add('btn-primary');
+      btnViewCalendar.classList.remove('btn-primary');
+    }
+  }
+  if (mode === 'calendar') {
+    loadCalendar();
+  } else {
+    renderSyllabusList();
+  }
+}
+
 function renderCalendar() {
   const grid = document.getElementById('calendar-grid');
   if (!grid) return;
@@ -1310,6 +1383,20 @@ if (viewRange) viewRange.addEventListener('change', () => {
   loadCalendar();
 });
 
+// Syllabus view toggle
+if (btnViewCalendar) btnViewCalendar.addEventListener('click', () => setSyllabusView('calendar'));
+if (btnViewList) btnViewList.addEventListener('click', () => setSyllabusView('list'));
+
+// Syllabus list filters
+if (btnRefreshSyllabusList) btnRefreshSyllabusList.addEventListener('click', renderSyllabusList);
+if (syllabusListCourse) syllabusListCourse.addEventListener('change', renderSyllabusList);
+if (syllabusListType) syllabusListType.addEventListener('change', renderSyllabusList);
+if (syllabusListSearch) syllabusListSearch.addEventListener('input', () => {
+  // Debounce lightly
+  clearTimeout(window._syllabusSearchTimer);
+  window._syllabusSearchTimer = setTimeout(renderSyllabusList, 150);
+});
+
 // Load courses for filters
 async function loadCoursesForCalendar() {
   try {
@@ -1413,6 +1500,19 @@ window.openScholarChat = function (index, mode = 'clarify', autoSend = false) {
   updateChatModeUI(index, mode);
   renderChatHistory(index, mode);
 
+  const history = getChatHistory(index, mode);
+  const lastReply = [...history].reverse().find(m => m.role === 'assistant');
+  const generatedDiv = document.getElementById(`generated-answer-${index}`);
+  const generatedText = document.getElementById(`generated-text-${index}`);
+  if (generatedDiv && generatedText) {
+    if (lastReply && lastReply.content) {
+      generatedText.textContent = lastReply.content;
+      generatedDiv.style.display = 'block';
+    } else {
+      generatedDiv.style.display = 'none';
+    }
+  }
+
   panel.style.display = 'block';
   inputEl.focus();
 
@@ -1463,15 +1563,23 @@ function updateChatModeUI(index, mode) {
   const generateBtn = document.getElementById(`chat-mode-generate-${index}`);
   if (!clarifyBtn || !generateBtn) return;
 
-  const activeStyle = 'background: var(--accent); color: #fff; border-color: var(--accent);';
-  const inactiveStyle = 'background: var(--card-bg); color: var(--text-secondary); border-color: var(--border);';
+  const setActive = (btn) => {
+    btn.style.background = 'var(--accent)';
+    btn.style.color = '#fff';
+    btn.style.borderColor = 'var(--accent)';
+  };
+  const setInactive = (btn) => {
+    btn.style.background = 'var(--card-bg)';
+    btn.style.color = 'var(--text-secondary)';
+    btn.style.borderColor = 'var(--border)';
+  };
 
   if (mode === 'generate') {
-    generateBtn.style.cssText = generateBtn.style.cssText + ';' + activeStyle;
-    clarifyBtn.style.cssText = clarifyBtn.style.cssText + ';' + inactiveStyle;
+    setActive(generateBtn);
+    setInactive(clarifyBtn);
   } else {
-    clarifyBtn.style.cssText = clarifyBtn.style.cssText + ';' + activeStyle;
-    generateBtn.style.cssText = generateBtn.style.cssText + ';' + inactiveStyle;
+    setActive(clarifyBtn);
+    setInactive(generateBtn);
   }
 }
 
@@ -1582,16 +1690,41 @@ window.sendChatMessage = async function (index) {
 window.loadSyllabusDashboard = async function () {
   console.log("Loading Syllabus Dashboard...");
   try {
-    const res = await fetch('/api/syllabus/courses');
-    const data = await res.json();
-
-    // Populate courses list if element exists
-    // This is a placeholder since the HTML might not have a container specifically for this list yet
-    // But we ensure the function exists so the tab doesn't crash
-    if (data.courses) {
-      console.log("Loaded courses:", data.courses.length);
-      allCourses = data.courses; // Update global
+    // Courses
+    const resCourses = await fetch('/api/syllabus/courses');
+    const coursesData = await resCourses.json();
+    if (coursesData.courses) {
+      allCourses = coursesData.courses;
+      // Populate calendar filter courses
+      const calCourseSelect = document.getElementById('calendar-filter-course');
+      const planCourseSelect = document.getElementById('plan-session-course');
+      const listCourseSelect = document.getElementById('syllabus-list-course');
+      [calCourseSelect, planCourseSelect, listCourseSelect].forEach(select => {
+        if (!select) return;
+        const current = select.value;
+        select.innerHTML = select.id === 'plan-session-course'
+          ? '<option value="">Optional</option>'
+          : '<option value="">All Courses</option>';
+        coursesData.courses.forEach(c => {
+          select.innerHTML += `<option value="${c.id}">${c.name || 'Course'}${c.term ? ' (' + c.term + ')' : ''}</option>`;
+        });
+        if (current) select.value = current; // preserve selection if possible
+      });
     }
+
+    // Events for list view
+    const resEvents = await fetch('/api/syllabus/events');
+    const eventsData = await resEvents.json();
+    if (eventsData.ok) {
+      syllabusEvents = (eventsData.events || []).map(ev => {
+        const course = allCourses.find(c => c.id === ev.course_id) || {};
+        return { ...ev, course };
+      });
+      renderSyllabusList();
+    }
+
+    // Ensure calendar data is loaded
+    loadCalendar();
   } catch (e) {
     console.error("Failed to load syllabus dashboard:", e);
   }

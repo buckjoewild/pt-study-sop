@@ -96,7 +96,7 @@ def api_scholar_api_key():
             "has_key": bool(api_key),
             "key_preview": f"{api_key[:7]}..." if api_key else None,
             "api_provider": api_provider,
-            "model": config.get("model", "zai-ai/glm-4.7"),
+            "model": config.get("model", "openrouter/auto"),
         })
     else:
         try:
@@ -110,7 +110,7 @@ def api_scholar_api_key():
             
             config = load_api_config()
             api_provider = data.get("api_provider", "openrouter")
-            model = data.get("model", "zai-ai/glm-4.7")
+            model = data.get("model", "openrouter/auto")
             
             if api_provider == "openrouter":
                 config["openrouter_api_key"] = api_key
@@ -237,8 +237,8 @@ def api_scholar_generate_answer():
         
         # Append history to context if available
         if messages:
-             # Filter to only previous turns
-             history_str = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages if m['content'] != question])
+             history_msgs = messages[:-1] if messages[-1].get("role") == "user" else messages
+             history_str = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in history_msgs])
              if history_str:
                  full_context += f"\n\nPrevious Conversation:\n{history_str}"
         
@@ -948,3 +948,299 @@ def api_calendar_plan_session():
         )
     except Exception as exc:
         return jsonify({"ok": False, "message": f"Failed to create planned session: {exc}"}), 400
+
+
+# ---------------------------------------------------------------------------
+# Card Draft Endpoints (Tutor -> Anki pipeline)
+# ---------------------------------------------------------------------------
+
+@dashboard_bp.route("/api/cards/draft", methods=["POST"])
+def api_create_card_draft():
+    """
+    Create a new card draft from Tutor.
+    
+    Expected JSON payload:
+        session_id: str (e.g., "sess-20260109-143022")
+        course_id: int (optional)
+        topic_id: int (optional)
+        deck_name: str (default "PT Study::Default")
+        card_type: str ("basic", "cloze", "image_occlusion")
+        front: str (required)
+        back: str (required)
+        tags: str (comma-separated, optional)
+        source_citation: str (optional)
+    
+    Returns:
+        JSON with ok, card_id, message
+    """
+    payload = request.get_json() or {}
+    
+    try:
+        # Required fields
+        front = (payload.get("front") or "").strip()
+        back = (payload.get("back") or "").strip()
+        
+        if not front or not back:
+            return jsonify({"ok": False, "message": "front and back are required"}), 400
+        
+        # Optional fields with defaults
+        session_id = payload.get("session_id")
+        course_id = payload.get("course_id")
+        topic_id = payload.get("topic_id")
+        deck_name = payload.get("deck_name", "PT Study::Default")
+        card_type = payload.get("card_type", "basic")
+        tags = payload.get("tags", "")
+        source_citation = payload.get("source_citation", "")
+        
+        # Validate card_type
+        valid_types = ("basic", "cloze", "image_occlusion")
+        if card_type not in valid_types:
+            return jsonify({
+                "ok": False, 
+                "message": f"card_type must be one of: {', '.join(valid_types)}"
+            }), 400
+        
+        init_database()
+        conn = get_connection()
+        cur = conn.cursor()
+        
+        now = datetime.now().isoformat(timespec="seconds")
+        cur.execute(
+            """
+            INSERT INTO card_drafts (
+                session_id, course_id, topic_id, deck_name,
+                card_type, front, back, tags, source_citation,
+                status, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+            """,
+            (session_id, course_id, topic_id, deck_name,
+             card_type, front, back, tags, source_citation, now)
+        )
+        card_id = cur.lastrowid
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            "ok": True,
+            "card_id": card_id,
+            "message": "Card draft created"
+        })
+        
+    except Exception as exc:
+        return jsonify({"ok": False, "message": f"Failed to create card draft: {exc}"}), 400
+
+
+@dashboard_bp.route("/api/cards/drafts", methods=["GET"])
+def api_list_card_drafts():
+    """
+    List card drafts with optional filtering.
+    
+    Query params:
+        status: Filter by status (pending, approved, rejected, synced)
+        course_id: Filter by course
+        limit: Max results (default 100)
+    
+    Returns:
+        JSON with ok, drafts (list), count
+    """
+    try:
+        status_filter = request.args.get("status")
+        course_id = request.args.get("course_id")
+        limit = int(request.args.get("limit", 100))
+        
+        init_database()
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        
+        query = "SELECT * FROM card_drafts WHERE 1=1"
+        params = []
+        
+        if status_filter:
+            query += " AND status = ?"
+            params.append(status_filter)
+        
+        if course_id:
+            query += " AND course_id = ?"
+            params.append(int(course_id))
+        
+        query += " ORDER BY created_at DESC LIMIT ?"
+        params.append(limit)
+        
+        cur.execute(query, params)
+        rows = cur.fetchall()
+        conn.close()
+        
+        drafts = [dict(row) for row in rows]
+        
+        return jsonify({
+            "ok": True,
+            "drafts": drafts,
+            "count": len(drafts)
+        })
+        
+    except Exception as exc:
+        return jsonify({"ok": False, "message": f"Failed to list drafts: {exc}"}), 400
+
+
+@dashboard_bp.route("/api/cards/drafts/<int:draft_id>", methods=["PATCH"])
+def api_update_card_draft(draft_id: int):
+    """
+    Update a card draft (approve, reject, edit).
+    
+    Expected JSON payload:
+        status: "approved" | "rejected" | "pending"
+        front: str (optional - update content)
+        back: str (optional - update content)
+        tags: str (optional)
+    
+    Returns:
+        JSON with ok, message
+    """
+    payload = request.get_json() or {}
+    
+    try:
+        init_database()
+        conn = get_connection()
+        cur = conn.cursor()
+        
+        # Check draft exists
+        cur.execute("SELECT id, status FROM card_drafts WHERE id = ?", (draft_id,))
+        row = cur.fetchone()
+        
+        if not row:
+            conn.close()
+            return jsonify({"ok": False, "message": "Draft not found"}), 404
+        
+        current_status = row[1]
+        
+        # Build update query dynamically
+        updates = []
+        params = []
+        
+        if "status" in payload:
+            new_status = payload["status"]
+            valid_statuses = ("pending", "approved", "rejected", "synced")
+            if new_status not in valid_statuses:
+                conn.close()
+                return jsonify({
+                    "ok": False,
+                    "message": f"status must be one of: {', '.join(valid_statuses)}"
+                }), 400
+            updates.append("status = ?")
+            params.append(new_status)
+        
+        if "front" in payload:
+            updates.append("front = ?")
+            params.append(payload["front"])
+        
+        if "back" in payload:
+            updates.append("back = ?")
+            params.append(payload["back"])
+        
+        if "tags" in payload:
+            updates.append("tags = ?")
+            params.append(payload["tags"])
+        
+        if not updates:
+            conn.close()
+            return jsonify({"ok": False, "message": "No fields to update"}), 400
+        
+        query = f"UPDATE card_drafts SET {', '.join(updates)} WHERE id = ?"
+        params.append(draft_id)
+        
+        cur.execute(query, params)
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            "ok": True,
+            "message": f"Draft {draft_id} updated"
+        })
+        
+    except Exception as exc:
+        return jsonify({"ok": False, "message": f"Failed to update draft: {exc}"}), 400
+
+
+@dashboard_bp.route("/api/cards/drafts/pending", methods=["GET"])
+def api_pending_card_drafts():
+    """
+    Get count and list of pending card drafts ready for review.
+    
+    Returns:
+        JSON with ok, pending_count, drafts (list)
+    """
+    try:
+        init_database()
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        
+        cur.execute(
+            """
+            SELECT * FROM card_drafts 
+            WHERE status = 'pending' 
+            ORDER BY created_at DESC
+            LIMIT 50
+            """
+        )
+        rows = cur.fetchall()
+        
+        cur.execute("SELECT COUNT(*) FROM card_drafts WHERE status = 'pending'")
+        total_pending = cur.fetchone()[0]
+        
+        conn.close()
+        
+        drafts = [dict(row) for row in rows]
+        
+        return jsonify({
+            "ok": True,
+            "pending_count": total_pending,
+            "drafts": drafts
+        })
+        
+    except Exception as exc:
+        return jsonify({"ok": False, "message": f"Failed to get pending drafts: {exc}"}), 400
+
+
+@dashboard_bp.route("/api/cards/sync", methods=["POST"])
+def api_sync_cards_to_anki():
+    """
+    Sync approved card drafts to Anki via Anki Connect.
+    
+    Expected JSON payload (optional):
+        dry_run: bool (default False) - Preview without syncing
+    
+    Returns:
+        JSON with ok, synced_count, errors, message
+    """
+    payload = request.get_json() or {}
+    dry_run = payload.get("dry_run", False)
+    
+    try:
+        # Import anki_sync module
+        import sys
+        from pathlib import Path
+        brain_path = Path(__file__).parent.parent
+        if str(brain_path) not in sys.path:
+            sys.path.insert(0, str(brain_path))
+        
+        from anki_sync import sync_pending_cards
+        
+        result = sync_pending_cards(dry_run=dry_run)
+        
+        return jsonify({
+            "ok": True,
+            "synced_count": result.get("synced", 0),
+            "errors": result.get("errors", []),
+            "message": f"Synced {result.get('synced', 0)} cards to Anki"
+        })
+        
+    except ImportError as exc:
+        return jsonify({
+            "ok": False,
+            "message": f"Anki sync module not available: {exc}"
+        }), 500
+    except Exception as exc:
+        return jsonify({"ok": False, "message": f"Sync failed: {exc}"}), 400

@@ -21,7 +21,7 @@ def load_api_config():
         "openai_api_key": "",
         "openrouter_api_key": "",
         "api_provider": "openrouter",  # Default to OpenRouter
-        "model": "zai-ai/glm-4.7"
+        "model": "openrouter/auto"
     }
 
 def save_api_config(config):

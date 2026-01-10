@@ -405,94 +405,148 @@ Now say: “Paste your syllabus text here (one course at a time).” Then wait f
       <div id="syllabus-json-status"></div>
     </div>
 
-    <!-- Calendar View with Filters -->
+    <!-- Calendar/List Toggle -->
     <div class="card resume-section" id="calendar-view">
-      <div class="card-header">
-        <h2 class="card-title">Study Calendar</h2>
+      <div class="card-header" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+        <h2 class="card-title" style="margin: 0;">Study Calendar</h2>
+        <div style="display: flex; gap: 8px;">
+          <button id="btn-view-calendar" class="btn btn-primary" type="button">Calendar</button>
+          <button id="btn-view-list" class="btn" type="button">List</button>
+        </div>
       </div>
       
       <!-- Filters -->
-      <div style="margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
-        <div class="form-group" style="margin: 0; min-width: 150px;">
-          <label class="form-label" style="font-size: 12px;">Course</label>
-          <select id="calendar-filter-course" class="form-select" style="font-size: 13px;">
-            <option value="">All Courses</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin: 0; min-width: 120px;">
-          <label class="form-label" style="font-size: 12px;">Event Type</label>
-          <select id="calendar-filter-type" class="form-select" style="font-size: 13px;">
-            <option value="">All Types</option>
-            <option value="lecture">Lectures</option>
-            <option value="quiz">Quizzes</option>
-            <option value="exam">Exams</option>
-            <option value="assignment">Assignments</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin: 0; min-width: 100px;">
-          <label class="form-label" style="font-size: 12px;">View</label>
-          <select id="calendar-view-range" class="form-select" style="font-size: 13px;">
-            <option value="month">This Month</option>
-            <option value="2months">2 Months</option>
-            <option value="3months">3 Months</option>
-          </select>
-        </div>
-        <button id="btn-refresh-calendar" class="btn" style="margin-top: 20px;">Refresh</button>
-      </div>
-
-      <!-- Calendar Navigation -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <button id="btn-calendar-prev" class="btn" style="padding: 6px 12px;">← Prev</button>
-        <h3 id="calendar-month-year" style="margin: 0; font-size: 18px; font-weight: 600;">Loading...</h3>
-        <button id="btn-calendar-next" class="btn" style="padding: 6px 12px;">Next →</button>
-      </div>
-
-      <!-- Calendar Grid -->
-      <div id="calendar-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 20px;">
-        <!-- Calendar will be rendered here by JavaScript -->
-      </div>
-
-      <!-- Legend -->
-      <div style="display: flex; gap: 16px; flex-wrap: wrap; padding-top: 16px; border-top: 1px solid var(--border); font-size: 12px;">
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <div style="width: 16px; height: 16px; border-radius: 4px; background: rgba(31, 111, 235, 0.3); border: 1px solid var(--accent);"></div>
-          <span>Course Event</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <div style="width: 16px; height: 16px; border-radius: 4px; background: rgba(63, 185, 80, 0.3); border: 1px solid var(--success);"></div>
-          <span>Study Session</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <div style="width: 16px; height: 16px; border-radius: 4px; background: rgba(188, 142, 249, 0.3); border: 1px solid var(--purple);"></div>
-          <span>Planned Repetition</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <div style="width: 16px; height: 16px; border-radius: 4px; background: rgba(248, 81, 73, 0.3); border: 1px solid var(--error);"></div>
-          <span>Exam/Quiz</span>
-        </div>
-      </div>
-
-      <!-- Quick Add Planned Session -->
-      <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
-        <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">Plan Spaced Repetition Session</h4>
-        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-          <div class="form-group" style="margin: 0; min-width: 140px;">
-            <label class="form-label" style="font-size: 12px;">Date</label>
-            <input type="date" id="plan-session-date" class="form-input" style="font-size: 13px;">
-          </div>
-          <div class="form-group" style="margin: 0; min-width: 100px;">
-            <label class="form-label" style="font-size: 12px;">Minutes</label>
-            <input type="number" id="plan-session-minutes" class="form-input" value="60" min="15" step="15" style="font-size: 13px;">
-          </div>
-          <div class="form-group" style="margin: 0; flex: 1; min-width: 200px;">
+      <div id="syllabus-calendar-container">
+        <div style="margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+          <div class="form-group" style="margin: 0; min-width: 150px;">
             <label class="form-label" style="font-size: 12px;">Course</label>
-            <select id="plan-session-course" class="form-select" style="font-size: 13px;">
-              <option value="">Optional</option>
+            <select id="calendar-filter-course" class="form-select" style="font-size: 13px;">
+              <option value="">All Courses</option>
             </select>
           </div>
-          <button id="btn-add-planned-session" class="btn btn-primary" style="margin-top: 20px;">Add Planned Session</button>
+          <div class="form-group" style="margin: 0; min-width: 120px;">
+            <label class="form-label" style="font-size: 12px;">Event Type</label>
+            <select id="calendar-filter-type" class="form-select" style="font-size: 13px;">
+              <option value="">All Types</option>
+              <option value="lecture">Lectures</option>
+              <option value="quiz">Quizzes</option>
+              <option value="exam">Exams</option>
+              <option value="assignment">Assignments</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin: 0; min-width: 100px;">
+            <label class="form-label" style="font-size: 12px;">View</label>
+            <select id="calendar-view-range" class="form-select" style="font-size: 13px;">
+              <option value="month">This Month</option>
+              <option value="2months">2 Months</option>
+              <option value="3months">3 Months</option>
+            </select>
+          </div>
+          <button id="btn-refresh-calendar" class="btn" style="margin-top: 20px;">Refresh</button>
         </div>
-        <div id="plan-session-status" style="margin-top: 8px; font-size: 12px;"></div>
+
+        <!-- Calendar Navigation -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <button id="btn-calendar-prev" class="btn" style="padding: 6px 12px;">← Prev</button>
+          <h3 id="calendar-month-year" style="margin: 0; font-size: 18px; font-weight: 600;">Loading...</h3>
+          <button id="btn-calendar-next" class="btn" style="padding: 6px 12px;">Next →</button>
+        </div>
+
+        <!-- Calendar Grid -->
+        <div id="calendar-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 20px;">
+          <!-- Calendar will be rendered here by JavaScript -->
+        </div>
+
+        <!-- Legend -->
+        <div style="display: flex; gap: 16px; flex-wrap: wrap; padding-top: 16px; border-top: 1px solid var(--border); font-size: 12px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="width: 16px; height: 16px; border-radius: 4px; background: rgba(31, 111, 235, 0.3); border: 1px solid var(--accent);"></div>
+            <span>Course Event</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="width: 16px; height: 16px; border-radius: 4px; background: rgba(63, 185, 80, 0.3); border: 1px solid var(--success);"></div>
+            <span>Study Session</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="width: 16px; height: 16px; border-radius: 4px; background: rgba(188, 142, 249, 0.3); border: 1px solid var(--purple);"></div>
+            <span>Planned Repetition</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="width: 16px; height: 16px; border-radius: 4px; background: rgba(248, 81, 73, 0.3); border: 1px solid var(--error);"></div>
+            <span>Exam/Quiz</span>
+          </div>
+        </div>
+
+        <!-- Quick Add Planned Session -->
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+          <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">Plan Spaced Repetition Session</h4>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <div class="form-group" style="margin: 0; min-width: 140px;">
+              <label class="form-label" style="font-size: 12px;">Date</label>
+              <input type="date" id="plan-session-date" class="form-input" style="font-size: 13px;">
+            </div>
+            <div class="form-group" style="margin: 0; min-width: 100px;">
+              <label class="form-label" style="font-size: 12px;">Minutes</label>
+              <input type="number" id="plan-session-minutes" class="form-input" value="60" min="15" step="15" style="font-size: 13px;">
+            </div>
+            <div class="form-group" style="margin: 0; flex: 1; min-width: 200px;">
+              <label class="form-label" style="font-size: 12px;">Course</label>
+              <select id="plan-session-course" class="form-select" style="font-size: 13px;">
+                <option value="">Optional</option>
+              </select>
+            </div>
+            <button id="btn-add-planned-session" class="btn btn-primary" style="margin-top: 20px;">Add Planned Session</button>
+          </div>
+          <div id="plan-session-status" style="margin-top: 8px; font-size: 12px;"></div>
+        </div>
+      </div>
+
+      <!-- Syllabus List View -->
+      <div id="syllabus-list-container" style="display: none;">
+        <div style="margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+          <div class="form-group" style="margin: 0; min-width: 150px;">
+            <label class="form-label" style="font-size: 12px;">Course</label>
+            <select id="syllabus-list-course" class="form-select" style="font-size: 13px;">
+              <option value="">All Courses</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin: 0; min-width: 120px;">
+            <label class="form-label" style="font-size: 12px;">Event Type</label>
+            <select id="syllabus-list-type" class="form-select" style="font-size: 13px;">
+              <option value="">All Types</option>
+              <option value="lecture">Lectures</option>
+              <option value="reading">Readings</option>
+              <option value="quiz">Quizzes</option>
+              <option value="exam">Exams</option>
+              <option value="assignment">Assignments</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin: 0; min-width: 200px; flex: 1;">
+            <label class="form-label" style="font-size: 12px;">Search title/details</label>
+            <input id="syllabus-list-search" class="form-input" type="text" placeholder="Search events..." style="font-size: 13px;">
+          </div>
+          <button id="btn-refresh-syllabus-list" class="btn" style="margin-top: 20px;">Refresh</button>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="sessions-table" style="min-width: 800px;">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Course</th>
+                <th>Type</th>
+                <th>Title</th>
+                <th>Weight</th>
+                <th>Status</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody id="syllabus-list-body">
+            </tbody>
+          </table>
+        </div>
+        <div id="syllabus-list-empty" style="display: none; color: var(--text-muted); font-size: 13px; padding: 12px 0;">No events match the filters.</div>
       </div>
     </div>
     </section>

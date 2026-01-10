@@ -358,6 +358,107 @@ def init_database():
     """
     )
 
+    # ------------------------------------------------------------------
+    # Tutor turns table (tracks individual Q&A within a Tutor session)
+    # ------------------------------------------------------------------
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS tutor_turns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT NOT NULL,        -- e.g., "sess-20260109-143022"
+            course_id INTEGER,
+            topic_id INTEGER,
+            mode TEXT,                        -- Core/Sprint/Drill
+            turn_number INTEGER DEFAULT 1,
+            question TEXT NOT NULL,
+            answer TEXT,
+            citations_json TEXT,              -- JSON array of citation objects
+            unverified INTEGER DEFAULT 0,     -- 1 if answer was unverified
+            source_lock_active INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(course_id) REFERENCES courses(id),
+            FOREIGN KEY(topic_id) REFERENCES topics(id)
+        )
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_tutor_turns_session
+        ON tutor_turns(session_id)
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_tutor_turns_created
+        ON tutor_turns(created_at)
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_tutor_turns_topic
+        ON tutor_turns(topic_id)
+    """
+    )
+
+    # ------------------------------------------------------------------
+    # Anki Card Drafts table (for Tutor WRAP phase)
+    # ------------------------------------------------------------------
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS card_drafts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT,              -- Link to Tutor session
+            course_id INTEGER,
+            topic_id INTEGER,
+            deck_name TEXT DEFAULT 'PT_Study',
+            card_type TEXT DEFAULT 'basic', -- basic, cloze, reversed
+            front TEXT NOT NULL,
+            back TEXT NOT NULL,
+            tags TEXT,                    -- comma-separated
+            source_citation TEXT,         -- RAG source attribution
+            status TEXT DEFAULT 'draft',  -- draft, approved, synced, rejected
+            anki_note_id INTEGER,         -- filled after sync
+            created_at TEXT NOT NULL,
+            synced_at TEXT,
+            FOREIGN KEY(course_id) REFERENCES courses(id),
+            FOREIGN KEY(topic_id) REFERENCES topics(id)
+        )
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_card_drafts_session
+        ON card_drafts(session_id)
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_card_drafts_status
+        ON card_drafts(status)
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_card_drafts_course
+        ON card_drafts(course_id)
+    """
+    )
+
+    # Add google_event_id to course_events if not exists (for GCal sync)
+    cursor.execute("PRAGMA table_info(course_events)")
+    ce_columns = {col[1] for col in cursor.fetchall()}
+    if 'google_event_id' not in ce_columns:
+        try:
+            cursor.execute("ALTER TABLE course_events ADD COLUMN google_event_id TEXT")
+        except sqlite3.OperationalError:
+            pass  # Column might already exist
+
     conn.commit()
     conn.close()
 

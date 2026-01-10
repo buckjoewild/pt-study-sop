@@ -51,9 +51,98 @@ import argparse
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from db_setup import get_connection, init_database
+
+# Prefer completed events, then earliest created_at when resolving duplicates
+STATUS_PRIORITY = {"completed": 3, "pending": 2, "cancelled": 1}
+
+
+def _normalize_str(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _normalize_event_input(ev: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalize inbound event payload to a consistent shape."""
+    ev_type = _normalize_str(ev.get("type") or "other") or "other"
+    title = _normalize_str(ev.get("title"))
+    date = _normalize_str(ev.get("date")) or None
+    due_date = _normalize_str(ev.get("due_date")) or None
+    weight = float(ev.get("weight", 0.0) or 0.0)
+    raw_text = _normalize_str(ev.get("raw_text"))
+    status = _normalize_str(ev.get("status") or "pending") or "pending"
+
+    return {
+        "type": ev_type,
+        "title": title,
+        "date": date,
+        "due_date": due_date,
+        "weight": weight,
+        "raw_text": raw_text,
+        "status": status,
+    }
+
+
+def _event_dedupe_key(course_id: int, ev: Dict[str, Any]) -> Tuple[int, str, str, str, str, float, str]:
+    """Key used to detect duplicate course_events rows."""
+    return (
+        int(course_id),
+        (_normalize_str(ev.get("type")) or "other").lower(),
+        (_normalize_str(ev.get("title"))).lower(),
+        _normalize_str(ev.get("date")),
+        _normalize_str(ev.get("due_date")),
+        round(float(ev.get("weight", 0.0) or 0.0), 4),
+        (_normalize_str(ev.get("raw_text"))).lower(),
+    )
+
+
+def _load_existing_event_keys(cur, course_id: int) -> set:
+    cur.execute(
+        """
+        SELECT course_id, type, title, date, due_date, weight, raw_text
+        FROM course_events
+        WHERE course_id = ?
+        """,
+        (course_id,),
+    )
+    rows = cur.fetchall()
+    keys = set()
+    for row in rows:
+        existing = {
+            "type": row[1],
+            "title": row[2],
+            "date": row[3],
+            "due_date": row[4],
+            "weight": row[5],
+            "raw_text": row[6],
+        }
+        keys.add(_event_dedupe_key(row[0], existing))
+    return keys
+
+
+def _parse_created_at(value: Optional[str]) -> datetime:
+    try:
+        return datetime.fromisoformat(value) if value else datetime.max
+    except Exception:
+        return datetime.max
+
+
+def _prefer_event(existing: Dict[str, Any], candidate: Dict[str, Any]) -> Dict[str, Any]:
+    """Choose which event to keep when duplicates share the same key."""
+    existing_status = (_normalize_str(existing.get("status")) or "pending").lower()
+    candidate_status = (_normalize_str(candidate.get("status")) or "pending").lower()
+    existing_score = STATUS_PRIORITY.get(existing_status, 1)
+    candidate_score = STATUS_PRIORITY.get(candidate_status, 1)
+
+    if candidate_score > existing_score:
+        return candidate
+    if candidate_score < existing_score:
+        return existing
+
+    existing_created = _parse_created_at(existing.get("created_at"))
+    candidate_created = _parse_created_at(candidate.get("created_at"))
+    return candidate if candidate_created < existing_created else existing
 
 
 def upsert_course(course_data: Dict[str, Any]) -> int:
@@ -156,23 +245,31 @@ def import_events(course_id: int, events: Any, replace: bool = False) -> int:
     conn = get_connection()
     cur = conn.cursor()
 
-    if replace:
-        cur.execute("DELETE FROM course_events WHERE course_id = ?", (course_id,))
-        print(f"[INFO] Existing events cleared for course_id={course_id}")
-
-    inserted = 0
-    now = datetime.now().isoformat(timespec="seconds")
+    normalized_events: List[Dict[str, Any]] = []
     for ev in events:
         if not isinstance(ev, dict):
             continue
-        ev_type = (ev.get("type") or "other").strip()
-        title = (ev.get("title") or "").strip()
-        if not title:
+        normalized = _normalize_event_input(ev)
+        if not normalized.get("title"):
             continue
-        date = (ev.get("date") or "").strip() or None
-        due_date = (ev.get("due_date") or "").strip() or None
-        weight = float(ev.get("weight", 0.0) or 0.0)
-        raw_text = (ev.get("raw_text") or "").strip()
+        normalized_events.append(normalized)
+
+    if replace:
+        cur.execute("DELETE FROM course_events WHERE course_id = ?", (course_id,))
+        print(f"[INFO] Existing events cleared for course_id={course_id}")
+        existing_keys = set()
+    else:
+        existing_keys = _load_existing_event_keys(cur, course_id)
+
+    inserted = 0
+    skipped = 0
+    now = datetime.now().isoformat(timespec="seconds")
+    for ev in normalized_events:
+        key = _event_dedupe_key(course_id, ev)
+        if key in existing_keys:
+            skipped += 1
+            continue
+        existing_keys.add(key)
 
         cur.execute(
             """
@@ -182,14 +279,118 @@ def import_events(course_id: int, events: Any, replace: bool = False) -> int:
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)
             """,
-            (course_id, ev_type, title, date, due_date, weight, raw_text, now),
+            (
+                course_id,
+                ev["type"],
+                ev["title"],
+                ev["date"],
+                ev["due_date"],
+                ev["weight"],
+                ev["raw_text"],
+                now,
+            ),
         )
         inserted += 1
 
     conn.commit()
     conn.close()
+    if skipped:
+        print(f"[INFO] Skipped {skipped} duplicate event(s) for course_id={course_id}")
     print(f"[OK] Imported {inserted} event(s) for course_id={course_id}")
     return inserted
+
+
+def dedupe_course_events(
+    course_id: Optional[int] = None,
+    apply: bool = False,
+    verbose: bool = False,
+) -> Dict[str, Any]:
+    """
+    Remove duplicate course_events rows (e.g., when the same JSON was imported twice).
+
+    - course_id: limit dedupe to a specific course (optional)
+    - apply: when False, perform a dry run
+    - verbose: when True, list kept/deleted ids for inspection
+    """
+
+    init_database()
+    conn = get_connection()
+    cur = conn.cursor()
+
+    where_clause = ""
+    params: Tuple[Any, ...] = ()
+    if course_id is not None:
+        where_clause = " WHERE course_id = ?"
+        params = (course_id,)
+
+    cur.execute(
+        f"""
+        SELECT id, course_id, type, title, date, due_date, weight, raw_text, status, created_at
+        FROM course_events{where_clause}
+        ORDER BY course_id, id
+        """,
+        params,
+    )
+    rows = cur.fetchall()
+    events = [
+        {
+            "id": row[0],
+            "course_id": row[1],
+            "type": row[2],
+            "title": row[3],
+            "date": row[4],
+            "due_date": row[5],
+            "weight": row[6],
+            "raw_text": row[7],
+            "status": row[8],
+            "created_at": row[9],
+        }
+        for row in rows
+    ]
+
+    winners: Dict[Tuple[int, str, str, str, str, float, str], Dict[str, Any]] = {}
+    duplicates: List[Dict[str, Any]] = []
+
+    for ev in events:
+        key = _event_dedupe_key(ev["course_id"], ev)
+        if key not in winners:
+            winners[key] = ev
+            continue
+
+        preferred = _prefer_event(winners[key], ev)
+        if preferred["id"] == winners[key]["id"]:
+            duplicates.append(ev)
+        else:
+            duplicates.append(winners[key])
+            winners[key] = ev
+
+    deleted_ids: List[int] = []
+    if apply and duplicates:
+        deleted_ids = [ev["id"] for ev in duplicates]
+        cur.executemany(
+            "DELETE FROM course_events WHERE id = ?",
+            [(row_id,) for row_id in deleted_ids],
+        )
+        conn.commit()
+
+    conn.close()
+
+    if verbose:
+        print(f"[INFO] Examined {len(events)} event(s)")
+        print(f"[INFO] Unique keys: {len(winners)}")
+        print(f"[INFO] Duplicate candidates: {len(duplicates)}")
+        if deleted_ids:
+            print(f"[INFO] Deleted ids: {sorted(deleted_ids)}")
+
+    return {
+        "course_filter": course_id,
+        "total_events": len(events),
+        "unique_events": len(winners),
+        "duplicates_found": len(duplicates),
+        "deleted": len(deleted_ids),
+        "deleted_ids": sorted(deleted_ids),
+        "kept_ids": sorted(ev["id"] for ev in winners.values()),
+    }
 
 
 def main() -> None:

@@ -28,7 +28,9 @@ def generate_ai_answer(question, context="", api_key_override=None, api_provider
     
     if api_provider == "openrouter":
         api_key = (api_key_override or config.get("openrouter_api_key", "")).strip()
-        model = model_override or config.get("model", "zai-ai/glm-4.7")
+        model = model_override or config.get("model", "openrouter/auto")
+        if not model or model == "zai-ai/glm-4.7":
+            model = "openrouter/auto"
         api_url = "https://openrouter.ai/api/v1/chat/completions"
     else:
         # Fallback to OpenAI

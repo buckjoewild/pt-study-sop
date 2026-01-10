@@ -32,6 +32,7 @@
       <button class="tab-button" onclick="openTab(event, 'syllabus')" data-tab="syllabus" type="button">Syllabus</button>
       <button class="tab-button" onclick="openTab(event, 'scholar')" data-tab="scholar" type="button">Scholar</button>
       <button class="tab-button" onclick="openTab(event, 'tutor')" data-tab="tutor" type="button">Tutor</button>
+      <button class="tab-button" onclick="openTab(event, 'brain')" data-tab="brain" type="button">Brain</button>
     </div>
 
     <div class="profile-section">
@@ -973,6 +974,7 @@ Now say: “Paste your syllabus text here (one course at a time).” Then wait f
             </h4>
           </div>
           <button id="btn-generate-digest" class="btn btn-primary" style="margin: 0; background: #a855f7;">Generate Analysis</button>
+          <button class="btn" style="margin: 0;" onclick="saveStrategicDigest()">Save Digest</button>
         </div>
         <div id="scholar-digest-status" style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">
           AI analyzes proposals, gaps, improvements, and research to recommend strategic next steps
@@ -1101,6 +1103,53 @@ Now say: “Paste your syllabus text here (one course at a time).” Then wait f
         </div>
       </div>
     </section>
+
+    <!-- Brain Tab -->
+    <section id="tab-brain" class="tab-panel">
+      <h2 class="page-title" style="font-size: 20px; margin-bottom: 20px;">Brain Database</h2>
+      
+      <div class="collapsible-section" id="brain-stats-section" data-section="brain-stats">
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+          <h3>Database Statistics</h3>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="collapsible-content">
+          <div id="brain-stats-grid" class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin-bottom: 16px;">
+            <div class="stat-card" style="padding: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; text-align: center;">
+              <div class="stat-value" id="brain-session-count" style="font-size: 24px; font-weight: 700; color: var(--accent);">--</div>
+              <div class="stat-label" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Sessions</div>
+            </div>
+            <div class="stat-card" style="padding: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; text-align: center;">
+              <div class="stat-value" id="brain-event-count" style="font-size: 24px; font-weight: 700; color: var(--success);">--</div>
+              <div class="stat-label" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Syllabus Events</div>
+            </div>
+            <div class="stat-card" style="padding: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; text-align: center;">
+              <div class="stat-value" id="brain-rag-count" style="font-size: 24px; font-weight: 700; color: var(--purple);">--</div>
+              <div class="stat-label" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">RAG Documents</div>
+            </div>
+            <div class="stat-card" style="padding: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; text-align: center;">
+              <div class="stat-value" id="brain-pending-cards" style="font-size: 24px; font-weight: 700; color: var(--warning);">--</div>
+              <div class="stat-label" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Pending Cards</div>
+            </div>
+            <div class="stat-card" style="padding: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; text-align: center;">
+              <div class="stat-value" id="brain-db-size" style="font-size: 24px; font-weight: 700; color: var(--text-primary);">--</div>
+              <div class="stat-label" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">DB Size (MB)</div>
+            </div>
+          </div>
+          <button class="btn" onclick="loadBrainStatus()" style="margin-top: 12px;">Refresh</button>
+        </div>
+      </div>
+      
+      <div class="collapsible-section" id="brain-mastery-section" data-section="brain-mastery" style="margin-top: 24px;">
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+          <h3>Topic Mastery Overview</h3>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="collapsible-content">
+          <div id="brain-mastery-list" style="padding: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; min-height: 60px;">Loading...</div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <!-- Proposal Viewer Modal -->
@@ -1126,6 +1175,89 @@ Now say: “Paste your syllabus text here (one course at a time).” Then wait f
       </div>
     </div>
   </div>
+
+  <!-- Event Edit Modal -->
+  <div id="event-edit-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; margin: 100px auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="margin: 0; font-size: 18px;">Edit Event</h3>
+        <button type="button" onclick="closeEventEditModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted);">&times;</button>
+      </div>
+      <form id="event-edit-form">
+        <input type="hidden" id="edit-event-id">
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" for="edit-event-title">Title</label>
+          <input type="text" id="edit-event-title" class="form-input" required>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" for="edit-event-type">Type</label>
+            <select id="edit-event-type" class="form-select">
+              <option value="lecture">Lecture</option>
+              <option value="reading">Reading</option>
+              <option value="quiz">Quiz</option>
+              <option value="exam">Exam</option>
+              <option value="assignment">Assignment</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" for="edit-event-status">Status</label>
+            <select id="edit-event-status" class="form-select">
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" for="edit-event-date">Date</label>
+            <input type="date" id="edit-event-date" class="form-input">
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" for="edit-event-due-date">Due Date</label>
+            <input type="date" id="edit-event-due-date" class="form-input">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" for="edit-event-weight">Weight (0-1)</label>
+          <input type="number" id="edit-event-weight" class="form-input" step="0.01" min="0" max="1">
+        </div>
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label class="form-label" for="edit-event-details">Details</label>
+          <textarea id="edit-event-details" class="form-textarea" rows="3"></textarea>
+        </div>
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+          <button type="button" class="btn" onclick="closeEventEditModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+      <div id="event-edit-status" style="margin-top: 12px; font-size: 13px;"></div>
+    </div>
+  </div>
+
+  <style>
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      backdrop-filter: blur(4px);
+    }
+    .session-detail-row {
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .session-detail-row td {
+      padding: 16px 12px;
+    }
+    .session-detail-row.hidden {
+      display: none;
+    }
+  </style>
   
 </body>
 </html>

@@ -762,6 +762,69 @@ def api_scholar_safe_mode():
         return jsonify({"ok": False, "message": f"Error updating safe_mode: {e}"}), 500
 
 
+@dashboard_bp.route("/api/scholar/proposal/<filename>")
+def api_scholar_proposal_get(filename):
+    """Get the content of a proposal file."""
+    try:
+        repo_root = Path(__file__).parent.parent.parent.resolve()
+        proposal_path = repo_root / "scholar" / "outputs" / "promotion_queue" / filename
+        
+        if not proposal_path.exists():
+            return jsonify({"ok": False, "message": "Proposal not found"}), 404
+        
+        content = proposal_path.read_text(encoding="utf-8")
+        
+        return jsonify({
+            "ok": True,
+            "filename": filename,
+            "content": content,
+            "path": str(proposal_path)
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "message": f"Error reading proposal: {e}"}), 500
+
+
+@dashboard_bp.route("/api/scholar/proposal/<filename>/action", methods=["POST"])
+def api_scholar_proposal_action(filename):
+    """Approve or reject a proposal."""
+    try:
+        data = request.get_json() or {}
+        action = data.get("action", "").lower()
+        
+        if action not in ("approve", "reject"):
+            return jsonify({"ok": False, "message": "Action must be 'approve' or 'reject'"}), 400
+        
+        repo_root = Path(__file__).parent.parent.parent.resolve()
+        promotion_queue = repo_root / "scholar" / "outputs" / "promotion_queue"
+        proposal_path = promotion_queue / filename
+        
+        if not proposal_path.exists():
+            return jsonify({"ok": False, "message": "Proposal not found"}), 404
+        
+        if action == "approve":
+            # Move to proposals folder (approved)
+            approved_dir = repo_root / "scholar" / "outputs" / "proposals" / "approved"
+            approved_dir.mkdir(parents=True, exist_ok=True)
+            dest = approved_dir / filename
+            proposal_path.rename(dest)
+            message = f"Proposal approved and moved to {dest.relative_to(repo_root)}"
+        else:
+            # Move to proposals/rejected folder
+            rejected_dir = repo_root / "scholar" / "outputs" / "proposals" / "rejected"
+            rejected_dir.mkdir(parents=True, exist_ok=True)
+            dest = rejected_dir / filename
+            proposal_path.rename(dest)
+            message = f"Proposal rejected and moved to {dest.relative_to(repo_root)}"
+        
+        return jsonify({
+            "ok": True,
+            "action": action,
+            "message": message
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "message": f"Error processing proposal: {e}"}), 500
+
+
 @dashboard_bp.route("/api/scholar/execute-via-ai", methods=["POST"])
 def api_scholar_execute_via_ai():
     repo_root = Path(__file__).parent.parent.parent.resolve()
@@ -1044,9 +1107,62 @@ def api_tutor_upload_project_file():
     }), 410
 
 
+@dashboard_bp.route("/api/tutor/study/config")
+def api_tutor_study_config():
+    """Return the Study RAG folder configuration."""
+    return jsonify({
+        "ok": True,
+        "root": str(STUDY_RAG_PATH),
+        "exists": os.path.exists(STUDY_RAG_PATH),
+    })
+
+
+@dashboard_bp.route("/api/tutor/study/config", methods=["POST"])
+def api_tutor_update_study_config():
+    """Update the Study RAG folder path."""
+    payload = request.get_json() or {}
+    new_path = payload.get("path", "").strip()
+    
+    if not new_path:
+        return jsonify({"ok": False, "message": "Path is required"}), 400
+    
+    # Expand and normalize the path
+    expanded_path = os.path.abspath(os.path.expanduser(os.path.expandvars(new_path)))
+    
+    # Check if path exists
+    if not os.path.exists(expanded_path):
+        return jsonify({
+            "ok": False, 
+            "message": f"Path does not exist: {expanded_path}",
+            "expanded_path": expanded_path
+        }), 400
+    
+    if not os.path.isdir(expanded_path):
+        return jsonify({
+            "ok": False, 
+            "message": f"Path is not a directory: {expanded_path}"
+        }), 400
+    
+    # Save to api_config.json
+    config = load_api_config()
+    config["study_rag_path"] = expanded_path
+    save_api_config(config)
+    
+    # Update the global STUDY_RAG_PATH
+    global STUDY_RAG_PATH
+    STUDY_RAG_PATH = Path(expanded_path)
+    
+    return jsonify({
+        "ok": True,
+        "root": str(STUDY_RAG_PATH),
+        "exists": True,
+        "message": f"Study RAG path updated to: {expanded_path}"
+    })
+
+
 @dashboard_bp.route("/api/tutor/study/sync", methods=["POST"])
 def api_tutor_sync_study_folder():
-    """Sync the Study RAG drop-folder (brain/data/study_rag) into rag_docs."""
+    """Sync the Study RAG drop-folder into rag_docs."""
     try:
         result = sync_folder_to_rag(str(STUDY_RAG_PATH), corpus="study")
         return jsonify({
@@ -1543,6 +1659,110 @@ def api_syllabus_courses():
             "summary": overall_summary,
         }
     )
+
+
+@dashboard_bp.route("/api/syllabus/study-tasks")
+def api_syllabus_study_tasks():
+    """
+    Get study tasks - readings, topics, and ongoing items that span multiple days.
+    These are better visualized as a to-do list rather than calendar events.
+    """
+    filter_status = request.args.get("filter", "active")  # active, all, completed
+    
+    courses, events = fetch_all_courses_and_events()
+    
+    # Build course lookup for names and colors
+    course_lookup = {c["id"]: c for c in courses}
+    
+    # Filter for readings and topics (ongoing study items)
+    study_types = ["reading", "other"]  # Types that span time
+    study_tasks = []
+    
+    from datetime import datetime
+    today = datetime.now().date()
+    
+    for ev in events:
+        # Include readings, topics, and items without specific dates
+        is_study_type = ev.get("type") in study_types
+        has_date_range = ev.get("date") and ev.get("due_date") and ev.get("date") != ev.get("due_date")
+        no_specific_date = not ev.get("date") and not ev.get("due_date")
+        
+        if is_study_type or has_date_range or no_specific_date:
+            course = course_lookup.get(ev.get("course_id"), {})
+            status = ev.get("status", "pending")
+            
+            # Calculate time context
+            start_date = ev.get("date")
+            end_date = ev.get("due_date") or ev.get("date")
+            
+            is_overdue = False
+            is_current = False
+            days_remaining = None
+            
+            if end_date:
+                try:
+                    end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
+                    days_remaining = (end_dt - today).days
+                    is_overdue = days_remaining < 0 and status != "completed"
+                    
+                    if start_date:
+                        start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
+                        is_current = start_dt <= today <= end_dt
+                    else:
+                        is_current = days_remaining >= 0 and days_remaining <= 7
+                except:
+                    pass
+            
+            task = {
+                "id": ev["id"],
+                "title": ev["title"],
+                "type": ev["type"],
+                "course_name": course.get("name", "Unknown"),
+                "course_color": course.get("color"),
+                "status": status,
+                "start_date": start_date,
+                "end_date": end_date,
+                "raw_text": ev.get("raw_text", ""),
+                "is_overdue": is_overdue,
+                "is_current": is_current,
+                "days_remaining": days_remaining,
+            }
+            
+            # Apply filter
+            if filter_status == "active" and status == "completed":
+                continue
+            elif filter_status == "completed" and status != "completed":
+                continue
+            
+            study_tasks.append(task)
+    
+    # Sort: overdue first, then current, then by end date
+    def sort_key(t):
+        if t["is_overdue"]:
+            return (0, t.get("end_date") or "9999")
+        if t["is_current"]:
+            return (1, t.get("end_date") or "9999")
+        return (2, t.get("end_date") or "9999")
+    
+    study_tasks.sort(key=sort_key)
+    
+    # Calculate stats
+    total = len([e for e in events if e.get("type") in study_types or not e.get("date")])
+    completed = len([e for e in events if e.get("status") == "completed" and (e.get("type") in study_types or not e.get("date"))])
+    in_progress = len([t for t in study_tasks if t["is_current"] and t["status"] != "completed"])
+    pending = total - completed - in_progress
+    
+    return jsonify({
+        "ok": True,
+        "tasks": study_tasks,
+        "stats": {
+            "total": total,
+            "pending": pending,
+            "in_progress": in_progress,
+            "completed": completed,
+            "progress_pct": round(completed / total * 100) if total > 0 else 0,
+        }
+    })
 
 
 @dashboard_bp.route("/api/syllabus/events")

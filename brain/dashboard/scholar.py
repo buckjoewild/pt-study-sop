@@ -5,18 +5,122 @@ import json
 import threading
 import subprocess
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Optional, Tuple
 from dashboard.utils import load_api_config
-
-# Try to import requests for OpenAI API calls
-try:
-    import requests
-    REQUESTS_AVAILABLE = True
-except ImportError:
-    REQUESTS_AVAILABLE = False
 
 # Maximum context size to send to API (approx 30k tokens = ~120k chars)
 MAX_CONTEXT_CHARS = 100000
+
+
+# -----------------------------------------------------------------------------
+# Codex CLI Integration (same as tutor_engine.py)
+# -----------------------------------------------------------------------------
+
+def find_codex_cli() -> Optional[str]:
+    """Find Codex CLI executable path."""
+    # Check npm global install location first (Windows)
+    npm_path = Path(os.environ.get("APPDATA", "")) / "npm" / "codex.cmd"
+    if npm_path.exists():
+        return str(npm_path)
+    
+    # Try to find in PATH
+    try:
+        result = subprocess.run(
+            ["where.exe", "codex"] if os.name == "nt" else ["which", "codex"],
+            capture_output=True,
+            timeout=5,
+            text=True,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip().split('\n')[0]
+    except:
+        pass
+    
+    return None
+
+
+def call_codex(prompt: str, system_prompt: str, timeout: int = 90) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Call Codex CLI with the given prompt (matches run_scholar.bat approach).
+    
+    Returns: (response_text, error_message)
+    """
+    codex_cmd = find_codex_cli()
+    if not codex_cmd:
+        return None, "Codex CLI not found. Install with: npm install -g @openai/codex"
+    
+    repo_root = Path(__file__).parent.parent.parent.resolve()
+    
+    # Build the full prompt (similar to tutor_engine.py)
+    full_prompt = f"""System Instructions:
+{system_prompt}
+
+---
+
+{prompt}
+
+---
+
+Respond with markdown formatting. Be concise and actionable.
+"""
+    
+    # Create a temp file for output (like --output-last-message in batch script)
+    import tempfile
+    output_file = None
+    
+    try:
+        # Create temp file for output
+        fd, output_path = tempfile.mkstemp(suffix=".md", prefix="codex_digest_")
+        os.close(fd)
+        output_file = Path(output_path)
+        
+        # Run codex exec with stdin and output file (matches batch script pattern)
+        # codex exec --cd REPO --dangerously-bypass-approvals-and-sandbox --output-last-message OUT - < prompt
+        process = subprocess.Popen(
+            [
+                codex_cmd, "exec",
+                "--cd", str(repo_root),
+                "--dangerously-bypass-approvals-and-sandbox",
+                "--output-last-message", str(output_file),
+                "-"  # Read from stdin
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=str(repo_root),
+            encoding="utf-8",
+            text=True,
+        )
+        
+        # Write prompt to stdin
+        stdout, stderr = process.communicate(input=full_prompt, timeout=timeout)
+        
+        if process.returncode == 0:
+            # Read the output from the file
+            if output_file.exists():
+                response = output_file.read_text(encoding="utf-8").strip()
+                return response, None
+            else:
+                # Fall back to stdout if file wasn't created
+                return stdout.strip() if stdout else "No response generated", None
+        else:
+            error = stderr.strip() if stderr else f"Codex exited with code {process.returncode}"
+            return None, error
+            
+    except subprocess.TimeoutExpired:
+        if process:
+            process.kill()
+        return None, "Codex request timed out (90s)"
+    except Exception as e:
+        return None, f"Codex error: {str(e)}"
+    finally:
+        # Clean up temp file
+        if output_file and output_file.exists():
+            try:
+                output_file.unlink()
+            except:
+                pass
 
 
 def cleanup_stale_pids() -> int:
@@ -207,12 +311,17 @@ def build_scholar_stats():
         "last_updated": None,
         "safe_mode": False,
         "questions": [],
+        "proposals": [],
         "coverage": {
             "complete": 0,
             "in_progress": 0,
             "not_started": 0,
+            "stale": 0,
             "items": []
         },
+        "research_topics": [],
+        "gaps": [],
+        "improvements": [],
         "next_steps": [],
         "latest_artifacts": {},
         "latest_run": None,
@@ -231,22 +340,10 @@ def build_scholar_stats():
                     result["last_updated"] = line.replace("Updated:", "").strip()
                     break
             
-            # Extract coverage counts
-            for line in lines:
-                if "Coverage counts:" in line:
-                    parts = line.split("Complete=")
-                    if len(parts) > 1:
-                        counts_part = parts[1]
-                        for part in counts_part.split("|"):
-                            if "Complete=" in part:
-                                result["coverage"]["complete"] = int(part.split("=")[1].strip())
-                            elif "In progress=" in part:
-                                result["coverage"]["in_progress"] = int(part.split("=")[1].strip())
-                            elif "Not started=" in part:
-                                result["coverage"]["not_started"] = int(part.split("=")[1].strip())
-                    break
+            # NOTE: Coverage counts are now calculated from parsing the actual checklist items
+            # (see below), not from the potentially stale STATUS.md snapshot
             
-            # Extract "What to do now" section
+            # Extract "What to do now" section - parse into structured actions
             in_next_steps = False
             for line in lines:
                 if "## What to do now" in line:
@@ -255,7 +352,29 @@ def build_scholar_stats():
                 if in_next_steps and line.strip().startswith("##"):
                     break
                 if in_next_steps and line.strip() and line.strip().startswith(("1)", "2)", "3)")):
-                    result["next_steps"].append(line.strip())
+                    step_text = line.strip()
+                    # Parse into structured action
+                    step_lower = step_text.lower()
+                    action = None
+                    action_label = None
+                    if "unattended_final" in step_lower or "open the latest" in step_lower:
+                        action = "open_final"
+                        action_label = "Open Latest Run"
+                    elif "questions_needed" in step_lower or "answer" in step_lower:
+                        action = "answer_questions"
+                        action_label = "Answer Questions"
+                    elif "run scholar" in step_lower or "start run" in step_lower:
+                        action = "start_run"
+                        action_label = "Start Run"
+                    elif "review" in step_lower and "proposal" in step_lower:
+                        action = "review_proposals"
+                        action_label = "Review Proposals"
+                    
+                    result["next_steps"].append({
+                        "text": step_text,
+                        "action": action,
+                        "action_label": action_label
+                    })
             
             # Extract safe_mode
             for line in lines:
@@ -346,12 +465,20 @@ def build_scholar_stats():
                 if in_table and line.startswith("|") and "---" not in line:
                     parts = [p.strip() for p in line.split("|")[1:-1]]
                     if len(parts) >= 3:
+                        status_text = parts[2].lower()
                         result["coverage"]["items"].append({
                             "grouping": parts[0],
                             "module": parts[1],
                             "status": parts[2],
                             "dossier": parts[3] if len(parts) > 3 else "",
                         })
+                        # Count status from parsed items
+                        if "[x]" in status_text or "complete" in status_text:
+                            result["coverage"]["complete"] += 1
+                        elif "[/]" in status_text or "progress" in status_text:
+                            result["coverage"]["in_progress"] += 1
+                        else:
+                            result["coverage"]["not_started"] += 1
                 if in_table and line.strip().startswith("##"):
                     break
         except Exception as e:
@@ -394,6 +521,127 @@ def build_scholar_stats():
                     break
     except Exception as e:
         pass
+    
+    # Scan promotion_queue for proposals
+    promotion_queue = scholar_outputs / "promotion_queue"
+    if promotion_queue.exists():
+        try:
+            proposal_files = list(promotion_queue.glob("*.md"))
+            for pf in proposal_files:
+                try:
+                    name = pf.stem
+                    # Parse proposal type from filename
+                    if "change_proposal" in name:
+                        title = name.replace("change_proposal_", "").replace("_", " ").title()
+                        proposal_type = "change"
+                    elif "experiment" in name:
+                        title = name.replace("experiment_", "").replace("_", " ").title()
+                        proposal_type = "experiment"
+                    else:
+                        title = name.replace("_", " ").title()
+                        proposal_type = "other"
+                    
+                    # Try to extract status from file content
+                    status = "draft"
+                    try:
+                        content = pf.read_text(encoding="utf-8")[:500]
+                        if "Status: " in content:
+                            for line in content.split("\n"):
+                                if line.strip().startswith("- Status:"):
+                                    status = line.split(":")[-1].strip().lower()
+                                    break
+                    except:
+                        pass
+                    
+                    result["proposals"].append({
+                        "title": title,
+                        "type": proposal_type,
+                        "status": status,
+                        "file": pf.name
+                    })
+                except Exception:
+                    continue
+        except Exception:
+            pass
+    
+    # Scan research_notebook for active research topics
+    research_notebook = scholar_outputs / "research_notebook"
+    if research_notebook.exists():
+        try:
+            research_files = sorted(research_notebook.glob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
+            for rf in research_files[:5]:
+                try:
+                    name = rf.stem.replace("_", " ").title()
+                    # Clean up common patterns
+                    name = name.replace("Research ", "").replace(" Research", "")
+                    days_ago = (datetime.now() - datetime.fromtimestamp(rf.stat().st_mtime)).days
+                    result["research_topics"].append({
+                        "name": name,
+                        "file": rf.name,
+                        "days_ago": days_ago
+                    })
+                except Exception:
+                    continue
+        except Exception:
+            pass
+    
+    # Scan gap_analysis for identified gaps
+    gap_analysis = scholar_outputs / "gap_analysis"
+    if gap_analysis.exists():
+        try:
+            gap_files = sorted(gap_analysis.glob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
+            for gf in gap_files[:3]:
+                try:
+                    content = gf.read_text(encoding="utf-8")
+                    # Extract gap items (lines starting with - that mention gap, missing, need, etc.)
+                    for line in content.split("\n"):
+                        line_clean = line.strip()
+                        if line_clean.startswith("-") and len(line_clean) > 10:
+                            lower = line_clean.lower()
+                            if any(kw in lower for kw in ["gap", "missing", "need", "lack", "incomplete", "todo"]):
+                                gap_text = line_clean.lstrip("-").strip()[:100]
+                                if gap_text and gap_text not in [g["text"] for g in result["gaps"]]:
+                                    result["gaps"].append({"text": gap_text, "file": gf.name})
+                                if len(result["gaps"]) >= 5:
+                                    break
+                    if len(result["gaps"]) >= 5:
+                        break
+                except Exception:
+                    continue
+        except Exception:
+            pass
+    
+    # Scan module_dossiers for improvement candidates
+    module_dossiers = scholar_outputs / "module_dossiers"
+    if module_dossiers.exists():
+        try:
+            dossier_files = sorted(module_dossiers.glob("*_dossier_*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
+            for df in dossier_files[:5]:
+                try:
+                    content = df.read_text(encoding="utf-8")
+                    in_improvement = False
+                    for line in content.split("\n"):
+                        if "improvement" in line.lower() and line.strip().startswith("#"):
+                            in_improvement = True
+                            continue
+                        if in_improvement and line.strip().startswith("#"):
+                            break
+                        if in_improvement and line.strip().startswith("-"):
+                            item = line.strip().lstrip("-").strip()[:100]
+                            if item and len(item) > 10:
+                                module_name = df.stem.split("_dossier_")[0].replace("_", " ").title()
+                                result["improvements"].append({
+                                    "text": item,
+                                    "module": module_name
+                                })
+                                if len(result["improvements"]) >= 5:
+                                    break
+                    if len(result["improvements"]) >= 5:
+                        break
+                except Exception:
+                    continue
+        except Exception:
+            pass
     
     result["status"] = "active" if result["last_updated"] else "inactive"
     return result
@@ -905,13 +1153,161 @@ def generate_weekly_digest(days: int = 7) -> dict:
     else:
         digest_parts.append("- No specific review topics flagged")
     
+    # --- 7. Get Proposals from promotion_queue ---
+    proposals = []
+    promotion_queue = scholar_outputs / "promotion_queue"
+    if promotion_queue.exists():
+        for pf in promotion_queue.glob("*.md"):
+            try:
+                content = pf.read_text(encoding="utf-8")[:1000]
+                name = pf.stem.replace("_", " ").title()
+                proposals.append({"name": name, "summary": content[:500]})
+            except:
+                pass
+    
+    # --- Build context for AI ---
+    context_parts = []
+    context_parts.append("# Scholar System State Summary\n")
+    context_parts.append(f"Period: {start_date} to {end_date}\n")
+    
+    if runs_info:
+        context_parts.append(f"\n## Recent Runs: {len(runs_info)} orchestrator runs")
+        for run in runs_info[:3]:
+            context_parts.append(f"- {run['date']}: {len(run['completed'])} completed, {len(run.get('blockers', []))} blockers")
+    
+    if proposals:
+        context_parts.append(f"\n## Pending Proposals ({len(proposals)}):")
+        for p in proposals[:5]:
+            context_parts.append(f"- {p['name']}")
+            context_parts.append(f"  {p['summary'][:200]}...")
+    
+    if improvement_candidates:
+        context_parts.append(f"\n## Improvement Candidates ({len(improvement_candidates)}):")
+        for item in improvement_candidates[:8]:
+            context_parts.append(f"- {item}")
+    
+    if topics_to_review:
+        context_parts.append(f"\n## Identified Gaps ({len(topics_to_review)}):")
+        for item in topics_to_review[:8]:
+            context_parts.append(f"- {item}")
+    
+    if key_findings:
+        context_parts.append(f"\n## Research Findings:")
+        for finding in key_findings[:3]:
+            context_parts.append(f"**{finding['topic']}:**")
+            for bullet in finding['findings'][:2]:
+                context_parts.append(f"  - {bullet}")
+    
+    if pending_questions:
+        context_parts.append(f"\n## Unanswered Questions ({len(pending_questions)}):")
+        for q in pending_questions[:5]:
+            context_parts.append(f"- {q}")
+    
+    context_text = "\n".join(context_parts)
+    
+    # --- Call OpenRouter API for AI analysis ---
+    ai_analysis = None
+    ai_error = None
+    
+    try:
+        import requests
+        config = load_api_config()
+        api_key = config.get("openrouter_api_key")
+        
+        if api_key:
+            system_prompt = """You are a learning science expert analyzing a PT student's study system improvement tracker.
+You help optimize study methods, track system health, and prioritize improvement proposals.
+Be concise, actionable, and use markdown formatting."""
+
+            user_prompt = f"""Analyze this study system data and provide strategic recommendations:
+
+{context_text}
+
+Based on this data, provide:
+
+1. **Executive Summary** (2-3 sentences): What's the current state of system improvements?
+
+2. **Top 3 Priority Actions**: What should be done first and why? Be specific.
+
+3. **Proposals Review**: Of the pending proposals, which look most impactful? Any concerns?
+
+4. **Research Recommendations**: What topics should be researched next based on the gaps?
+
+5. **System Health Assessment**: Is the system being actively improved? Any staleness?"""
+
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://pt-study-brain.local",
+            }
+            
+            payload = {
+                "model": "anthropic/claude-3.5-sonnet",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                "max_tokens": 1500,
+                "temperature": 0.7
+            }
+            
+            response = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=60
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                ai_analysis = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            else:
+                ai_error = f"API error: {response.status_code}"
+        else:
+            ai_error = "No OpenRouter API key configured"
+    except Exception as e:
+        ai_error = f"AI analysis failed: {str(e)}"
+    
+    # --- Build Final Digest ---
+    digest_parts = []
+    digest_parts.append(f"# 🧠 Scholar Weekly Digest")
+    digest_parts.append(f"**Period:** {start_date} to {end_date}")
+    digest_parts.append(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
+    
+    if ai_analysis and not ai_error:
+        digest_parts.append("---\n")
+        digest_parts.append(ai_analysis)
+        digest_parts.append("\n---\n")
+    elif ai_error:
+        digest_parts.append(f"\n> ⚠️ {ai_error}\n")
+    
+    # Raw data summary
+    digest_parts.append("## 📊 Raw Data Summary")
+    digest_parts.append(f"- **Orchestrator Runs:** {len(runs_info)}")
+    digest_parts.append(f"- **Pending Proposals:** {len(proposals)}")
+    digest_parts.append(f"- **Improvement Candidates:** {len(improvement_candidates)}")
+    digest_parts.append(f"- **Identified Gaps:** {len(topics_to_review)}")
+    digest_parts.append(f"- **Unanswered Questions:** {len(pending_questions)}")
+    
     digest_text = "\n".join(digest_parts)
+    
+    # Build context summary for UI
+    context_items = []
+    if proposals:
+        context_items.append(f"{len(proposals)} proposals")
+    if improvement_candidates:
+        context_items.append(f"{len(improvement_candidates)} improvements")
+    if topics_to_review:
+        context_items.append(f"{len(topics_to_review)} gaps")
+    context_summary = ", ".join(context_items) if context_items else "No data"
     
     return {
         "ok": True,
         "digest": digest_text,
         "period": f"{start_date} to {end_date}",
         "runs_count": len(runs_info),
+        "ai_powered": bool(ai_analysis and not ai_error),
+        "context_summary": context_summary,
     }
 
 

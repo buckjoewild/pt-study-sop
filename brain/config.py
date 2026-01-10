@@ -16,8 +16,22 @@ OUTPUT_DIR = os.path.join(BASE_DIR, 'output')
 
 # Study RAG (drop files here; no upload needed)
 _DEFAULT_STUDY_RAG_DIR = os.path.join(DATA_DIR, 'study_rag')
-STUDY_RAG_DIR = os.environ.get('PT_STUDY_RAG_DIR', _DEFAULT_STUDY_RAG_DIR)
-STUDY_RAG_DIR = os.path.abspath(os.path.expanduser(os.path.expandvars(STUDY_RAG_DIR)))
+
+# Check api_config.json for saved study_rag_path first
+def _load_study_rag_path():
+    api_config_path = os.path.join(DATA_DIR, 'api_config.json')
+    if os.path.exists(api_config_path):
+        try:
+            with open(api_config_path, 'r', encoding='utf-8') as f:
+                cfg = __import__('json').load(f)
+                if cfg.get('study_rag_path'):
+                    return cfg['study_rag_path']
+        except:
+            pass
+    # Fall back to env var or default
+    return os.environ.get('PT_STUDY_RAG_DIR', _DEFAULT_STUDY_RAG_DIR)
+
+STUDY_RAG_DIR = os.path.abspath(os.path.expanduser(os.path.expandvars(_load_study_rag_path())))
 
 # Database
 DB_PATH = os.path.join(DATA_DIR, 'pt_study.db')

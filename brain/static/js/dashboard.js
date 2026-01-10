@@ -871,10 +871,22 @@ function setTutorStudyStatus(html) {
   tutorStudyStatusBox.innerHTML = html;
 }
 
+// Store the current study RAG root path globally
+let currentStudyRagRoot = '';
+
 function renderTutorStudyFolders(folders, root) {
   if (!tutorStudyFoldersBox) return;
+  currentStudyRagRoot = root || '';
+  
+  // Update the path display in the UI
+  const pathDisplay = document.getElementById('study-rag-path-display');
+  if (pathDisplay && root) {
+    pathDisplay.textContent = root.replace(/\\/g, '/');
+  }
+  
   if (!folders || folders.length === 0) {
-    tutorStudyFoldersBox.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">No Study files ingested yet. Drop files into brain/data/study_rag and click Sync.</div>';
+    const pathHint = root ? root.replace(/\\/g, '/') : 'brain/data/study_rag';
+    tutorStudyFoldersBox.innerHTML = `<div style="color: var(--text-muted); font-size: 13px;">No Study files ingested yet. Drop files into <span style="font-family: monospace;">${pathHint}</span> and click Sync.</div>`;
     return;
   }
 
@@ -1146,6 +1158,7 @@ async function addTutorLink() {
 function loadTutor() {
   // Idempotent-ish init: only binds listeners once.
   if (loadTutor._initialized) {
+    loadStudyRagConfig();
     loadTutorStudyFolders();
     loadTutorRuntimeItems();
     return;
@@ -1163,8 +1176,124 @@ function loadTutor() {
     renderTutorCitations([]);
   });
 
+  loadStudyRagConfig();
+  setupStudyRagPathControls();
   loadTutorStudyFolders();
   loadTutorRuntimeItems();
+}
+
+// Fetch and display the Study RAG path configuration
+async function loadStudyRagConfig() {
+  try {
+    const res = await fetch('/api/tutor/study/config');
+    const data = await res.json();
+    if (data.ok && data.root) {
+      currentStudyRagRoot = data.root;
+      const pathDisplay = document.getElementById('study-rag-path-display');
+      const pathInput = document.getElementById('study-rag-path-input');
+      const normalizedPath = data.root.replace(/\\\\/g, '/').replace(/\\/g, '/');
+      
+      if (pathDisplay) {
+        pathDisplay.textContent = normalizedPath;
+        if (!data.exists) {
+          pathDisplay.style.color = 'var(--warning)';
+          pathDisplay.title = 'Folder does not exist';
+        } else {
+          pathDisplay.style.color = 'var(--text-primary)';
+          pathDisplay.title = '';
+        }
+      }
+      
+      // Also populate the input field
+      if (pathInput) {
+        pathInput.value = data.root;
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load Study RAG config:', e);
+  }
+}
+
+// Save Study RAG path
+async function saveStudyRagPath(newPath) {
+  const statusEl = document.getElementById('study-rag-path-status');
+  if (statusEl) statusEl.textContent = 'Saving...';
+  
+  try {
+    const res = await fetch('/api/tutor/study/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: newPath })
+    });
+    const data = await res.json();
+    
+    if (data.ok) {
+      if (statusEl) {
+        statusEl.textContent = '✓ Saved!';
+        statusEl.style.color = 'var(--success)';
+      }
+      // Reload the config to update display
+      await loadStudyRagConfig();
+      // Refresh folders list
+      loadTutorStudyFolders();
+    } else {
+      if (statusEl) {
+        statusEl.textContent = '✗ ' + (data.message || 'Failed to save');
+        statusEl.style.color = 'var(--danger)';
+      }
+    }
+  } catch (e) {
+    console.error('Failed to save Study RAG path:', e);
+    if (statusEl) {
+      statusEl.textContent = '✗ Error saving path';
+      statusEl.style.color = 'var(--danger)';
+    }
+  }
+}
+
+// Setup Study RAG path controls
+function setupStudyRagPathControls() {
+  const saveBtn = document.getElementById('btn-save-study-path');
+  const pathInput = document.getElementById('study-rag-path-input');
+  const folderPicker = document.getElementById('study-rag-folder-picker');
+  
+  if (saveBtn && pathInput) {
+    saveBtn.addEventListener('click', () => {
+      const path = pathInput.value.trim();
+      if (path) {
+        saveStudyRagPath(path);
+      } else {
+        const statusEl = document.getElementById('study-rag-path-status');
+        if (statusEl) {
+          statusEl.textContent = 'Please enter a path';
+          statusEl.style.color = 'var(--warning)';
+        }
+      }
+    });
+  }
+  
+  // Handle folder picker (browser file dialog)
+  if (folderPicker && pathInput) {
+    folderPicker.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        // Get the common parent folder from selected files
+        const firstFile = e.target.files[0];
+        // webkitRelativePath gives us the folder structure
+        const relativePath = firstFile.webkitRelativePath;
+        if (relativePath) {
+          // Extract the root folder name
+          const rootFolder = relativePath.split('/')[0];
+          // Unfortunately, we can't get the full path from the browser for security reasons
+          // So we'll show a message and ask user to paste the path
+          const statusEl = document.getElementById('study-rag-path-status');
+          if (statusEl) {
+            statusEl.innerHTML = `Selected folder: <strong>${rootFolder}</strong><br>Please paste the full path above (browsers don't allow reading full paths for security).`;
+            statusEl.style.color = 'var(--info)';
+          }
+        }
+      }
+    });
+  }
 }
 
 if (btnTutorSend && tutorQuestion && tutorAnswerBox) {
@@ -1347,6 +1476,40 @@ function renderScholar(data) {
   safeModeEl.setAttribute('data-safe-mode', data.safe_mode ? 'true' : 'false');
   document.getElementById('scholar-last-updated').textContent = data.last_updated || 'Never';
 
+  // Proposals section
+  const proposalsContainer = document.getElementById('scholar-proposals-list');
+  const proposalsCount = document.getElementById('scholar-proposals-section-count');
+  const proposals = data.proposals || [];
+  
+  if (proposalsCount) {
+    proposalsCount.textContent = `(${proposals.length})`;
+  }
+  
+  if (proposalsContainer) {
+    if (proposals.length === 0) {
+      proposalsContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">No proposals pending review.</div>';
+    } else {
+      proposalsContainer.innerHTML = proposals.map((p, i) => {
+        const typeColor = p.type === 'change' ? '#a855f7' : p.type === 'experiment' ? '#06b6d4' : '#64748b';
+        const typeLabel = p.type === 'change' ? '📝 Change' : p.type === 'experiment' ? '🧪 Experiment' : '📋 Other';
+        return `
+          <div style="padding: 12px; border-bottom: 1px solid var(--border); ${i === proposals.length - 1 ? 'border-bottom: none;' : ''}">
+            <div style="display: flex; justify-content: space-between; align-items: start; gap: 12px;">
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                  <span style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: ${typeColor}20; color: ${typeColor}; font-weight: 500;">${typeLabel}</span>
+                  <span style="font-size: 11px; color: var(--text-muted);">Status: ${p.status || 'draft'}</span>
+                </div>
+                <div style="font-size: 14px; color: var(--text-primary); font-weight: 500;">${p.title}</div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; font-family: monospace;">${p.file}</div>
+              </div>
+              <button class="btn" style="font-size: 11px; padding: 4px 10px;" onclick="viewProposalFile('${p.file}')">View</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
 
   // Questions
   const questionsContainer = document.getElementById('scholar-questions');
@@ -1476,64 +1639,148 @@ function renderScholar(data) {
 
   // Coverage
   const coverage = data.coverage || {};
-  document.getElementById('scholar-coverage-complete').textContent = coverage.complete || 0;
-  document.getElementById('scholar-coverage-progress').textContent = coverage.in_progress || 0;
-  document.getElementById('scholar-coverage-not-started').textContent = coverage.not_started || 0;
+  const completeCount = coverage.complete || 0;
+  const progressCount = coverage.in_progress || 0;
+  const notStartedCount = coverage.not_started || 0;
+  
+  document.getElementById('scholar-coverage-complete').textContent = completeCount;
+  document.getElementById('scholar-coverage-progress').textContent = progressCount;
+  document.getElementById('scholar-coverage-not-started').textContent = notStartedCount;
 
-  const total = (coverage.complete || 0) + (coverage.in_progress || 0) + (coverage.not_started || 0);
-  const pct = total > 0 ? Math.round(((coverage.complete || 0) / total) * 100) : 0;
-  document.getElementById('scholar-coverage-summary').textContent = `(${pct}% complete)`;
+  const total = completeCount + progressCount + notStartedCount;
+  const pct = total > 0 ? Math.round((completeCount / total) * 100) : 0;
+  const progressPct = total > 0 ? Math.round((progressCount / total) * 100) : 0;
+  document.getElementById('scholar-coverage-summary').textContent = `${pct}% complete • ${total} modules`;
+  
+  // Update progress bar
+  const barComplete = document.getElementById('scholar-coverage-bar-complete');
+  const barProgress = document.getElementById('scholar-coverage-bar-progress');
+  if (barComplete) barComplete.style.width = `${pct}%`;
+  if (barProgress) barProgress.style.width = `${progressPct}%`;
 
   // Coverage list
   const coverageList = document.getElementById('scholar-coverage-list');
   const items = coverage.items || [];
   if (items.length === 0) {
-    coverageList.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">No coverage data available.</div>';
+    coverageList.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">No coverage data available. Run Scholar to scan modules.</div>';
   } else {
     coverageList.innerHTML = items.map(item => {
       let statusColor = 'var(--text-muted)';
-      let statusIcon = '[ ]';
-      if (item.status.includes('complete') || item.status.includes('[x]')) {
+      let statusIcon = '○';
+      let bgColor = 'transparent';
+      const statusLower = (item.status || '').toLowerCase();
+      
+      if (statusLower.includes('complete') || statusLower.includes('[x]')) {
         statusColor = 'var(--success)';
-        statusIcon = '[✓]';
-      } else if (item.status.includes('progress') || item.status.includes('[/]')) {
+        statusIcon = '✓';
+        bgColor = 'rgba(63, 185, 80, 0.1)';
+      } else if (statusLower.includes('progress') || statusLower.includes('[/]')) {
         statusColor = 'var(--warning)';
-        statusIcon = '[/]';
+        statusIcon = '⏳';
+        bgColor = 'rgba(218, 165, 32, 0.1)';
       }
       return `
-            <div style="display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border);">
-              <span style="color: ${statusColor}; font-weight: 600; min-width: 40px;">${statusIcon}</span>
+            <div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-bottom: 4px; border-radius: 6px; background: ${bgColor};">
+              <span style="color: ${statusColor}; font-size: 16px;">${statusIcon}</span>
               <div style="flex: 1;">
-                <div style="font-size: 13px; color: var(--text-primary); font-weight: 600;">${item.module || ''}</div>
+                <div style="font-size: 13px; color: var(--text-primary); font-weight: 500;">${item.module || ''}</div>
                 <div style="font-size: 11px; color: var(--text-muted);">${item.grouping || ''}</div>
               </div>
+              <span style="font-size: 10px; color: ${statusColor}; text-transform: uppercase;">${statusLower.includes('complete') ? 'Done' : statusLower.includes('progress') ? 'WIP' : 'Pending'}</span>
             </div>
           `;
     }).join('');
   }
 
-  // Next steps
+  // Next steps - now structured with action buttons
   const nextStepsContainer = document.getElementById('scholar-next-steps');
   const nextSteps = data.next_steps || [];
   if (nextSteps.length === 0) {
-    nextStepsContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">No next steps defined.</div>';
+    nextStepsContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">No next steps defined. Run Scholar to generate tasks.</div>';
   } else {
-    nextStepsContainer.innerHTML = nextSteps.map(step => {
-      const lower = (step || '').toLowerCase();
+    nextStepsContainer.innerHTML = nextSteps.map((step, idx) => {
+      // Handle both old string format and new object format
+      const stepText = typeof step === 'string' ? step : (step.text || '');
+      const action = typeof step === 'object' ? step.action : null;
+      const actionLabel = typeof step === 'object' ? step.action_label : null;
+      
       let actionBtn = '';
-      if (lower.includes('unattended_final')) {
-        actionBtn = '<button class="btn" style="font-size: 11px; padding: 4px 8px;" type="button" onclick="openScholarLatestFinal()">Open Latest Final</button>';
-      } else if (lower.includes('questions_needed') || lower.includes('answer it')) {
-        actionBtn = '<button class="btn" style="font-size: 11px; padding: 4px 8px;" type="button" onclick="document.getElementById(\'scholar-questions\').scrollIntoView({behavior:\'smooth\', block:\'start\'})">Go to Questions</button>';
+      if (action === 'open_final') {
+        actionBtn = '<button class="btn btn-primary" style="font-size: 11px; padding: 6px 12px;" type="button" onclick="openScholarLatestFinal()">📄 Open Latest Run</button>';
+      } else if (action === 'answer_questions') {
+        actionBtn = '<button class="btn btn-primary" style="font-size: 11px; padding: 6px 12px;" type="button" onclick="document.getElementById(\'scholar-questions\').scrollIntoView({behavior:\'smooth\', block:\'start\'})">❓ Answer Questions</button>';
+      } else if (action === 'start_run') {
+        actionBtn = '<button class="btn btn-primary" style="font-size: 11px; padding: 6px 12px;" type="button" onclick="startScholarRun()">▶ Start Run</button>';
+      } else if (action === 'review_proposals') {
+        actionBtn = '<button class="btn btn-primary" style="font-size: 11px; padding: 6px 12px;" type="button" onclick="document.getElementById(\'scholar-proposals-list\').scrollIntoView({behavior:\'smooth\', block:\'start\'})">📝 Review Proposals</button>';
+      } else {
+        // Fallback for old string format
+        const lower = stepText.toLowerCase();
+        if (lower.includes('unattended_final') || lower.includes('open the latest')) {
+          actionBtn = '<button class="btn" style="font-size: 11px; padding: 4px 8px;" type="button" onclick="openScholarLatestFinal()">Open</button>';
+        } else if (lower.includes('questions_needed') || lower.includes('answer')) {
+          actionBtn = '<button class="btn" style="font-size: 11px; padding: 4px 8px;" type="button" onclick="document.getElementById(\'scholar-questions\').scrollIntoView({behavior:\'smooth\', block:\'start\'})">Go</button>';
+        }
       }
 
+      // Number badge
+      const numBadge = `<span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--primary); color: white; font-size: 12px; font-weight: 600; flex-shrink: 0;">${idx + 1}</span>`;
+
       return `
-        <div style="padding: 10px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 12px; align-items: center;">
-          <div style="font-size: 13px; color: var(--text-primary); flex: 1;">${step}</div>
+        <div style="padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; gap: 12px; align-items: center;">
+          ${numBadge}
+          <div style="font-size: 13px; color: var(--text-primary); flex: 1;">${stepText.replace(/^\d+\)\s*/, '')}</div>
           ${actionBtn}
         </div>
       `;
     }).join('');
+  }
+
+  // Research Topics
+  const researchContainer = document.getElementById('scholar-research-topics');
+  if (researchContainer) {
+    const topics = data.research_topics || [];
+    if (topics.length === 0) {
+      researchContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 12px;">No recent research. Run Scholar to discover topics.</div>';
+    } else {
+      researchContainer.innerHTML = topics.map(t => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--border);">
+          <span style="font-size: 12px;">📖 ${t.name}</span>
+          <span style="font-size: 10px; color: var(--text-muted);">${t.days_ago}d ago</span>
+        </div>
+      `).join('');
+    }
+  }
+
+  // Identified Gaps
+  const gapsContainer = document.getElementById('scholar-gaps');
+  if (gapsContainer) {
+    const gaps = data.gaps || [];
+    if (gaps.length === 0) {
+      gapsContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 12px;">No gaps identified. System looks healthy! 🎉</div>';
+    } else {
+      gapsContainer.innerHTML = gaps.map(g => `
+        <div style="padding: 4px 0; border-bottom: 1px solid var(--border);">
+          <span style="font-size: 12px; color: var(--warning);">• ${g.text}</span>
+        </div>
+      `).join('');
+    }
+  }
+
+  // Improvement Candidates
+  const improvementsContainer = document.getElementById('scholar-improvements');
+  if (improvementsContainer) {
+    const improvements = data.improvements || [];
+    if (improvements.length === 0) {
+      improvementsContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 12px;">No improvement candidates. Run Scholar to analyze modules.</div>';
+    } else {
+      improvementsContainer.innerHTML = improvements.map(imp => `
+        <div style="display: flex; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border);">
+          <span style="font-size: 10px; padding: 2px 6px; background: rgba(136, 46, 224, 0.15); color: #a855f7; border-radius: 4px;">${imp.module}</span>
+          <span style="font-size: 12px; flex: 1;">${imp.text}</span>
+        </div>
+      `).join('');
+    }
   }
 
   // Latest run
@@ -1881,43 +2128,75 @@ const scholarDigestText = document.getElementById('scholar-digest-text');
 
 if (btnGenerateDigest) btnGenerateDigest.addEventListener('click', async () => {
   btnGenerateDigest.disabled = true;
-  btnGenerateDigest.textContent = 'Generating...';
-  if (scholarDigestStatus) scholarDigestStatus.textContent = 'Generating digest...';
+  btnGenerateDigest.textContent = '🧠 Analyzing...';
+  btnGenerateDigest.style.background = '#6b21a8';
+  if (scholarDigestStatus) scholarDigestStatus.innerHTML = '<span style="color: #a855f7;">🔄 AI is analyzing proposals, gaps, and research data... (this may take up to 90s)</span>';
   if (scholarDigestContent) scholarDigestContent.style.display = 'none';
 
   try {
-    const res = await fetch('/api/scholar/digest');
+    // Use AbortController for timeout (2 minutes for Codex)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
+    
+    const res = await fetch('/api/scholar/digest', { signal: controller.signal });
+    clearTimeout(timeoutId);
+    
+    if (!res.ok) {
+      throw new Error(`Server error: ${res.status} ${res.statusText}`);
+    }
+    
     const data = await res.json();
 
     if (data.ok) {
+      const aiPowered = data.ai_powered ? '🧠 AI Analysis' : '📊 Summary';
+      const contextInfo = data.context_summary || '';
       if (scholarDigestStatus) {
-        scholarDigestStatus.textContent = `Digest generated for ${data.period} (${data.runs_count} runs)`;
+        scholarDigestStatus.innerHTML = `<span style="color: #3fb950;">✓</span> ${aiPowered} complete • ${contextInfo}`;
       }
       if (scholarDigestContent && scholarDigestText) {
-        // Convert markdown to HTML (basic)
-        const html = data.digest
+        // Enhanced markdown to HTML conversion for AI responses
+        let html = data.digest
+          // Headers with proper styling
+          .replace(/^### (.+)$/gm, '<h4 style="margin-top: 14px; margin-bottom: 6px; font-size: 14px; font-weight: 600; color: #a855f7;">$1</h4>')
+          .replace(/^## (.+)$/gm, '<h3 style="margin-top: 18px; margin-bottom: 8px; font-size: 15px; font-weight: 600; color: var(--text-primary); border-bottom: 1px solid var(--border); padding-bottom: 4px;">$1</h3>')
           .replace(/^# (.+)$/gm, '<h2 style="margin-top: 0; margin-bottom: 12px; font-size: 18px; color: var(--text-primary);">$1</h2>')
-          .replace(/^## (.+)$/gm, '<h3 style="margin-top: 16px; margin-bottom: 8px; font-size: 15px; font-weight: 600; color: var(--text-primary);">$1</h3>')
-          .replace(/^\*\*(.+?)\*\*/gm, '<strong>$1</strong>')
-          .replace(/^\*\*Period:\*\* (.+)$/gm, '<div style="color: var(--text-muted); font-size: 12px; margin-bottom: 12px;">$1</div>')
+          // Bold text
+          .replace(/\*\*(.+?)\*\*/g, '<strong style="color: var(--text-primary);">$1</strong>')
+          // Italic text
+          .replace(/\*(.+?)\*/g, '<em>$1</em>')
+          // Numbered lists
+          .replace(/^(\d+)\. (.+)$/gm, '<div style="padding-left: 8px; margin-bottom: 6px;"><span style="color: #a855f7; font-weight: 600;">$1.</span> $2</div>')
+          // Bullet points with nested support
+          .replace(/^  - (.+)$/gm, '<div style="padding-left: 28px; margin-bottom: 4px; color: var(--text-secondary);">◦ $1</div>')
           .replace(/^- (.+)$/gm, '<div style="padding-left: 12px; margin-bottom: 4px;">• $1</div>')
-          .replace(/^  - (.+)$/gm, '<div style="padding-left: 24px; margin-bottom: 4px; color: var(--text-secondary);">◦ $1</div>')
-          .replace(/\n\n/g, '<br>');
+          // Code blocks
+          .replace(/`([^`]+)`/g, '<code style="background: var(--bg-secondary); padding: 1px 4px; border-radius: 3px; font-size: 12px;">$1</code>')
+          // Line breaks
+          .replace(/\n\n/g, '<div style="margin-bottom: 12px;"></div>');
+        
+        // Add AI indicator badge at top
+        if (data.ai_powered) {
+          html = '<div style="display: inline-block; background: linear-gradient(135deg, #a855f7, #6366f1); color: white; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-bottom: 16px;">🧠 AI-POWERED ANALYSIS</div>' + html;
+        }
+        
         scholarDigestText.innerHTML = html;
         scholarDigestContent.style.display = 'block';
       }
-      btnGenerateDigest.textContent = 'Regenerate';
+      btnGenerateDigest.textContent = '🔄 Regenerate';
+      btnGenerateDigest.style.background = '#a855f7';
     } else {
       if (scholarDigestStatus) {
-        scholarDigestStatus.textContent = `Error: ${data.message || 'Unknown error'}`;
+        scholarDigestStatus.innerHTML = `<span style="color: #f85149;">✗ Error:</span> ${data.message || 'Unknown error'}`;
       }
-      btnGenerateDigest.textContent = 'Generate Digest';
+      btnGenerateDigest.textContent = 'Generate Analysis';
+      btnGenerateDigest.style.background = '#a855f7';
     }
   } catch (error) {
     if (scholarDigestStatus) {
-      scholarDigestStatus.textContent = `Network error: ${error.message}`;
+      scholarDigestStatus.innerHTML = `<span style="color: #f85149;">✗ Network error:</span> ${error.message}`;
     }
-    btnGenerateDigest.textContent = 'Generate Digest';
+    btnGenerateDigest.textContent = 'Generate Analysis';
+    btnGenerateDigest.style.background = '#a855f7';
   }
 
   btnGenerateDigest.disabled = false;
@@ -2255,6 +2534,109 @@ function getCourseColor(course, index) {
   return COURSE_COLOR_PALETTE[index % COURSE_COLOR_PALETTE.length];
 }
 
+// Track current proposal being viewed
+let currentProposalFile = null;
+
+// View a proposal file in modal
+async function viewProposalFile(filename) {
+  currentProposalFile = filename;
+  const overlay = document.getElementById('proposal-modal-overlay');
+  const titleEl = document.getElementById('proposal-modal-title');
+  const metaEl = document.getElementById('proposal-modal-meta');
+  const contentEl = document.getElementById('proposal-modal-content');
+  
+  if (!overlay) return;
+  
+  // Show modal
+  overlay.style.display = 'flex';
+  titleEl.textContent = 'Loading...';
+  metaEl.textContent = '';
+  contentEl.textContent = 'Fetching proposal content...';
+  
+  try {
+    const res = await fetch(`/api/scholar/proposal/${encodeURIComponent(filename)}`);
+    const data = await res.json();
+    
+    if (data.ok) {
+      // Parse title from filename
+      let title = filename.replace('.md', '').replace(/_/g, ' ');
+      if (filename.includes('change_proposal')) {
+        title = '📝 ' + title.replace('change proposal ', '').trim();
+        metaEl.innerHTML = '<span style="color: #a855f7;">Change Proposal</span>';
+      } else if (filename.includes('experiment')) {
+        title = '🧪 ' + title.replace('experiment ', '').trim();
+        metaEl.innerHTML = '<span style="color: #06b6d4;">Experiment</span>';
+      } else {
+        metaEl.innerHTML = '<span style="color: #64748b;">Proposal</span>';
+      }
+      
+      titleEl.textContent = title;
+      contentEl.textContent = data.content;
+    } else {
+      titleEl.textContent = 'Error';
+      contentEl.textContent = data.message || 'Failed to load proposal';
+    }
+  } catch (e) {
+    titleEl.textContent = 'Error';
+    contentEl.textContent = 'Failed to fetch proposal: ' + e.message;
+  }
+}
+
+// Close proposal modal
+function closeProposalModal() {
+  const overlay = document.getElementById('proposal-modal-overlay');
+  if (overlay) {
+    overlay.style.display = 'none';
+  }
+  currentProposalFile = null;
+}
+
+// Handle proposal approve/reject
+async function handleProposalAction(action) {
+  if (!currentProposalFile) return;
+  
+  const confirmMsg = action === 'approve' 
+    ? 'Approve this proposal? It will be moved to the approved folder.'
+    : 'Reject this proposal? It will be moved to the rejected folder.';
+  
+  if (!confirm(confirmMsg)) return;
+  
+  try {
+    const res = await fetch(`/api/scholar/proposal/${encodeURIComponent(currentProposalFile)}/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action })
+    });
+    const data = await res.json();
+    
+    if (data.ok) {
+      closeProposalModal();
+      // Refresh Scholar tab to update proposal list
+      loadScholar();
+      // Show success message
+      alert(`✓ ${data.message}`);
+    } else {
+      alert('Error: ' + (data.message || 'Failed to process proposal'));
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+// Close modal on overlay click
+document.addEventListener('click', (e) => {
+  if (e.target.id === 'proposal-modal-overlay') {
+    closeProposalModal();
+  }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeProposalModal();
+  }
+});
+
 // Toggle event status (pending <-> completed)
 async function toggleEventStatus(eventId, currentStatus) {
   const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
@@ -2591,6 +2973,159 @@ function renderCalendar() {
     grid.innerHTML += '<div class="calendar-day other-month"></div>';
   }
 }
+
+// ========================================
+// Study Tasks (Readings & Topics)
+// ========================================
+
+async function loadStudyTasks() {
+  const listEl = document.getElementById('study-tasks-list');
+  const filterEl = document.getElementById('study-tasks-filter');
+  if (!listEl) return;
+  
+  const filter = filterEl ? filterEl.value : 'active';
+  
+  try {
+    const res = await fetch(`/api/syllabus/study-tasks?filter=${filter}`);
+    const data = await res.json();
+    
+    if (!data.ok) {
+      listEl.innerHTML = `<div style="color: var(--error); padding: 20px;">Error: ${data.message}</div>`;
+      return;
+    }
+    
+    // Update stats
+    const stats = data.stats || {};
+    const pendingEl = document.getElementById('tasks-pending-count');
+    const inProgressEl = document.getElementById('tasks-in-progress-count');
+    const completedEl = document.getElementById('tasks-completed-count');
+    const progressBar = document.getElementById('tasks-progress-bar');
+    const progressPct = document.getElementById('tasks-progress-pct');
+    
+    if (pendingEl) pendingEl.textContent = stats.pending || 0;
+    if (inProgressEl) inProgressEl.textContent = stats.in_progress || 0;
+    if (completedEl) completedEl.textContent = stats.completed || 0;
+    if (progressBar) progressBar.style.width = `${stats.progress_pct || 0}%`;
+    if (progressPct) progressPct.textContent = `${stats.progress_pct || 0}%`;
+    
+    // Render tasks
+    const tasks = data.tasks || [];
+    if (tasks.length === 0) {
+      listEl.innerHTML = `<div style="color: var(--text-muted); padding: 20px; text-align: center;">
+        No study tasks found. Add readings or topics via the syllabus form.
+      </div>`;
+      return;
+    }
+    
+    let html = '';
+    tasks.forEach(task => {
+      const isCompleted = task.status === 'completed';
+      const courseColor = task.course_color || '#6366F1';
+      
+      // Status styling
+      let statusBadge = '';
+      let rowStyle = '';
+      if (task.is_overdue) {
+        statusBadge = '<span style="font-size: 10px; padding: 2px 6px; background: var(--error); color: white; border-radius: 4px; margin-left: 8px;">OVERDUE</span>';
+        rowStyle = 'border-left: 3px solid var(--error);';
+      } else if (task.is_current) {
+        statusBadge = '<span style="font-size: 10px; padding: 2px 6px; background: var(--accent); color: white; border-radius: 4px; margin-left: 8px;">CURRENT</span>';
+        rowStyle = 'border-left: 3px solid var(--accent);';
+      } else if (isCompleted) {
+        rowStyle = 'border-left: 3px solid var(--success); opacity: 0.7;';
+      }
+      
+      // Date range display
+      let dateDisplay = '';
+      if (task.start_date && task.end_date) {
+        dateDisplay = `${task.start_date} → ${task.end_date}`;
+      } else if (task.end_date) {
+        dateDisplay = `Due: ${task.end_date}`;
+      } else if (task.start_date) {
+        dateDisplay = `From: ${task.start_date}`;
+      }
+      
+      // Days remaining
+      let daysDisplay = '';
+      if (!isCompleted && task.days_remaining !== null) {
+        if (task.days_remaining < 0) {
+          daysDisplay = `<span style="color: var(--error); font-weight: 600;">${Math.abs(task.days_remaining)}d overdue</span>`;
+        } else if (task.days_remaining === 0) {
+          daysDisplay = '<span style="color: var(--warning); font-weight: 600;">Due today</span>';
+        } else if (task.days_remaining <= 3) {
+          daysDisplay = `<span style="color: var(--warning);">${task.days_remaining}d left</span>`;
+        } else {
+          daysDisplay = `<span style="color: var(--text-muted);">${task.days_remaining}d left</span>`;
+        }
+      }
+      
+      html += `
+        <div class="study-task-item" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; ${rowStyle}">
+          <input type="checkbox" 
+            id="task-check-${task.id}" 
+            ${isCompleted ? 'checked' : ''} 
+            onchange="toggleStudyTask(${task.id}, this.checked)"
+            style="width: 20px; height: 20px; margin-top: 2px; accent-color: var(--success); cursor: pointer;">
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="width: 10px; height: 10px; border-radius: 50%; background: ${courseColor};"></span>
+              <span style="font-size: 11px; color: var(--text-muted);">${task.course_name}</span>
+              <span style="font-size: 10px; padding: 1px 6px; background: var(--bg-secondary); border-radius: 4px; text-transform: uppercase;">${task.type}</span>
+              ${statusBadge}
+            </div>
+            <div style="font-size: 14px; font-weight: 500; margin-top: 4px; ${isCompleted ? 'text-decoration: line-through; color: var(--text-muted);' : ''}">
+              ${task.title}
+            </div>
+            ${task.raw_text ? `<div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">${task.raw_text.substring(0, 100)}${task.raw_text.length > 100 ? '...' : ''}</div>` : ''}
+            <div style="display: flex; gap: 16px; margin-top: 8px; font-size: 11px;">
+              ${dateDisplay ? `<span style="color: var(--text-muted);">📅 ${dateDisplay}</span>` : ''}
+              ${daysDisplay}
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    
+    listEl.innerHTML = html;
+    
+  } catch (error) {
+    console.error('Failed to load study tasks:', error);
+    listEl.innerHTML = `<div style="color: var(--error); padding: 20px;">Failed to load study tasks: ${error.message}</div>`;
+  }
+}
+
+async function toggleStudyTask(taskId, completed) {
+  const newStatus = completed ? 'completed' : 'pending';
+  try {
+    const res = await fetch(`/api/syllabus/event/${taskId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      // Refresh the task list
+      loadStudyTasks();
+    } else {
+      alert('Failed to update task: ' + (data.message || 'Unknown error'));
+      // Revert checkbox
+      const checkbox = document.getElementById(`task-check-${taskId}`);
+      if (checkbox) checkbox.checked = !completed;
+    }
+  } catch (error) {
+    console.error('Failed to toggle task:', error);
+    alert('Failed to update task');
+    const checkbox = document.getElementById(`task-check-${taskId}`);
+    if (checkbox) checkbox.checked = !completed;
+  }
+}
+
+// Study tasks filter and refresh
+const studyTasksFilter = document.getElementById('study-tasks-filter');
+const btnRefreshStudyTasks = document.getElementById('btn-refresh-study-tasks');
+
+if (studyTasksFilter) studyTasksFilter.addEventListener('change', loadStudyTasks);
+if (btnRefreshStudyTasks) btnRefreshStudyTasks.addEventListener('click', loadStudyTasks);
 
 // Calendar navigation
 const btnPrev = document.getElementById('btn-calendar-prev');
@@ -3159,6 +3694,11 @@ async function saveStrategicDigest() {
 window.loadSyllabusDashboard = async function () {
   console.log("Loading Syllabus Dashboard...");
   try {
+    // Load Study Tasks first (most visible section)
+    if (typeof loadStudyTasks === 'function') {
+      loadStudyTasks();
+    }
+    
     // Courses
     const resCourses = await fetch('/api/syllabus/courses');
     const coursesData = await resCourses.json();

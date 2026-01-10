@@ -1,37 +1,33 @@
 Goal (incl. success criteria):
-- Add trend visualization to Brain dashboard Overview tab.
+- Refactor Scholar orchestrator prompt for focus and better outputs.
 - Success criteria:
-  1. Add `get_trend_data(days=30)` function in dashboard/stats.py. ✓
-  2. Add `GET /api/trends?days=30` endpoint in dashboard/routes.py. ✓
-  3. Add "Study Trends" section with canvas and period dropdown in dashboard.html. ✓
-  4. Add JS to fetch and render line chart with understanding/retention in dashboard.js. ✓
-  5. Add CSS styles for trends section in dashboard.css. ✓
+  1. Add explicit output format (5-bullet summary, ⚡ actions, ⚠️ warnings). ✓
+  2. Consolidate into 3 phases (Audit, Research, Synthesize). ✓
+  3. Add high-utility technique checklist (Dunlosky research). ✓
+  4. Add weekly digest trigger. ✓
+  5. Add probe-before-teach rule. ✓
+  6. Reduce verbosity (1-2 page dossiers, 5-10 bullet notes). ✓
 
 Constraints/Assumptions:
-- Use simple canvas line chart (no external libs).
-- Reuse existing chart patterns from modeChart.
-- Handle empty data gracefully.
-- Make chart responsive.
+- Keep unattended mode instructions at top.
+- Keep safety guardrails (never modify code).
+- Target ~100 lines.
 
 Key decisions:
-- Query sessions table, group by date, calculate daily averages.
-- Purple line for understanding, blue line for retention.
-- Support 7/14/30 day periods via dropdown.
+- Replaced multi-step execution cycle with 3 clear phases.
+- Added Dunlosky technique table for quick reference.
+- Weekly digest triggers on Friday+ or 7+ days since last.
 
 State:
-  - Done: Trend visualization feature complete.
-  - Now: Ready for testing.
+  - Done: Orchestrator prompt refactored.
+  - Now: Complete.
   - Next: User validation.
 
 Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
-- brain/dashboard/stats.py
-- brain/dashboard/routes.py
-- brain/templates/dashboard.html
-- brain/static/js/dashboard.js
-- brain/static/css/dashboard.css
+- scholar/workflows/orchestrator_run_prompt.md
 
 Notes:
 - Study RAG directory can be overridden via env var PT_STUDY_RAG_DIR (currently set in Run_Brain_All.bat to C:\Users\treyt\OneDrive\Desktop\PT School)

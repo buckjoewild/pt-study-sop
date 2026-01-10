@@ -116,6 +116,82 @@ def api_scholar_insights():
     return jsonify(result)
 
 
+@dashboard_bp.route("/api/brain/status", methods=["GET"])
+def api_brain_status():
+    """Get brain database status and statistics."""
+    from pathlib import Path
+    
+    conn = get_connection()
+    cur = conn.cursor()
+    
+    # Get counts
+    cur.execute("SELECT COUNT(*) FROM sessions")
+    session_count = cur.fetchone()[0]
+    
+    cur.execute("SELECT COUNT(*) FROM course_events")
+    event_count = cur.fetchone()[0]
+    
+    # Check if rag_documents table exists
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='rag_documents'")
+    rag_table_exists = cur.fetchone() is not None
+    rag_count = 0
+    if rag_table_exists:
+        cur.execute("SELECT COUNT(*) FROM rag_documents")
+        rag_count = cur.fetchone()[0]
+    
+    # Check if card_drafts table exists
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='card_drafts'")
+    card_table_exists = cur.fetchone() is not None
+    pending_cards = 0
+    if card_table_exists:
+        cur.execute("SELECT COUNT(*) FROM card_drafts WHERE synced = 0")
+        pending_cards = cur.fetchone()[0]
+    
+    # Get DB file size
+    db_path = Path(__file__).parent.parent / "data" / "study_brain.db"
+    db_size_mb = db_path.stat().st_size / (1024 * 1024) if db_path.exists() else 0
+    
+    conn.close()
+    
+    return jsonify({
+        "ok": True,
+        "stats": {
+            "sessions": session_count,
+            "events": event_count,
+            "rag_documents": rag_count,
+            "pending_cards": pending_cards,
+            "db_size_mb": round(db_size_mb, 2)
+        }
+    })
+
+
+@dashboard_bp.route("/api/scholar/digest/save", methods=["POST"])
+def api_scholar_save_digest():
+    """Save AI Strategic Digest to scholar outputs."""
+    from pathlib import Path
+    from datetime import datetime
+    
+    payload = request.get_json() or {}
+    digest_content = payload.get("digest", "").strip()
+    if not digest_content:
+        return jsonify({"ok": False, "message": "No digest content"}), 400
+    
+    repo_root = Path(__file__).parent.parent.parent.resolve()
+    digests_dir = repo_root / "scholar" / "outputs" / "digests"
+    digests_dir.mkdir(parents=True, exist_ok=True)
+    
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    filename = f"strategic_digest_{timestamp}.md"
+    filepath = digests_dir / filename
+    filepath.write_text(digest_content, encoding="utf-8")
+    
+    return jsonify({
+        "ok": True,
+        "file": str(filepath.relative_to(repo_root)),
+        "message": f"Digest saved to {filename}"
+    })
+
+
 @dashboard_bp.route("/api/mastery")
 def api_mastery():
     """Get topic mastery statistics for identifying weak areas and relearning needs."""
@@ -860,6 +936,21 @@ def api_quick_session():
         return jsonify({"ok": False, "message": f"Server error: {e}"}), 500
 
 
+@dashboard_bp.route("/api/sessions/<int:session_id>", methods=["DELETE"])
+def api_delete_session(session_id):
+    """Delete a session by ID."""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM sessions WHERE id = ?", (session_id,))
+    if not cur.fetchone():
+        conn.close()
+        return jsonify({"ok": False, "message": "Session not found"}), 404
+    cur.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True, "message": "Session deleted"})
+
+
 @dashboard_bp.route("/api/tutor/session/start", methods=["POST"])
 def api_tutor_session_start():
     """Start a new Tutor session."""
@@ -1565,6 +1656,73 @@ def api_update_event_status(event_id):
         "ok": True, 
         "message": f"Event '{event_title}' marked as {status}",
         "status": status
+    })
+
+
+@dashboard_bp.route("/api/syllabus/event/<int:event_id>", methods=["PUT", "PATCH"])
+def api_update_event(event_id):
+    """Update a course event's details (title, date, type, weight, etc.)."""
+    payload = request.get_json() or {}
+    
+    init_database()
+    conn = get_connection()
+    cur = conn.cursor()
+    
+    # Check event exists
+    cur.execute("SELECT id, course_id, title FROM course_events WHERE id = ?", (event_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"ok": False, "message": "Event not found"}), 404
+    
+    # Build update query dynamically based on provided fields
+    update_fields = []
+    update_values = []
+    
+    if "title" in payload:
+        update_fields.append("title = ?")
+        update_values.append(payload["title"].strip())
+    if "event_type" in payload:
+        valid_types = ["lecture", "reading", "quiz", "exam", "assignment", "other"]
+        if payload["event_type"] not in valid_types:
+            conn.close()
+            return jsonify({"ok": False, "message": f"Invalid event_type. Use one of: {', '.join(valid_types)}"}), 400
+        update_fields.append("event_type = ?")
+        update_values.append(payload["event_type"])
+    if "date" in payload:
+        update_fields.append("date = ?")
+        update_values.append(payload["date"])
+    if "due_date" in payload:
+        update_fields.append("due_date = ?")
+        update_values.append(payload["due_date"])
+    if "weight" in payload:
+        update_fields.append("weight = ?")
+        update_values.append(payload["weight"])
+    if "raw_text" in payload:
+        update_fields.append("raw_text = ?")
+        update_values.append(payload["raw_text"])
+    if "status" in payload:
+        valid_statuses = ["pending", "completed", "cancelled"]
+        if payload["status"] not in valid_statuses:
+            conn.close()
+            return jsonify({"ok": False, "message": f"Invalid status. Use one of: {', '.join(valid_statuses)}"}), 400
+        update_fields.append("status = ?")
+        update_values.append(payload["status"])
+    
+    if not update_fields:
+        conn.close()
+        return jsonify({"ok": False, "message": "No fields to update"}), 400
+    
+    update_values.append(event_id)
+    query = f"UPDATE course_events SET {', '.join(update_fields)} WHERE id = ?"
+    cur.execute(query, update_values)
+    conn.commit()
+    conn.close()
+    
+    return jsonify({
+        "ok": True,
+        "message": "Event updated successfully",
+        "event_id": event_id
     })
 
 

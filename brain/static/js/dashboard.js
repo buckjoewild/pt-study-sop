@@ -1,3 +1,33 @@
+/* ===== Collapsible Section Toggle ===== */
+function toggleCollapsible(headerEl) {
+  const section = headerEl.closest('.collapsible-section');
+  if (section) {
+    section.classList.toggle('collapsed');
+    // Save state to localStorage
+    const sectionId = section.id || section.dataset.section;
+    if (sectionId) {
+      const collapsed = section.classList.contains('collapsed');
+      localStorage.setItem('collapse_' + sectionId, collapsed ? '1' : '0');
+    }
+  }
+}
+
+function initCollapsibles() {
+  // Restore collapsed state from localStorage
+  document.querySelectorAll('.collapsible-section').forEach(section => {
+    const sectionId = section.id || section.dataset.section;
+    if (sectionId) {
+      const saved = localStorage.getItem('collapse_' + sectionId);
+      if (saved === '1') {
+        section.classList.add('collapsed');
+      }
+    }
+  });
+}
+
+// Call initCollapsibles on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', initCollapsibles);
+
 function openTab(evt, tabName) {
   // 0. Check if switching AWAY from Scholar before hiding panels
   const currentActivePanel = document.querySelector('.tab-panel.active');
@@ -58,6 +88,7 @@ function openTab(evt, tabName) {
     }
   }
   if (tabName === 'tutor' && typeof loadTutor === 'function') loadTutor();
+  if (tabName === 'brain' && typeof loadBrain === 'function') loadBrain();
 }
 
 // Global State
@@ -302,8 +333,14 @@ function renderSessions(data) {
     const r = s.retention_confidence || '-';
     const sys = s.system_performance || '-';
 
+    // Build detail content for expandable row
+    const whatWorked = s.what_worked || 'Not recorded';
+    const whatNeedsFix = s.what_needs_fixing || 'Not recorded';
+    const notes = s.notes_insights || 'No notes';
+    const frameworks = s.frameworks_used || 'None';
+
     return `
-          <tr>
+          <tr data-session-id="${s.id}">
             <td>${s.session_date}<br><span style="font-size: 12px; color: var(--text-muted)">${s.session_time || ''}</span></td>
             <td><span class="mode-badge ${modeClass}">${s.study_mode}</span></td>
             <td>${s.topic}</td>
@@ -315,10 +352,63 @@ function renderSessions(data) {
                 <span class="s">S:${sys}</span>
               </div>
             </td>
-            <td><button class="btn" onclick="alert('View details coming soon!')">View</button></td>
+            <td>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn" onclick="toggleSessionDetails(${s.id})" title="View details">View</button>
+                <button class="btn" onclick="deleteSession(${s.id})" title="Delete session" style="color: var(--error);">✕</button>
+              </div>
+            </td>
+          </tr>
+          <tr id="session-detail-${s.id}" class="session-detail-row hidden">
+            <td colspan="6">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; padding: 8px 0;">
+                <div>
+                  <strong style="color: var(--text-muted); font-size: 12px;">What Worked</strong>
+                  <p style="margin: 4px 0 0 0; font-size: 14px;">${whatWorked}</p>
+                </div>
+                <div>
+                  <strong style="color: var(--text-muted); font-size: 12px;">What Needs Fixing</strong>
+                  <p style="margin: 4px 0 0 0; font-size: 14px;">${whatNeedsFix}</p>
+                </div>
+                <div>
+                  <strong style="color: var(--text-muted); font-size: 12px;">Notes & Insights</strong>
+                  <p style="margin: 4px 0 0 0; font-size: 14px;">${notes}</p>
+                </div>
+                <div>
+                  <strong style="color: var(--text-muted); font-size: 12px;">Frameworks Used</strong>
+                  <p style="margin: 4px 0 0 0; font-size: 14px;">${frameworks}</p>
+                </div>
+              </div>
+            </td>
           </tr>
         `;
   }).join('');
+}
+
+// ============================================
+// SESSION CRUD FUNCTIONS
+// ============================================
+
+async function deleteSession(sessionId) {
+  if (!confirm('Are you sure you want to delete this session?')) return;
+  try {
+    const resp = await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+    const data = await resp.json();
+    if (data.ok) {
+      loadStats(); // Refresh the sessions list
+    } else {
+      alert('Error: ' + data.message);
+    }
+  } catch (err) {
+    alert('Error deleting session: ' + err.message);
+  }
+}
+
+function toggleSessionDetails(sessionId) {
+  const detailRow = document.getElementById('session-detail-' + sessionId);
+  if (detailRow) {
+    detailRow.classList.toggle('hidden');
+  }
 }
 
 function renderPatterns(data) {
@@ -1260,10 +1350,22 @@ function renderScholar(data) {
 
   // Questions
   const questionsContainer = document.getElementById('scholar-questions');
-  const questionsCount = document.getElementById('scholar-questions-count');
+  const questionsHeaderCount = document.getElementById('scholar-questions-header-count');
   const questions = data.questions || [];
   currentScholarQuestions = questions;
-  questionsCount.textContent = `(${questions.length})`;
+  if (questionsHeaderCount) {
+    questionsHeaderCount.textContent = `(${questions.length})`;
+  }
+  // Also update overview count
+  const overviewQuestionsCount = document.getElementById('scholar-questions-count');
+  if (overviewQuestionsCount) {
+    if (questions.length > 0) {
+      overviewQuestionsCount.innerHTML = `<span style="color:#ef4444; font-weight:600;">${questions.length} question${questions.length !== 1 ? 's' : ''}</span>
+        <span style="color:#64748b; font-size:0.8rem;"> need answers</span>`;
+    } else {
+      overviewQuestionsCount.innerHTML = '<span style="color:#64748b;">0 questions</span>';
+    }
+  }
   const saveAnswersBtn = document.getElementById('btn-save-answers');
 
   if (questions.length === 0) {
@@ -2201,6 +2303,104 @@ async function scheduleM6Reviews(eventId, eventTitle) {
   }
 }
 
+// ===== Event Edit Modal Functions =====
+function openEventEditModal(eventId) {
+  const ev = syllabusEvents.find(e => e.id === eventId);
+  if (!ev) {
+    console.error('Event not found:', eventId);
+    return;
+  }
+  
+  document.getElementById('edit-event-id').value = eventId;
+  document.getElementById('edit-event-title').value = ev.title || '';
+  document.getElementById('edit-event-type').value = ev.type || ev.event_type || 'other';
+  document.getElementById('edit-event-status').value = ev.status || 'pending';
+  document.getElementById('edit-event-date').value = ev.date || '';
+  document.getElementById('edit-event-due-date').value = ev.due_date || '';
+  document.getElementById('edit-event-weight').value = ev.weight || '';
+  document.getElementById('edit-event-details').value = ev.raw_text || '';
+  
+  document.getElementById('event-edit-modal').style.display = 'block';
+}
+
+function closeEventEditModal() {
+  document.getElementById('event-edit-modal').style.display = 'none';
+  document.getElementById('event-edit-status').textContent = '';
+}
+
+async function saveEventEdit(e) {
+  if (e) e.preventDefault();
+  
+  const eventId = document.getElementById('edit-event-id').value;
+  const statusEl = document.getElementById('event-edit-status');
+  
+  const payload = {
+    title: document.getElementById('edit-event-title').value.trim(),
+    event_type: document.getElementById('edit-event-type').value,
+    status: document.getElementById('edit-event-status').value,
+    date: document.getElementById('edit-event-date').value || null,
+    due_date: document.getElementById('edit-event-due-date').value || null,
+    weight: parseFloat(document.getElementById('edit-event-weight').value) || null,
+    raw_text: document.getElementById('edit-event-details').value.trim()
+  };
+  
+  // Remove null/empty fields
+  Object.keys(payload).forEach(k => {
+    if (payload[k] === null || payload[k] === '') delete payload[k];
+  });
+  
+  try {
+    statusEl.textContent = 'Saving...';
+    statusEl.style.color = 'var(--text-muted)';
+    
+    const res = await fetch(`/api/syllabus/event/${eventId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    
+    if (data.ok) {
+      statusEl.textContent = '✓ Event updated successfully';
+      statusEl.style.color = 'var(--success)';
+      
+      // Update local state
+      const ev = syllabusEvents.find(e => e.id === parseInt(eventId));
+      if (ev) {
+        if (payload.title) ev.title = payload.title;
+        if (payload.event_type) ev.type = payload.event_type;
+        if (payload.status) ev.status = payload.status;
+        if (payload.date) ev.date = payload.date;
+        if (payload.due_date) ev.due_date = payload.due_date;
+        if (payload.weight) ev.weight = payload.weight;
+        if (payload.raw_text) ev.raw_text = payload.raw_text;
+      }
+      
+      // Close modal and refresh list after brief delay
+      setTimeout(() => {
+        closeEventEditModal();
+        renderSyllabusList();
+        if (syllabusViewMode === 'calendar') loadCalendar();
+      }, 500);
+    } else {
+      statusEl.textContent = `Error: ${data.message}`;
+      statusEl.style.color = 'var(--error)';
+    }
+  } catch (error) {
+    console.error('Error saving event:', error);
+    statusEl.textContent = 'Failed to save event';
+    statusEl.style.color = 'var(--error)';
+  }
+}
+
+// Attach form submit handler for event edit form
+document.addEventListener('DOMContentLoaded', () => {
+  const editForm = document.getElementById('event-edit-form');
+  if (editForm) {
+    editForm.addEventListener('submit', saveEventEdit);
+  }
+});
+
 function renderSyllabusList() {
   if (!syllabusListBody || !syllabusListEmpty) return;
 
@@ -2257,7 +2457,12 @@ function renderSyllabusList() {
         <td style="${titleStyle}">${ev.title || ''}</td>
         <td style="text-align: center;">${weightDisplay}</td>
         <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${(ev.raw_text || '').replace(/"/g, '&quot;')}">${ev.raw_text || ''}</td>
-        <td>
+        <td style="white-space: nowrap;">
+          <button class="btn" style="font-size: 11px; padding: 4px 8px; margin-right: 4px;" 
+                  onclick="openEventEditModal(${ev.id})"
+                  title="Edit event">
+            ✏️
+          </button>
           <button class="btn" style="font-size: 11px; padding: 4px 8px;" 
                   onclick="scheduleM6Reviews(${ev.id}, '${(ev.title || '').replace(/'/g, "\\'")}')">
             📅 M6
@@ -2870,6 +3075,85 @@ window.sendChatMessage = async function (index) {
     historyEl.scrollTop = historyEl.scrollHeight;
   }
 };
+
+// ============================================
+// BRAIN TAB FUNCTIONS
+// ============================================
+
+async function loadBrainStatus() {
+  try {
+    const resp = await fetch('/api/brain/status');
+    const data = await resp.json();
+    if (data.ok) {
+      document.getElementById('brain-session-count').textContent = data.stats.sessions;
+      document.getElementById('brain-event-count').textContent = data.stats.events;
+      document.getElementById('brain-rag-count').textContent = data.stats.rag_documents;
+      document.getElementById('brain-pending-cards').textContent = data.stats.pending_cards;
+      document.getElementById('brain-db-size').textContent = data.stats.db_size_mb;
+    }
+  } catch (err) {
+    console.error('Error loading brain status:', err);
+  }
+}
+
+async function loadBrainMastery() {
+  try {
+    const resp = await fetch('/api/mastery');
+    const data = await resp.json();
+    const container = document.getElementById('brain-mastery-list');
+    if (data.mastery && data.mastery.length > 0) {
+      container.innerHTML = data.mastery.map(m => 
+        `<div class="mastery-item" style="padding: 8px 0; border-bottom: 1px solid var(--border);">
+          <strong style="color: var(--text-primary);">${m.topic}</strong>: 
+          <span style="color: ${m.level === 'Strong' ? 'var(--success)' : m.level === 'Weak' ? 'var(--error)' : 'var(--text-secondary)'};">${m.level}</span> 
+          <span style="color: var(--text-muted);">(${m.sessions} sessions)</span>
+        </div>`
+      ).join('');
+    } else {
+      container.innerHTML = '<p style="color: var(--text-muted);">No mastery data yet. Complete study sessions to build mastery.</p>';
+    }
+  } catch (err) {
+    document.getElementById('brain-mastery-list').innerHTML = '<p style="color: var(--error);">Error loading mastery data.</p>';
+  }
+}
+
+function loadBrain() {
+  loadBrainStatus();
+  loadBrainMastery();
+}
+
+// ============================================
+// SCHOLAR DIGEST SAVE FUNCTION
+// ============================================
+
+async function saveStrategicDigest() {
+  const digestEl = document.getElementById('scholar-digest-text');
+  if (!digestEl) {
+    alert('No digest content found. Please generate a digest first.');
+    return;
+  }
+  const content = digestEl.innerText || digestEl.textContent;
+  if (!content.trim()) {
+    alert('Digest is empty. Please generate a digest first.');
+    return;
+  }
+  
+  try {
+    const resp = await fetch('/api/scholar/digest/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ digest: content })
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      alert('Digest saved to: ' + data.file);
+    } else {
+      alert('Error: ' + data.message);
+    }
+  } catch (err) {
+    alert('Error saving digest: ' + err.message);
+  }
+}
 
 // Missing Function: loadSyllabusDashboard
 window.loadSyllabusDashboard = async function () {

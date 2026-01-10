@@ -270,6 +270,35 @@ def init_database():
     """
     )
 
+    # Additive migration for newer RAG features (safe on existing DBs)
+    cursor.execute("PRAGMA table_info(rag_docs)")
+    rag_cols = {col[1] for col in cursor.fetchall()}
+
+    # NOTE: Keep defaults loose to avoid NOT NULL migration issues.
+    if "corpus" not in rag_cols:
+        try:
+            cursor.execute("ALTER TABLE rag_docs ADD COLUMN corpus TEXT")
+        except sqlite3.OperationalError:
+            pass
+    if "folder_path" not in rag_cols:
+        try:
+            cursor.execute("ALTER TABLE rag_docs ADD COLUMN folder_path TEXT")
+        except sqlite3.OperationalError:
+            pass
+    if "enabled" not in rag_cols:
+        try:
+            cursor.execute("ALTER TABLE rag_docs ADD COLUMN enabled INTEGER DEFAULT 1")
+        except sqlite3.OperationalError:
+            pass
+
+    # Backfill corpus/enabled defaults for older rows.
+    try:
+        cursor.execute("UPDATE rag_docs SET corpus = COALESCE(corpus, 'runtime')")
+        cursor.execute("UPDATE rag_docs SET enabled = COALESCE(enabled, 1)")
+    except sqlite3.OperationalError:
+        # Column might not exist in some edge cases; ignore.
+        pass
+
     # Indexes for common queries on sessions
     cursor.execute(
         """
@@ -351,12 +380,136 @@ def init_database():
         ON rag_docs(source_path)
     """
     )
+
+    # Indexes for new corpus/folder toggles
+    try:
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_rag_docs_corpus
+            ON rag_docs(corpus)
+        """
+        )
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_rag_docs_folder
+            ON rag_docs(folder_path)
+        """
+        )
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_rag_docs_enabled
+            ON rag_docs(enabled)
+        """
+        )
+    except sqlite3.OperationalError:
+        pass
     cursor.execute(
         """
         CREATE INDEX IF NOT EXISTS idx_rag_docs_course
         ON rag_docs(course_id)
     """
     )
+
+    # ------------------------------------------------------------------
+    # Tutor turns table (tracks individual Q&A within a Tutor session)
+    # ------------------------------------------------------------------
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS tutor_turns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT NOT NULL,        -- e.g., "sess-20260109-143022"
+            course_id INTEGER,
+            topic_id INTEGER,
+            mode TEXT,                        -- Core/Sprint/Drill
+            turn_number INTEGER DEFAULT 1,
+            question TEXT NOT NULL,
+            answer TEXT,
+            citations_json TEXT,              -- JSON array of citation objects
+            unverified INTEGER DEFAULT 0,     -- 1 if answer was unverified
+            source_lock_active INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(course_id) REFERENCES courses(id),
+            FOREIGN KEY(topic_id) REFERENCES topics(id)
+        )
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_tutor_turns_session
+        ON tutor_turns(session_id)
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_tutor_turns_created
+        ON tutor_turns(created_at)
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_tutor_turns_topic
+        ON tutor_turns(topic_id)
+    """
+    )
+
+    # ------------------------------------------------------------------
+    # Anki Card Drafts table (for Tutor WRAP phase)
+    # ------------------------------------------------------------------
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS card_drafts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT,              -- Link to Tutor session
+            course_id INTEGER,
+            topic_id INTEGER,
+            deck_name TEXT DEFAULT 'PT_Study',
+            card_type TEXT DEFAULT 'basic', -- basic, cloze, reversed
+            front TEXT NOT NULL,
+            back TEXT NOT NULL,
+            tags TEXT,                    -- comma-separated
+            source_citation TEXT,         -- RAG source attribution
+            status TEXT DEFAULT 'draft',  -- draft, approved, synced, rejected
+            anki_note_id INTEGER,         -- filled after sync
+            created_at TEXT NOT NULL,
+            synced_at TEXT,
+            FOREIGN KEY(course_id) REFERENCES courses(id),
+            FOREIGN KEY(topic_id) REFERENCES topics(id)
+        )
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_card_drafts_session
+        ON card_drafts(session_id)
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_card_drafts_status
+        ON card_drafts(status)
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_card_drafts_course
+        ON card_drafts(course_id)
+    """
+    )
+
+    # Add google_event_id to course_events if not exists (for GCal sync)
+    cursor.execute("PRAGMA table_info(course_events)")
+    ce_columns = {col[1] for col in cursor.fetchall()}
+    if 'google_event_id' not in ce_columns:
+        try:
+            cursor.execute("ALTER TABLE course_events ADD COLUMN google_event_id TEXT")
+        except sqlite3.OperationalError:
+            pass  # Column might already exist
 
     conn.commit()
     conn.close()

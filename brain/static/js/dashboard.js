@@ -1,4 +1,15 @@
 function openTab(evt, tabName) {
+  // 0. Check if switching AWAY from Scholar before hiding panels
+  const currentActivePanel = document.querySelector('.tab-panel.active');
+  const wasScholarActive = currentActivePanel && currentActivePanel.id === 'tab-scholar';
+  if (wasScholarActive && tabName !== 'scholar') {
+    // Clear polling interval when leaving Scholar (but keep sessionStorage)
+    if (typeof runStatusInterval !== 'undefined' && runStatusInterval) {
+      clearInterval(runStatusInterval);
+      runStatusInterval = null;
+    }
+  }
+
   // 1. Hide all panels
   const panels = document.getElementsByClassName("tab-panel");
   for (let i = 0; i < panels.length; i++) {
@@ -36,13 +47,25 @@ function openTab(evt, tabName) {
 
   // 6. Lazy Load
   if (tabName === 'syllabus' && typeof loadSyllabusDashboard === 'function') loadSyllabusDashboard();
-  if (tabName === 'scholar' && typeof loadScholar === 'function') loadScholar();
+  if (tabName === 'scholar' && typeof loadScholar === 'function') {
+    loadScholar();
+    // Restore polling if there's an active run in sessionStorage
+    const storedRunId = restoreScholarRunId();
+    if (storedRunId && !runStatusInterval) {
+      currentRunId = storedRunId;
+      runStatusInterval = setInterval(() => checkRunStatus(currentRunId), 2000);
+      checkRunStatus(currentRunId);
+    }
+  }
+  if (tabName === 'tutor' && typeof loadTutor === 'function') loadTutor();
 }
 
 // Global State
 let allCourses = [];
 let currentCalendarDate = new Date();
 let calendarData = { events: [], sessions: [], planned: [] };
+let syllabusEvents = [];
+let syllabusViewMode = 'calendar';
 let currentScholarQuestions = [];
 
 // DOM Elements
@@ -71,6 +94,41 @@ const btnResume = document.getElementById('btn-resume');
 const tutorQuestion = document.getElementById('tutor-question');
 const tutorAnswerBox = document.getElementById('tutor-answer-box');
 const btnTutorSend = document.getElementById('btn-tutor-send');
+const tutorModeSelect = document.getElementById('tutor-mode');
+const btnTutorNewSession = document.getElementById('btn-tutor-new-session');
+
+const tutorKindNote = document.getElementById('tutor-kind-note');
+const tutorKindTextbook = document.getElementById('tutor-kind-textbook');
+const tutorKindTranscript = document.getElementById('tutor-kind-transcript');
+const tutorKindSlide = document.getElementById('tutor-kind-slide');
+const tutorKindOther = document.getElementById('tutor-kind-other');
+const tutorKindPowerpoint = document.getElementById('tutor-kind-powerpoint');
+const tutorKindPdf = document.getElementById('tutor-kind-pdf');
+const tutorKindTxt = document.getElementById('tutor-kind-txt');
+const tutorKindMp4 = document.getElementById('tutor-kind-mp4');
+const tutorKindYoutube = document.getElementById('tutor-kind-youtube');
+
+const tutorProjectFile = document.getElementById('tutor-project-file');
+const tutorProjectDocType = document.getElementById('tutor-project-doc-type');
+const tutorProjectTags = document.getElementById('tutor-project-tags');
+const btnTutorUpload = document.getElementById('btn-tutor-upload');
+const btnTutorAddLink = document.getElementById('btn-tutor-add-link');
+const tutorUploadStatusBox = document.getElementById('tutor-upload-status');
+const btnTutorRefreshDocs = document.getElementById('btn-tutor-refresh-docs');
+const tutorDocSearch = document.getElementById('tutor-doc-search');
+const tutorDocTypeFilter = document.getElementById('tutor-doc-type-filter');
+const tutorDocsList = document.getElementById('tutor-docs-list');
+const tutorCitationsBox = document.getElementById('tutor-citations');
+const tutorLinkUrl = document.getElementById('tutor-link-url');
+const tutorLinkDocType = document.getElementById('tutor-link-doc-type');
+
+const btnTutorStudySync = document.getElementById('btn-tutor-study-sync');
+const btnTutorStudyRefresh = document.getElementById('btn-tutor-study-refresh');
+const tutorStudyStatusBox = document.getElementById('tutor-study-status');
+const tutorStudyFoldersBox = document.getElementById('tutor-study-folders');
+
+const btnTutorRuntimeRefresh = document.getElementById('btn-tutor-runtime-refresh');
+const tutorRuntimeItemsBox = document.getElementById('tutor-runtime-items');
 const syllabusForm = document.getElementById('syllabus-form');
 const syllabusStatus = document.getElementById('syllabus-status');
 const syllabusJsonInput = document.getElementById('syllabus_json_input');
@@ -78,6 +136,14 @@ const syllabusJsonStatus = document.getElementById('syllabus-json-status');
 const btnSyllabusJsonImport = document.getElementById('btn-syllabus-json-import');
 const btnSyllabusPromptCopy = document.getElementById('btn-syllabus-prompt-copy');
 const syllabusPromptTemplate = document.getElementById('syllabus_prompt_template');
+const btnViewCalendar = document.getElementById('btn-view-calendar');
+const btnViewList = document.getElementById('btn-view-list');
+const syllabusListCourse = document.getElementById('syllabus-list-course');
+const syllabusListType = document.getElementById('syllabus-list-type');
+const syllabusListSearch = document.getElementById('syllabus-list-search');
+const syllabusListBody = document.getElementById('syllabus-list-body');
+const syllabusListEmpty = document.getElementById('syllabus-list-empty');
+const btnRefreshSyllabusList = document.getElementById('btn-refresh-syllabus-list');
 
 // Helpers
 const formatMinutes = (m) => {
@@ -364,6 +430,334 @@ function resetQuickForm() {
 // Tutor tab handling (prototype calling stub API)
 let activeTutorSessionId = null;
 
+let tutorDocsCache = [];
+let tutorSelectedDocIds = new Set();
+let tutorSearchDebounceTimer = null;
+
+function getTutorAllowedKindsFromUI() {
+  const kinds = [];
+  if (tutorKindNote && tutorKindNote.checked) kinds.push('note');
+  if (tutorKindTextbook && tutorKindTextbook.checked) kinds.push('textbook');
+  if (tutorKindTranscript && tutorKindTranscript.checked) kinds.push('transcript');
+  if (tutorKindSlide && tutorKindSlide.checked) kinds.push('slide');
+  if (tutorKindOther && tutorKindOther.checked) kinds.push('other');
+  if (tutorKindPowerpoint && tutorKindPowerpoint.checked) kinds.push('powerpoint');
+  if (tutorKindPdf && tutorKindPdf.checked) kinds.push('pdf');
+  if (tutorKindTxt && tutorKindTxt.checked) kinds.push('txt');
+  if (tutorKindMp4 && tutorKindMp4.checked) kinds.push('mp4');
+  if (tutorKindYoutube && tutorKindYoutube.checked) kinds.push('youtube');
+  if (kinds.length === 0) {
+    return ['note', 'textbook', 'transcript', 'slide', 'other', 'powerpoint', 'pdf', 'txt', 'mp4', 'youtube'];
+  }
+  return kinds;
+}
+
+function setTutorUploadStatus(html) {
+  if (!tutorUploadStatusBox) return;
+  tutorUploadStatusBox.innerHTML = html;
+}
+
+function setTutorStudyStatus(html) {
+  if (!tutorStudyStatusBox) return;
+  tutorStudyStatusBox.innerHTML = html;
+}
+
+function renderTutorStudyFolders(folders, root) {
+  if (!tutorStudyFoldersBox) return;
+  if (!folders || folders.length === 0) {
+    tutorStudyFoldersBox.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">No Study files ingested yet. Drop files into brain/data/study_rag and click Sync.</div>';
+    return;
+  }
+
+  const header = root ? `<div style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">Root: <span style="font-family: monospace;">${root.replace(/\\/g, '/')}</span></div>` : '';
+  tutorStudyFoldersBox.innerHTML = header + folders.map((f) => {
+    const checked = f.enabled ? 'checked' : '';
+    const label = f.folder_path ? f.folder_path : '(root)';
+    return `
+      <label style="display:block; padding: 8px 6px; border-bottom: 1px solid var(--border); cursor: pointer;">
+        <input type="checkbox" class="tutor-study-folder-checkbox" data-folder-path="${label === '(root)' ? '' : f.folder_path}" ${checked} style="margin-right: 8px;" />
+        <span style="font-weight: 600;">${label}</span>
+        <span style="color: var(--text-muted);"> • ${f.doc_count} docs</span>
+      </label>
+    `;
+  }).join('');
+
+  const checkboxes = tutorStudyFoldersBox.querySelectorAll('.tutor-study-folder-checkbox');
+  checkboxes.forEach((cb) => {
+    cb.addEventListener('change', async (e) => {
+      const folderPath = e.target.getAttribute('data-folder-path') || '';
+      const enabled = !!e.target.checked;
+      await setTutorStudyFolderEnabled(folderPath, enabled);
+      await loadTutorStudyFolders();
+    });
+  });
+}
+
+async function loadTutorStudyFolders() {
+  if (!tutorStudyFoldersBox) return;
+  tutorStudyFoldersBox.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">Loading Study folders...</div>';
+  try {
+    const res = await fetch('/api/tutor/study/folders');
+    const data = await res.json();
+    if (!data.ok) {
+      tutorStudyFoldersBox.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">Failed to load Study folders.</div>';
+      return;
+    }
+    renderTutorStudyFolders(data.folders || [], data.root || '');
+  } catch (e) {
+    tutorStudyFoldersBox.innerHTML = `<div style="color: var(--text-muted); font-size: 13px;">Failed to load Study folders: ${e.message}</div>`;
+  }
+}
+
+async function syncTutorStudyFolder() {
+  setTutorStudyStatus('<div class="upload-status" style="background: var(--accent-light); color: var(--accent);">Syncing Study folder...</div>');
+  try {
+    const res = await fetch('/api/tutor/study/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    const data = await res.json();
+    if (!data.ok) {
+      setTutorStudyStatus(`<div class="upload-status error">[ERROR] ${data.message || 'Study sync failed.'}</div>`);
+      return;
+    }
+    const errors = (data.errors || []).length ? `<div style="margin-top:6px; font-size:12px; color: var(--text-muted);">Errors: ${data.errors.length}</div>` : '';
+    setTutorStudyStatus(`<div class="upload-status success">[OK] ${data.message}</div>${errors}`);
+    await loadTutorStudyFolders();
+  } catch (e) {
+    setTutorStudyStatus(`<div class="upload-status error">[ERROR] ${e.message}</div>`);
+  }
+}
+
+async function setTutorStudyFolderEnabled(folderPath, enabled) {
+  try {
+    await fetch('/api/tutor/study/folders/set', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folder_path: folderPath, enabled })
+    });
+  } catch (e) {
+    // Best-effort
+  }
+}
+
+function renderTutorRuntimeItems(items) {
+  if (!tutorRuntimeItemsBox) return;
+  if (!items || items.length === 0) {
+    tutorRuntimeItemsBox.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">No Runtime items found.</div>';
+    return;
+  }
+
+  let lastGroup = null;
+  tutorRuntimeItemsBox.innerHTML = items.map((it) => {
+    const checked = it.enabled ? 'checked' : '';
+    const group = it.group || 'Runtime';
+    const groupHeader = group !== lastGroup ? `<div style="margin-top:${lastGroup ? '10px' : '0'}; font-size: 12px; font-weight: 700; color: var(--text-muted);">${group}</div>` : '';
+    lastGroup = group;
+    const desc = it.description ? `<div style="margin-left: 26px; font-size: 12px; color: var(--text-muted);">${it.description}</div>` : '';
+    return `
+      ${groupHeader}
+      <label style="display:block; padding: 6px 0; cursor: pointer;">
+        <input type="checkbox" class="tutor-runtime-item-checkbox" data-item-id="${it.id}" ${checked} style="margin-right: 8px;" />
+        <span style="font-weight: 600;">${it.key}</span>
+        ${desc}
+      </label>
+    `;
+  }).join('');
+
+  const checkboxes = tutorRuntimeItemsBox.querySelectorAll('.tutor-runtime-item-checkbox');
+  checkboxes.forEach((cb) => {
+    cb.addEventListener('change', async (e) => {
+      const id = parseInt(e.target.getAttribute('data-item-id'));
+      if (!Number.isFinite(id)) return;
+      const enabled = !!e.target.checked;
+      await setTutorRuntimeItemEnabled(id, enabled);
+    });
+  });
+}
+
+async function loadTutorRuntimeItems() {
+  if (!tutorRuntimeItemsBox) return;
+  tutorRuntimeItemsBox.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">Loading Runtime items...</div>';
+  try {
+    const res = await fetch('/api/tutor/runtime/items');
+    const data = await res.json();
+    if (!data.ok) {
+      tutorRuntimeItemsBox.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">Failed to load Runtime items.</div>';
+      return;
+    }
+    renderTutorRuntimeItems(data.items || []);
+  } catch (e) {
+    tutorRuntimeItemsBox.innerHTML = `<div style="color: var(--text-muted); font-size: 13px;">Failed to load Runtime items: ${e.message}</div>`;
+  }
+}
+
+async function setTutorRuntimeItemEnabled(id, enabled) {
+  try {
+    await fetch('/api/tutor/runtime/items/set', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, enabled })
+    });
+  } catch (e) {
+    // Best-effort
+  }
+}
+
+function renderTutorCitations(citations) {
+  if (!tutorCitationsBox) return;
+  if (!citations || citations.length === 0) {
+    tutorCitationsBox.textContent = 'No citations.';
+    return;
+  }
+  const lines = citations.map((c) => {
+    const header = `[${c.doc_id}] (${c.doc_type}) ${c.source_path}`;
+    const snippet = (c.snippet || '').trim();
+    return snippet ? `${header}\n  ${snippet}` : header;
+  });
+  tutorCitationsBox.textContent = lines.join('\n\n');
+}
+
+function renderTutorDocsList(docs) {
+  if (!tutorDocsList) return;
+  if (!docs || docs.length === 0) {
+    tutorDocsList.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">No RAG docs found.</div>';
+    return;
+  }
+
+  tutorDocsList.innerHTML = docs.map((d) => {
+    const checked = tutorSelectedDocIds.has(d.id) ? 'checked' : '';
+    const tags = (d.topic_tags || '').trim();
+    const tagText = tags ? ` • ${tags}` : '';
+    const path = (d.source_path || '').replace(/\\/g, '/');
+    return `
+      <label style="display: block; padding: 8px 6px; border-bottom: 1px solid var(--border); cursor: pointer;">
+        <input type="checkbox" class="tutor-doc-checkbox" data-doc-id="${d.id}" ${checked} style="margin-right: 8px;" />
+        <span style="font-weight: 600;">#${d.id}</span>
+        <span style="color: var(--text-muted);">(${d.doc_type})</span>
+        <span style="color: var(--text-secondary);">${path}</span>
+        <span style="color: var(--text-muted);">${tagText}</span>
+      </label>
+    `;
+  }).join('');
+
+  const checkboxes = tutorDocsList.querySelectorAll('.tutor-doc-checkbox');
+  checkboxes.forEach((cb) => {
+    cb.addEventListener('change', (e) => {
+      const id = parseInt(e.target.getAttribute('data-doc-id'));
+      if (!Number.isFinite(id)) return;
+      if (e.target.checked) tutorSelectedDocIds.add(id);
+      else tutorSelectedDocIds.delete(id);
+    });
+  });
+}
+
+async function loadTutorRagDocs() {
+  if (!tutorDocsList) return;
+  tutorDocsList.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">Loading RAG docs...</div>';
+
+  const search = (tutorDocSearch && tutorDocSearch.value || '').trim();
+  const docType = (tutorDocTypeFilter && tutorDocTypeFilter.value || '').trim();
+  const params = new URLSearchParams();
+  params.set('limit', '200');
+  if (search) params.set('search', search);
+  if (docType) params.set('doc_type', docType);
+
+  try {
+    const res = await fetch(`/api/tutor/rag-docs?${params.toString()}`);
+    const data = await res.json();
+    if (!data.ok) {
+      tutorDocsList.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">Failed to load RAG docs.</div>';
+      return;
+    }
+    tutorDocsCache = data.docs || [];
+    renderTutorDocsList(tutorDocsCache);
+  } catch (e) {
+    tutorDocsList.innerHTML = `<div style="color: var(--text-muted); font-size: 13px;">Failed to load RAG docs: ${e.message}</div>`;
+  }
+}
+
+async function uploadTutorProjectFile() {
+  if (!tutorProjectFile || !tutorProjectFile.files || tutorProjectFile.files.length === 0) {
+    setTutorUploadStatus('<div class="upload-status error">Choose a file first.</div>');
+    return;
+  }
+  const file = tutorProjectFile.files[0];
+  const docType = (tutorProjectDocType && tutorProjectDocType.value) ? tutorProjectDocType.value : 'other';
+  const tags = (tutorProjectTags && tutorProjectTags.value || '').trim();
+
+  setTutorUploadStatus('<div class="upload-status" style="background: var(--accent-light); color: var(--accent);">Uploading + ingesting...</div>');
+  const form = new FormData();
+  form.append('file', file);
+  form.append('doc_type', docType);
+  if (tags) form.append('tags', tags);
+
+  try {
+    const res = await fetch('/api/tutor/project-files/upload', { method: 'POST', body: form });
+    const data = await res.json();
+    if (!data.ok) {
+      setTutorUploadStatus(`<div class="upload-status error">[ERROR] ${data.message || 'Upload failed.'}</div>`);
+      return;
+    }
+    setTutorUploadStatus(`<div class="upload-status success">[OK] ${data.message}</div>`);
+    if (data.doc_id) tutorSelectedDocIds.add(parseInt(data.doc_id));
+    await loadTutorRagDocs();
+  } catch (e) {
+    setTutorUploadStatus(`<div class="upload-status error">[ERROR] ${e.message}</div>`);
+  }
+}
+
+async function addTutorLink() {
+  if (!tutorLinkUrl) return;
+  const url = (tutorLinkUrl.value || '').trim();
+  if (!url) {
+    setTutorUploadStatus('<div class="upload-status error">Enter a URL first.</div>');
+    return;
+  }
+  const docType = (tutorLinkDocType && tutorLinkDocType.value) ? tutorLinkDocType.value : 'youtube';
+  const tags = (tutorProjectTags && tutorProjectTags.value || '').trim();
+
+  setTutorUploadStatus('<div class="upload-status" style="background: var(--accent-light); color: var(--accent);">Adding link...</div>');
+  try {
+    const res = await fetch('/api/tutor/links/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, doc_type: docType, tags })
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      setTutorUploadStatus(`<div class="upload-status error">[ERROR] ${data.message || 'Add link failed.'}</div>`);
+      return;
+    }
+    setTutorUploadStatus(`<div class="upload-status success">[OK] ${data.message}</div>`);
+    if (data.doc_id) tutorSelectedDocIds.add(parseInt(data.doc_id));
+    await loadTutorRagDocs();
+  } catch (e) {
+    setTutorUploadStatus(`<div class="upload-status error">[ERROR] ${e.message}</div>`);
+  }
+}
+
+function loadTutor() {
+  // Idempotent-ish init: only binds listeners once.
+  if (loadTutor._initialized) {
+    loadTutorStudyFolders();
+    loadTutorRuntimeItems();
+    return;
+  }
+  loadTutor._initialized = true;
+
+  if (btnTutorStudySync) btnTutorStudySync.addEventListener('click', () => syncTutorStudyFolder());
+  if (btnTutorStudyRefresh) btnTutorStudyRefresh.addEventListener('click', () => loadTutorStudyFolders());
+  if (btnTutorRuntimeRefresh) btnTutorRuntimeRefresh.addEventListener('click', () => loadTutorRuntimeItems());
+  if (btnTutorAddLink) btnTutorAddLink.addEventListener('click', () => addTutorLink());
+
+  if (btnTutorNewSession) btnTutorNewSession.addEventListener('click', () => {
+    activeTutorSessionId = null;
+    if (tutorAnswerBox) tutorAnswerBox.textContent = 'New session started. Ask a question when ready.';
+    renderTutorCitations([]);
+  });
+
+  loadTutorStudyFolders();
+  loadTutorRuntimeItems();
+}
+
 if (btnTutorSend && tutorQuestion && tutorAnswerBox) {
   btnTutorSend.addEventListener('click', async () => {
     const question = (tutorQuestion.value || '').trim();
@@ -372,6 +766,7 @@ if (btnTutorSend && tutorQuestion && tutorAnswerBox) {
       return;
     }
     tutorAnswerBox.textContent = 'Thinking...';
+    if (tutorCitationsBox) tutorCitationsBox.textContent = '...';
 
     try {
       if (!activeTutorSessionId) {
@@ -393,12 +788,12 @@ if (btnTutorSend && tutorQuestion && tutorAnswerBox) {
         session_id: activeTutorSessionId,
         course_id: null,
         topic_id: null,
-        mode: 'Core',
+        mode: (tutorModeSelect && tutorModeSelect.value) ? tutorModeSelect.value : 'Core',
         question,
         plan_snapshot_json: '{}',
         sources: {
-          allowed_doc_ids: [],
-          allowed_kinds: ['note', 'textbook', 'transcript'],
+          allowed_doc_ids: Array.from(tutorSelectedDocIds.values()),
+          allowed_kinds: getTutorAllowedKindsFromUI(),
           disallowed_doc_ids: []
         },
         notes_context_ids: []
@@ -415,9 +810,12 @@ if (btnTutorSend && tutorQuestion && tutorAnswerBox) {
         return;
       }
       activeTutorSessionId = data.session_id;
-      tutorAnswerBox.textContent = data.answer;
+      const unverifiedBanner = data.unverified ? '[UNVERIFIED]\n\n' : '';
+      tutorAnswerBox.textContent = unverifiedBanner + (data.answer || '');
+      renderTutorCitations(data.citations || []);
     } catch (error) {
       tutorAnswerBox.textContent = `Failed to contact Tutor: ${error.message}`;
+      renderTutorCitations([]);
     }
   });
 }
@@ -624,6 +1022,13 @@ function renderScholar(data) {
                  <button 
                    class="btn" 
                    style="font-size: 11px; padding: 4px 10px;"
+                   onclick="clearChatAndReset(${i})"
+                 >
+                   Clear Chat
+                 </button>
+                 <button 
+                   class="btn" 
+                   style="font-size: 11px; padding: 4px 10px;"
                    onclick="document.getElementById('chat-panel-${i}').style.display='none'"
                  >
                    Close
@@ -692,11 +1097,22 @@ function renderScholar(data) {
   if (nextSteps.length === 0) {
     nextStepsContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">No next steps defined.</div>';
   } else {
-    nextStepsContainer.innerHTML = nextSteps.map(step => `
-          <div style="padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-primary);">
-            ${step}
-          </div>
-        `).join('');
+    nextStepsContainer.innerHTML = nextSteps.map(step => {
+      const lower = (step || '').toLowerCase();
+      let actionBtn = '';
+      if (lower.includes('unattended_final')) {
+        actionBtn = '<button class="btn" style="font-size: 11px; padding: 4px 8px;" type="button" onclick="openScholarLatestFinal()">Open Latest Final</button>';
+      } else if (lower.includes('questions_needed') || lower.includes('answer it')) {
+        actionBtn = '<button class="btn" style="font-size: 11px; padding: 4px 8px;" type="button" onclick="document.getElementById(\'scholar-questions\').scrollIntoView({behavior:\'smooth\', block:\'start\'})">Go to Questions</button>';
+      }
+
+      return `
+        <div style="padding: 10px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 12px; align-items: center;">
+          <div style="font-size: 13px; color: var(--text-primary); flex: 1;">${step}</div>
+          ${actionBtn}
+        </div>
+      `;
+    }).join('');
   }
 
   // Latest run
@@ -711,10 +1127,108 @@ function renderScholar(data) {
 // Scholar run handling
 let currentRunId = null;
 let runStatusInterval = null;
+let lastRunLogSize = null;
+let lastRunLogChangeAt = null;
+
+const SCHOLAR_RUN_STORAGE_KEY = 'scholar_active_run_id';
+
+function saveScholarRunId(runId) {
+  if (runId) {
+    sessionStorage.setItem(SCHOLAR_RUN_STORAGE_KEY, runId);
+  } else {
+    sessionStorage.removeItem(SCHOLAR_RUN_STORAGE_KEY);
+  }
+}
+
+function restoreScholarRunId() {
+  return sessionStorage.getItem(SCHOLAR_RUN_STORAGE_KEY);
+}
+
+function clearScholarRunState() {
+  currentRunId = null;
+  sessionStorage.removeItem(SCHOLAR_RUN_STORAGE_KEY);
+  if (runStatusInterval) {
+    clearInterval(runStatusInterval);
+    runStatusInterval = null;
+  }
+}
 
 const btnRunScholar = document.getElementById('btn-run-scholar');
 const scholarRunStatus = document.getElementById('scholar-run-status');
 const scholarRunLog = document.getElementById('scholar-run-log');
+const scholarRunProgress = document.getElementById('scholar-run-progress');
+const scholarRunMeta = document.getElementById('scholar-run-meta');
+const scholarRunActions = document.getElementById('scholar-run-actions');
+const btnScholarRefresh = document.getElementById('btn-scholar-refresh');
+const btnScholarOpenFinal = document.getElementById('btn-scholar-open-final');
+const btnScholarCancel = document.getElementById('btn-scholar-cancel');
+
+function _fmtSeconds(secs) {
+  if (secs == null || Number.isNaN(secs)) return 'unknown';
+  if (secs < 60) return `${secs}s`;
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  if (m < 60) return `${m}m ${s}s`;
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  return `${h}h ${mm}m`;
+}
+
+function _setRunUiActive(isActive) {
+  if (scholarRunProgress) scholarRunProgress.style.display = isActive ? 'block' : 'none';
+  if (scholarRunMeta) scholarRunMeta.style.display = isActive ? 'block' : 'none';
+  if (scholarRunActions) scholarRunActions.style.display = isActive ? 'flex' : 'none';
+}
+
+async function openScholarLatestFinal() {
+  if (!scholarRunLog) return;
+  scholarRunLog.style.display = 'block';
+  scholarRunLog.textContent = 'Loading latest final...';
+  try {
+    const res = await fetch('/api/scholar/run/latest-final');
+    const data = await res.json();
+    if (!data.ok) {
+      scholarRunLog.textContent = `No latest final available: ${data.message || 'unknown error'}`;
+      return;
+    }
+    scholarRunLog.textContent = `FILE: ${data.file}\nMODIFIED: ${data.modified}\n\n${data.content}`;
+  } catch (e) {
+    scholarRunLog.textContent = `Failed to load latest final: ${e.message}`;
+  }
+}
+
+async function cancelScholarRun() {
+  if (!currentRunId) {
+    alert('No active run_id to cancel.');
+    return;
+  }
+  if (!confirm('Cancel this Scholar run?')) return;
+  try {
+    const res = await fetch(`/api/scholar/run/cancel/${currentRunId}`, { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      const msg = (data.message || '').toLowerCase();
+      const alreadyStopped = msg.includes('no pid file') || msg.includes('already');
+      scholarRunStatus.innerHTML = alreadyStopped
+        ? `<span style="color: var(--warning);">⚠ Run not running (nothing to cancel)</span>`
+        : `<span style="color: var(--warning);">⚠ Cancel requested</span>`;
+      scholarRunLog.style.display = 'block';
+      scholarRunLog.textContent = (scholarRunLog.textContent || '') + `\n\n[dashboard] ${data.message}`;
+      setTimeout(() => checkRunStatus(currentRunId), 1000);
+    } else {
+      alert(data.message || 'Cancel failed');
+    }
+  } catch (e) {
+    alert(`Cancel failed: ${e.message}`);
+  }
+}
+
+if (btnScholarRefresh) btnScholarRefresh.addEventListener('click', async () => {
+  if (currentRunId) await checkRunStatus(currentRunId);
+  await loadScholar();
+});
+if (btnScholarOpenFinal) btnScholarOpenFinal.addEventListener('click', openScholarLatestFinal);
+if (btnScholarCancel) btnScholarCancel.addEventListener('click', cancelScholarRun);
 
 if (btnRunScholar && scholarRunStatus && scholarRunLog) btnRunScholar.addEventListener('click', async () => {
   // Check for unanswered questions first
@@ -733,6 +1247,10 @@ if (btnRunScholar && scholarRunStatus && scholarRunLog) btnRunScholar.addEventLi
   scholarRunStatus.textContent = 'Starting Scholar run...';
   scholarRunLog.style.display = 'block';
   scholarRunLog.textContent = 'Initializing...';
+  _setRunUiActive(true);
+  if (scholarRunMeta) scholarRunMeta.textContent = '';
+  lastRunLogSize = null;
+  lastRunLogChangeAt = Date.now();
 
   try {
     const res = await fetch('/api/scholar/run', { method: 'POST' });
@@ -740,6 +1258,7 @@ if (btnRunScholar && scholarRunStatus && scholarRunLog) btnRunScholar.addEventLi
 
     if (data.ok) {
       currentRunId = data.run_id;
+      saveScholarRunId(data.run_id);
       const methodNote = data.method === 'batch_script' ? ' (via batch script)' : '';
       let preservedNote = '';
       if (data.preserved_questions > 0) {
@@ -768,6 +1287,7 @@ if (btnRunScholar && scholarRunStatus && scholarRunLog) btnRunScholar.addEventLi
         // User will need to refresh dashboard after executing Scholar manually
         btnRunScholar.disabled = false;
         btnRunScholar.textContent = 'Execution Queued (Manual Required)';
+        _setRunUiActive(false);
 
         // Show instructions more prominently
         setTimeout(() => {
@@ -776,6 +1296,7 @@ if (btnRunScholar && scholarRunStatus && scholarRunLog) btnRunScholar.addEventLi
       } else {
         // Normal execution (codex available)
         scholarRunStatus.innerHTML = `<span style="color: var(--success);">✓ Run started${methodNote} (ID: ${data.run_id})${preservedNote}</span>`;
+        btnRunScholar.textContent = 'Running...';
         if (data.warning) {
           scholarRunLog.textContent = `WARNING: ${data.warning}\n\nLog file: ${data.log_file}\nFinal file: ${data.final_file}\n\nWaiting for output...`;
         } else {
@@ -810,12 +1331,14 @@ if (btnRunScholar && scholarRunStatus && scholarRunLog) btnRunScholar.addEventLi
       scholarRunLog.textContent = errorMsg;
       btnRunScholar.disabled = false;
       btnRunScholar.textContent = 'Start Run';
+      _setRunUiActive(false);
     }
   } catch (error) {
     scholarRunStatus.innerHTML = `<span style="color: var(--error);">✗ Network error: ${error.message}</span>`;
     scholarRunLog.textContent = `Network error: ${error.message}`;
     btnRunScholar.disabled = false;
     btnRunScholar.textContent = 'Start Run';
+    _setRunUiActive(false);
   }
 });
 
@@ -824,16 +1347,40 @@ async function checkRunStatus(runId) {
     const res = await fetch(`/api/scholar/run/status/${runId}`);
     const status = await res.json();
 
+    _setRunUiActive(true);
+
+    // Meta + stalled detection
+    const kb = (status.log_size / 1024).toFixed(1);
+    const since = status.seconds_since_log_update;
+    const stalled = !!status.stalled;
+    if (scholarRunMeta) {
+      let meta = `Log: ${kb} KB`;
+      if (since != null) meta += ` • Last output: ${_fmtSeconds(since)} ago`;
+      if (status.pid) meta += ` • PID: ${status.pid}`;
+      if (stalled) meta += ' • ⚠ No new output (may be stuck)';
+      scholarRunMeta.textContent = meta;
+    }
+
+    if (typeof status.log_size === 'number') {
+      if (lastRunLogSize === null || lastRunLogSize === undefined) {
+        lastRunLogSize = status.log_size;
+        lastRunLogChangeAt = Date.now();
+      } else if (status.log_size !== lastRunLogSize) {
+        lastRunLogSize = status.log_size;
+        lastRunLogChangeAt = Date.now();
+      }
+    }
+
     if (status.log_tail) {
       scholarRunLog.textContent = status.log_tail;
       scholarRunLog.scrollTop = scholarRunLog.scrollHeight;
     }
 
     if (status.completed) {
-      clearInterval(runStatusInterval);
-      runStatusInterval = null;
+      clearScholarRunState();
       btnRunScholar.disabled = false;
       btnRunScholar.textContent = 'Start Run';
+      _setRunUiActive(false);
 
       if (status.final_summary) {
         scholarRunStatus.innerHTML = `<span style="color: var(--success);">✓ Run completed successfully</span>`;
@@ -848,7 +1395,18 @@ async function checkRunStatus(runId) {
         loadStats();
       }, 1000);
     } else if (status.running) {
-      scholarRunStatus.innerHTML = `<span style="color: var(--accent);">⏳ Running... (${(status.log_size / 1024).toFixed(1)} KB logged)</span>`;
+      btnRunScholar.textContent = 'Running...';
+      scholarRunStatus.innerHTML = `<span style="color: var(--accent);">⏳ Running... (${(status.log_size / 1024).toFixed(1)} KB logged)${status.stalled ? ' • ⚠ No new output' : ''}</span>`;
+    } else {
+      // Not running and not completed: likely exited unexpectedly or PID became stale.
+      clearScholarRunState();
+      btnRunScholar.disabled = false;
+      btnRunScholar.textContent = 'Start Run';
+
+      const staleNote = (status.pid_stale || status.pid) ? ' (process not detected — may have stopped)' : '';
+      scholarRunStatus.innerHTML = `<span style="color: var(--warning);">⚠ Run not running${staleNote}. Use Refresh/Open Final or start a new run.</span>`;
+      // Keep actions visible so user can Open Latest Final / Refresh
+      _setRunUiActive(true);
     }
   } catch (error) {
     console.error('Failed to check run status:', error);
@@ -986,7 +1544,7 @@ if (btnSaveApiKey && apiKeyInput && apiKeyStatus) btnSaveApiKey.addEventListener
   }
 
   const apiProvider = apiProviderSelect ? apiProviderSelect.value : 'openrouter';
-  const model = apiProvider === 'openrouter' ? 'zai-ai/glm-4.7' : 'gpt-4o-mini';
+  const model = apiProvider === 'openrouter' ? 'openrouter/auto' : 'gpt-4o-mini';
 
   btnSaveApiKey.disabled = true;
   btnSaveApiKey.textContent = 'Saving...';
@@ -1033,7 +1591,7 @@ if (btnTestApiKey && apiKeyInput && apiKeyTestResult) btnTestApiKey.addEventList
 
   try {
     const apiProvider = apiProviderSelect ? apiProviderSelect.value : 'openrouter';
-    const model = apiProvider === 'openrouter' ? 'zai-ai/glm-4.7' : 'gpt-4o-mini';
+    const model = apiProvider === 'openrouter' ? 'openrouter/auto' : 'gpt-4o-mini';
 
     // Test by generating a simple answer with the provided key (no save)
     const res = await fetch('/api/scholar/questions/generate', {
@@ -1203,6 +1761,69 @@ async function loadCalendar() {
   }
 }
 
+function renderSyllabusList() {
+  if (!syllabusListBody || !syllabusListEmpty) return;
+
+  const courseId = syllabusListCourse ? syllabusListCourse.value : '';
+  const eventType = syllabusListType ? syllabusListType.value : '';
+  const search = syllabusListSearch ? syllabusListSearch.value.toLowerCase() : '';
+
+  const filtered = syllabusEvents.filter(ev => {
+    const matchesCourse = !courseId || String(ev.course_id) === String(courseId);
+    const matchesType = !eventType || (ev.type || '').toLowerCase() === eventType;
+    const haystack = `${ev.title || ''} ${ev.raw_text || ''}`.toLowerCase();
+    const matchesSearch = !search || haystack.includes(search);
+    return matchesCourse && matchesType && matchesSearch;
+  }).sort((a, b) => {
+    const ad = a.date || a.due_date || '';
+    const bd = b.date || b.due_date || '';
+    return ad.localeCompare(bd);
+  });
+
+  syllabusListBody.innerHTML = filtered.map(ev => {
+    const dateDisplay = ev.date || ev.due_date || '';
+    const weightDisplay = (ev.weight || 0).toFixed(2);
+    const courseName = (ev.course || {}).name || '';
+    return `
+      <tr>
+        <td>${dateDisplay || '—'}</td>
+        <td>${courseName || '—'}</td>
+        <td>${ev.type || ''}</td>
+        <td>${ev.title || ''}</td>
+        <td>${weightDisplay}</td>
+        <td>${ev.status || 'pending'}</td>
+        <td>${ev.raw_text || ''}</td>
+      </tr>
+    `;
+  }).join('');
+
+  syllabusListEmpty.style.display = filtered.length ? 'none' : 'block';
+}
+
+function setSyllabusView(mode) {
+  syllabusViewMode = mode;
+  const calendarBox = document.getElementById('syllabus-calendar-container');
+  const listBox = document.getElementById('syllabus-list-container');
+  if (calendarBox && listBox) {
+    calendarBox.style.display = mode === 'calendar' ? 'block' : 'none';
+    listBox.style.display = mode === 'list' ? 'block' : 'none';
+  }
+  if (btnViewCalendar && btnViewList) {
+    if (mode === 'calendar') {
+      btnViewCalendar.classList.add('btn-primary');
+      btnViewList.classList.remove('btn-primary');
+    } else {
+      btnViewList.classList.add('btn-primary');
+      btnViewCalendar.classList.remove('btn-primary');
+    }
+  }
+  if (mode === 'calendar') {
+    loadCalendar();
+  } else {
+    renderSyllabusList();
+  }
+}
+
 function renderCalendar() {
   const grid = document.getElementById('calendar-grid');
   if (!grid) return;
@@ -1310,6 +1931,20 @@ if (viewRange) viewRange.addEventListener('change', () => {
   loadCalendar();
 });
 
+// Syllabus view toggle
+if (btnViewCalendar) btnViewCalendar.addEventListener('click', () => setSyllabusView('calendar'));
+if (btnViewList) btnViewList.addEventListener('click', () => setSyllabusView('list'));
+
+// Syllabus list filters
+if (btnRefreshSyllabusList) btnRefreshSyllabusList.addEventListener('click', renderSyllabusList);
+if (syllabusListCourse) syllabusListCourse.addEventListener('change', renderSyllabusList);
+if (syllabusListType) syllabusListType.addEventListener('change', renderSyllabusList);
+if (syllabusListSearch) syllabusListSearch.addEventListener('input', () => {
+  // Debounce lightly
+  clearTimeout(window._syllabusSearchTimer);
+  window._syllabusSearchTimer = setTimeout(renderSyllabusList, 150);
+});
+
 // Load courses for filters
 async function loadCoursesForCalendar() {
   try {
@@ -1383,6 +2018,18 @@ if (planDateInput) {
 function initDashboard() {
   console.log('[Dashboard] Initializing data...');
 
+  // Restore Scholar run state from sessionStorage
+  const storedRunId = restoreScholarRunId();
+  if (storedRunId) {
+    console.log('[Dashboard] Restoring Scholar run:', storedRunId);
+    currentRunId = storedRunId;
+    // Start polling immediately; checkRunStatus will clear if stale
+    if (!runStatusInterval) {
+      runStatusInterval = setInterval(() => checkRunStatus(currentRunId), 2000);
+      checkRunStatus(currentRunId);
+    }
+  }
+
   // Load Data
   loadStats();
   loadScholar();
@@ -1412,6 +2059,19 @@ window.openScholarChat = function (index, mode = 'clarify', autoSend = false) {
   chatModes[index] = mode;
   updateChatModeUI(index, mode);
   renderChatHistory(index, mode);
+
+  const history = getChatHistory(index, mode);
+  const lastReply = [...history].reverse().find(m => m.role === 'assistant');
+  const generatedDiv = document.getElementById(`generated-answer-${index}`);
+  const generatedText = document.getElementById(`generated-text-${index}`);
+  if (generatedDiv && generatedText) {
+    if (lastReply && lastReply.content) {
+      generatedText.textContent = lastReply.content;
+      generatedDiv.style.display = 'block';
+    } else {
+      generatedDiv.style.display = 'none';
+    }
+  }
 
   panel.style.display = 'block';
   inputEl.focus();
@@ -1444,9 +2104,48 @@ window.setChatMode = function (index, mode) {
   if (inputEl) inputEl.focus();
 };
 
-// Store chat history in memory (simple session storage)
+// Store chat history with localStorage persistence
 const chatHistories = {}; // index -> { clarify: [{role, content}], generate: [{role, content}] }
 const chatModes = {}; // index -> 'clarify' | 'generate'
+
+function saveScholarChatHistory(questionIndex, mode, messages) {
+  try {
+    localStorage.setItem(`scholar_chat_${questionIndex}_${mode}`, JSON.stringify(messages));
+  } catch (e) {
+    console.warn('Failed to save chat history:', e);
+  }
+}
+
+function loadScholarChatHistory(questionIndex, mode) {
+  try {
+    const saved = localStorage.getItem(`scholar_chat_${questionIndex}_${mode}`);
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) {
+    console.warn('Failed to load chat history:', e);
+    return [];
+  }
+}
+
+function clearScholarChatHistory(questionIndex, mode) {
+  try {
+    localStorage.removeItem(`scholar_chat_${questionIndex}_${mode}`);
+  } catch (e) {
+    console.warn('Failed to clear chat history:', e);
+  }
+}
+
+window.clearChatAndReset = function(index) {
+  const mode = chatModes[index] || 'clarify';
+  clearScholarChatHistory(index, mode);
+  if (chatHistories[index] && chatHistories[index][mode]) {
+    chatHistories[index][mode] = [];
+  }
+  renderChatHistory(index, mode);
+  const generatedDiv = document.getElementById(`generated-answer-${index}`);
+  if (generatedDiv) {
+    generatedDiv.style.display = 'none';
+  }
+};
 
 function getChatHistory(index, mode) {
   if (!chatHistories[index]) {
@@ -1454,6 +2153,13 @@ function getChatHistory(index, mode) {
   }
   if (!chatHistories[index][mode]) {
     chatHistories[index][mode] = [];
+  }
+  // Load from localStorage on first access if empty
+  if (chatHistories[index][mode].length === 0) {
+    const saved = loadScholarChatHistory(index, mode);
+    if (saved.length > 0) {
+      chatHistories[index][mode] = saved;
+    }
   }
   return chatHistories[index][mode];
 }
@@ -1463,15 +2169,23 @@ function updateChatModeUI(index, mode) {
   const generateBtn = document.getElementById(`chat-mode-generate-${index}`);
   if (!clarifyBtn || !generateBtn) return;
 
-  const activeStyle = 'background: var(--accent); color: #fff; border-color: var(--accent);';
-  const inactiveStyle = 'background: var(--card-bg); color: var(--text-secondary); border-color: var(--border);';
+  const setActive = (btn) => {
+    btn.style.background = 'var(--accent)';
+    btn.style.color = '#fff';
+    btn.style.borderColor = 'var(--accent)';
+  };
+  const setInactive = (btn) => {
+    btn.style.background = 'var(--card-bg)';
+    btn.style.color = 'var(--text-secondary)';
+    btn.style.borderColor = 'var(--border)';
+  };
 
   if (mode === 'generate') {
-    generateBtn.style.cssText = generateBtn.style.cssText + ';' + activeStyle;
-    clarifyBtn.style.cssText = clarifyBtn.style.cssText + ';' + inactiveStyle;
+    setActive(generateBtn);
+    setInactive(clarifyBtn);
   } else {
-    clarifyBtn.style.cssText = clarifyBtn.style.cssText + ';' + activeStyle;
-    generateBtn.style.cssText = generateBtn.style.cssText + ';' + inactiveStyle;
+    setActive(clarifyBtn);
+    setInactive(generateBtn);
   }
 }
 
@@ -1508,6 +2222,7 @@ window.sendChatMessage = async function (index) {
 
   // Add User Message
   history.push({ role: 'user', content: msg });
+  saveScholarChatHistory(index, mode, history);
 
   // Render user message
   const userDiv = document.createElement('div');
@@ -1553,6 +2268,7 @@ window.sendChatMessage = async function (index) {
     if (data.ok) {
       const answer = data.answer || data.clarification || '';
       history.push({ role: 'assistant', content: answer });
+      saveScholarChatHistory(index, mode, history);
 
       const aiDiv = document.createElement('div');
       aiDiv.style.cssText = "align-self: flex-start; background: var(--bg); border: 1px solid var(--border); padding: 6px 10px; border-radius: 12px 12px 12px 0; max-width: 85%;";
@@ -1582,16 +2298,41 @@ window.sendChatMessage = async function (index) {
 window.loadSyllabusDashboard = async function () {
   console.log("Loading Syllabus Dashboard...");
   try {
-    const res = await fetch('/api/syllabus/courses');
-    const data = await res.json();
-
-    // Populate courses list if element exists
-    // This is a placeholder since the HTML might not have a container specifically for this list yet
-    // But we ensure the function exists so the tab doesn't crash
-    if (data.courses) {
-      console.log("Loaded courses:", data.courses.length);
-      allCourses = data.courses; // Update global
+    // Courses
+    const resCourses = await fetch('/api/syllabus/courses');
+    const coursesData = await resCourses.json();
+    if (coursesData.courses) {
+      allCourses = coursesData.courses;
+      // Populate calendar filter courses
+      const calCourseSelect = document.getElementById('calendar-filter-course');
+      const planCourseSelect = document.getElementById('plan-session-course');
+      const listCourseSelect = document.getElementById('syllabus-list-course');
+      [calCourseSelect, planCourseSelect, listCourseSelect].forEach(select => {
+        if (!select) return;
+        const current = select.value;
+        select.innerHTML = select.id === 'plan-session-course'
+          ? '<option value="">Optional</option>'
+          : '<option value="">All Courses</option>';
+        coursesData.courses.forEach(c => {
+          select.innerHTML += `<option value="${c.id}">${c.name || 'Course'}${c.term ? ' (' + c.term + ')' : ''}</option>`;
+        });
+        if (current) select.value = current; // preserve selection if possible
+      });
     }
+
+    // Events for list view
+    const resEvents = await fetch('/api/syllabus/events');
+    const eventsData = await resEvents.json();
+    if (eventsData.ok) {
+      syllabusEvents = (eventsData.events || []).map(ev => {
+        const course = allCourses.find(c => c.id === ev.course_id) || {};
+        return { ...ev, course };
+      });
+      renderSyllabusList();
+    }
+
+    // Ensure calendar data is loaded
+    loadCalendar();
   } catch (e) {
     console.error("Failed to load syllabus dashboard:", e);
   }
@@ -1600,3 +2341,51 @@ window.loadSyllabusDashboard = async function () {
 // Run immediately
 console.log("%c Dashboard JS v2.1 LOADED ", "background: #22c55e; color: #ffffff; font-size: 20px; font-weight: bold;");
 initDashboard();
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Progress Ring Helper
+    const circle = document.getElementById('progress-circle');
+    // Circumference = 2 * PI * r (r=26)  163.36
+    const circumference = 163.36; 
+
+    function setScore(percent) {
+        if(!circle) return;
+        const offset = circumference - (percent / 100) * circumference;
+        circle.style.strokeDashoffset = offset;
+        const label = document.getElementById('avg-score');
+        if(label) label.textContent = \\%\;
+    }
+    
+    // Test Init (remove if you load real data immediately)
+    setScore(0); 
+
+    // 2. Chart.js Init
+    const ctx = document.getElementById('modeChart');
+    if(ctx) {
+        new Chart(ctx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Deep Work', 'Light', 'Review'],
+                datasets: [{
+                    data: [12, 5, 3], // Placeholder data
+                    backgroundColor: ['#3B82F6', '#8B5CF6', '#10B981'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false, // REQUIRED for this layout
+                cutout: '75%', 
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+
+    // 3. Upload Click Trigger
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('file-input');
+    if(dropzone && fileInput) {
+        dropzone.addEventListener('click', () => fileInput.click());
+    }
+});
+

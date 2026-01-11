@@ -3277,7 +3277,7 @@ function renderWeekView() {
       const typeIcon = getEventTypeIcon(event.type || event.event_type);
       const eventType = event.type || event.event_type || 'other';
       html += `
-        <div class="calendar-event week-event event-${eventType}" onclick="openEventEditModal(${event.id})" title="${event.title}">
+        <div class="calendar-event week-event event-${eventType}" onclick="openEventEditModal('${event.id}')" title="${event.title}">
           <span class="event-icon">${typeIcon}</span>
           <span class="event-title">${event.title}</span>
           ${details.time ? `<div class="event-time">${details.time}</div>` : ''}
@@ -3373,7 +3373,7 @@ function renderDayView() {
       const courseName = course.code || course.name || '';
       
       html += `
-        <div class="day-event-card event-type-${event.type || event.event_type}" onclick="openEventEditModal(${event.id})">
+        <div class="day-event-card event-type-${event.type || event.event_type}" onclick="openEventEditModal('${event.id}')">
           <div class="day-event-header">
             <span class="day-event-icon">${typeIcon}</span>
             <span class="day-event-type">${event.type || event.event_type || 'event'}</span>
@@ -3581,6 +3581,11 @@ async function scheduleM6Reviews(eventId, eventTitle) {
 
 // ===== Event Edit Modal Functions =====
 function openEventEditModal(eventId) {
+  // Handle string IDs from calendar (e.g., "event_123")
+  if (typeof eventId === 'string' && eventId.startsWith('event_')) {
+    eventId = eventId.replace('event_', '');
+  }
+
   console.log('[EditModal] Opening for event:', eventId, 'syllabusEvents count:', syllabusEvents.length);
   let ev = syllabusEvents.find(e => String(e.id) === String(eventId));
   
@@ -3626,12 +3631,52 @@ function populateEditModal(ev, eventId) {
   document.getElementById('edit-event-weight').value = ev.weight || '';
   document.getElementById('edit-event-details').value = ev.raw_text || '';
   
-  document.getElementById('event-edit-modal').style.display = 'block';
+  const modal = document.getElementById('event-edit-modal');
+  modal.style.display = 'flex';
+  // Small delay to allow display change to render before adding active class for transition
+  setTimeout(() => modal.classList.add('active'), 10);
 }
 
 function closeEventEditModal() {
-  document.getElementById('event-edit-modal').style.display = 'none';
-  document.getElementById('event-edit-status').textContent = '';
+  const modal = document.getElementById('event-edit-modal');
+  modal.classList.remove('active');
+  setTimeout(() => {
+    modal.style.display = 'none';
+    document.getElementById('event-edit-status').textContent = '';
+  }, 200); // Wait for transition
+}
+
+async function deleteEvent() {
+  const eventId = document.getElementById('edit-event-id').value;
+  if (!eventId) return;
+  
+  if (!confirm('Are you sure you want to delete this event?')) return;
+  
+  const statusEl = document.getElementById('event-edit-status');
+  statusEl.textContent = 'Deleting...';
+  
+  try {
+    const res = await fetch(`/api/syllabus/event/${eventId}`, {
+      method: 'DELETE'
+    });
+    const data = await res.json();
+    
+    if (data.ok) {
+      // Remove from local state
+      syllabusEvents = syllabusEvents.filter(e => String(e.id) !== String(eventId));
+      
+      closeEventEditModal();
+      renderSyllabusList();
+      if (typeof loadCalendar === 'function') loadCalendar();
+    } else {
+      statusEl.textContent = `Error: ${data.message}`;
+      statusEl.style.color = 'var(--error)';
+    }
+  } catch (error) {
+    console.error('Error deleting event:', error);
+    statusEl.textContent = 'Failed to delete event';
+    statusEl.style.color = 'var(--error)';
+  }
 }
 
 async function saveEventEdit(e) {
@@ -3703,6 +3748,7 @@ async function saveEventEdit(e) {
 window.openEventEditModal = openEventEditModal;
 window.closeEventEditModal = closeEventEditModal;
 window.saveEventEdit = saveEventEdit;
+window.deleteEvent = deleteEvent;
 window.toggleEventStatus = toggleEventStatus;
 window.scheduleM6Reviews = scheduleM6Reviews;
 window.toggleWeekSection = toggleWeekSection;
@@ -4057,7 +4103,7 @@ function renderCalendar() {
       const borderColor = isExamQuiz ? 'var(--error)' : color;
       const typeIcon = EVENT_TYPE_ICONS[(ev.event_type || '').toLowerCase()] || '';
       
-      html += `<div class="calendar-event" style="background: ${bgColor}; border-left: 3px solid ${borderColor}; cursor: pointer;" onclick="openEventEditModal(${ev.id})" title="${ev.course_code || ''}: ${ev.title}">${typeIcon} ${ev.title}</div>`;
+      html += `<div class="calendar-event" style="background: ${bgColor}; border-left: 3px solid ${borderColor}; cursor: pointer;" onclick="openEventEditModal('${ev.id}')" title="${ev.course_code || ''}: ${ev.title}">${typeIcon} ${ev.title}</div>`;
     });
 
     // Render study sessions

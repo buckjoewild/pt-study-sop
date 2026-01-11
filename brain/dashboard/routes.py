@@ -2614,11 +2614,9 @@ def api_update_event_status(event_id):
     })
 
 
-@dashboard_bp.route("/api/syllabus/event/<int:event_id>", methods=["PUT", "PATCH"])
+@dashboard_bp.route("/api/syllabus/event/<int:event_id>", methods=["PUT", "PATCH", "DELETE"])
 def api_update_event(event_id):
-    """Update a course event's details (title, date, type, weight, etc.)."""
-    payload = request.get_json() or {}
-    
+    """Update or delete a course event."""
     init_database()
     conn = get_connection()
     cur = conn.cursor()
@@ -2629,6 +2627,18 @@ def api_update_event(event_id):
     if not row:
         conn.close()
         return jsonify({"ok": False, "message": "Event not found"}), 404
+
+    if request.method == "DELETE":
+        try:
+            cur.execute("DELETE FROM course_events WHERE id = ?", (event_id,))
+            conn.commit()
+            conn.close()
+            return jsonify({"ok": True, "message": "Event deleted successfully", "event_id": event_id})
+        except Exception as e:
+            conn.close()
+            return jsonify({"ok": False, "message": f"Failed to delete event: {e}"}), 500
+
+    payload = request.get_json() or {}
     
     # Build update query dynamically based on provided fields
     update_fields = []

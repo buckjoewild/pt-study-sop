@@ -26,8 +26,17 @@ State:
       - Created index `idx_course_events_google_id`
       - Updated db_setup.py with migration code for future runs
       - Backup created: pt_study.db.backup_20260110
+    - **Agent 2 COMPLETE**: Extraction Prompt Template Enhancement:
+      - Created v2.0 at C:\Users\treyt\Downloads\School_schedule_JSON\EXTRACTION_PROMPT_TEMPLATE.md
+      - Added: Expanded 11-type event taxonomy with decision tree
+      - Added: 3-step weight calculation methodology with defaults table
+      - Added: 10 edge case handling scenarios (TBD, recurring, multi-part, etc.)
+      - Added: Enhanced validation checklist (16 items)
+      - Added: Good/Bad extraction examples with annotations
+      - Added: Common mistakes table
+      - File size: 17,111 chars, 427 lines
   - Now:
-    - Agents 3, 4 can proceed (schema dependencies resolved).
+    - Agents 3, 4, 5 can proceed (no dependencies).
   - Next:
     - After Agents 2-5: Launch Agent 6 for integration testing.
 

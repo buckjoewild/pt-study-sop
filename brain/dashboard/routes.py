@@ -40,6 +40,8 @@ from rag_notes import (
     ingest_url_document,
     sync_folder_to_rag,
     sync_runtime_catalog,
+    index_repo_to_rag,
+    search_rag_docs,
 )
 
 # Dashboard modules
@@ -51,6 +53,7 @@ from dashboard.scholar import (
     run_scholar_orchestrator,
     generate_weekly_digest,
     get_latest_insights,
+    check_proposal_similarity,
     MAX_CONTEXT_CHARS,
 )
 from dashboard.syllabus import fetch_all_courses_and_events, attach_event_analytics
@@ -131,12 +134,12 @@ def api_brain_status():
     cur.execute("SELECT COUNT(*) FROM course_events")
     event_count = cur.fetchone()[0]
     
-    # Check if rag_documents table exists
-    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='rag_documents'")
+    # Check if rag_docs table exists
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='rag_docs'")
     rag_table_exists = cur.fetchone() is not None
     rag_count = 0
     if rag_table_exists:
-        cur.execute("SELECT COUNT(*) FROM rag_documents")
+        cur.execute("SELECT COUNT(*) FROM rag_docs")
         rag_count = cur.fetchone()[0]
     
     # Check if card_drafts table exists
@@ -144,11 +147,11 @@ def api_brain_status():
     card_table_exists = cur.fetchone() is not None
     pending_cards = 0
     if card_table_exists:
-        cur.execute("SELECT COUNT(*) FROM card_drafts WHERE synced = 0")
+        cur.execute("SELECT COUNT(*) FROM card_drafts WHERE status IN ('draft', 'approved')")
         pending_cards = cur.fetchone()[0]
     
     # Get DB file size
-    db_path = Path(__file__).parent.parent / "data" / "study_brain.db"
+    db_path = Path(__file__).parent.parent / "data" / "pt_study.db"
     db_size_mb = db_path.stat().st_size / (1024 * 1024) if db_path.exists() else 0
     
     conn.close()
@@ -167,7 +170,8 @@ def api_brain_status():
 
 @dashboard_bp.route("/api/scholar/digest/save", methods=["POST"])
 def api_scholar_save_digest():
-    """Save AI Strategic Digest to scholar outputs."""
+    """Save AI Strategic Digest to scholar outputs and database."""
+    import hashlib
     from pathlib import Path
     from datetime import datetime
     
@@ -185,11 +189,137 @@ def api_scholar_save_digest():
     filepath = digests_dir / filename
     filepath.write_text(digest_content, encoding="utf-8")
     
+    # Extract title from first markdown heading or first line
+    title = None
+    heading_match = re.match(r'^#+ +(.+)', digest_content, re.MULTILINE)
+    if heading_match:
+        title = heading_match.group(1).strip()
+    else:
+        first_line = digest_content.split('\n')[0].strip()
+        title = first_line[:100] if first_line else "Untitled Digest"
+    
+    # Generate content hash (MD5)
+    content_hash = hashlib.md5(digest_content.encode('utf-8')).hexdigest()
+    created_at = datetime.now().isoformat()
+    
+    # Store in database
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO scholar_digests (filename, filepath, title, digest_type, created_at, content_hash)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (filename, str(filepath.relative_to(repo_root)), title, 'strategic', created_at, content_hash)
+    )
+    conn.commit()
+    digest_id = cur.lastrowid
+    conn.close()
+    
     return jsonify({
         "ok": True,
+        "id": digest_id,
         "file": str(filepath.relative_to(repo_root)),
         "message": f"Digest saved to {filename}"
     })
+
+
+@dashboard_bp.route("/api/scholar/digests", methods=["GET"])
+def api_scholar_list_digests():
+    """List saved digests from database."""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT id, filename, title, digest_type, created_at, content_hash
+        FROM scholar_digests
+        ORDER BY created_at DESC
+        """
+    )
+    rows = cur.fetchall()
+    conn.close()
+    
+    digests = [
+        {
+            "id": row[0],
+            "filename": row[1],
+            "title": row[2],
+            "digest_type": row[3],
+            "created_at": row[4],
+            "content_hash": row[5]
+        }
+        for row in rows
+    ]
+    
+    return jsonify({"ok": True, "digests": digests, "count": len(digests)})
+
+
+@dashboard_bp.route("/api/scholar/digests/<int:digest_id>", methods=["GET"])
+def api_scholar_get_digest(digest_id):
+    """Get a single digest by ID, including its content."""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT id, filename, filepath, title, digest_type, created_at, content_hash
+        FROM scholar_digests WHERE id = ?
+        """,
+        (digest_id,)
+    )
+    row = cur.fetchone()
+    conn.close()
+    
+    if not row:
+        return jsonify({"ok": False, "message": "Digest not found"}), 404
+    
+    # Read content from file
+    repo_root = Path(__file__).parent.parent.parent.resolve()
+    filepath = repo_root / row[2]
+    content = ""
+    if filepath.exists():
+        content = filepath.read_text(encoding="utf-8")
+    
+    return jsonify({
+        "ok": True,
+        "digest": {
+            "id": row[0],
+            "filename": row[1],
+            "filepath": row[2],
+            "title": row[3],
+            "digest_type": row[4],
+            "created_at": row[5],
+            "content_hash": row[6],
+            "content": content
+        }
+    })
+
+
+@dashboard_bp.route("/api/scholar/digests/<int:digest_id>", methods=["DELETE"])
+def api_scholar_delete_digest(digest_id):
+    """Delete a digest by ID (removes from DB and filesystem)."""
+    conn = get_connection()
+    cur = conn.cursor()
+    
+    # Get filepath first
+    cur.execute("SELECT filepath FROM scholar_digests WHERE id = ?", (digest_id,))
+    row = cur.fetchone()
+    
+    if not row:
+        conn.close()
+        return jsonify({"ok": False, "message": "Digest not found"}), 404
+    
+    # Delete from database
+    cur.execute("DELETE FROM scholar_digests WHERE id = ?", (digest_id,))
+    conn.commit()
+    conn.close()
+    
+    # Delete file if it exists
+    repo_root = Path(__file__).parent.parent.parent.resolve()
+    filepath = repo_root / row[0]
+    if filepath.exists():
+        filepath.unlink()
+    
+    return jsonify({"ok": True, "message": "Digest deleted"})
 
 
 @dashboard_bp.route("/api/mastery")
@@ -286,6 +416,21 @@ def api_scholar_clarify_question():
         context_parts = []
         context_parts.append(f"Primary Scholar Question being discussed: {scholar_question}")
         
+        # Search repo RAG for relevant context
+        try:
+            search_query = user_message if user_message else scholar_question
+            rag_results = search_rag_docs(search_query, limit=3, corpus="repo")
+            if rag_results:
+                rag_snippets = []
+                for r in rag_results:
+                    source = r.get("source_path", "unknown")
+                    snippet = r.get("snippet", "")[:500]
+                    rag_snippets.append(f"[{source}]: {snippet}")
+                if rag_snippets:
+                    context_parts.append("\n--- Repo Context ---\n" + "\n\n".join(rag_snippets))
+        except Exception:
+            pass  # Continue without RAG if search fails
+        
         # Load docs
         for doc_name in ["PEIRRO.md", "KWIK.md", "M6-wrap.md"]:
              doc_path = repo_root / "sop" / "gpt-knowledge" / doc_name
@@ -349,6 +494,21 @@ def api_scholar_generate_answer():
         
         context = data.get("context", "")
         
+        # Search repo RAG for relevant context
+        rag_context = ""
+        try:
+            rag_results = search_rag_docs(question, limit=3, corpus="repo")
+            if rag_results:
+                rag_snippets = []
+                for r in rag_results:
+                    source = r.get("source_path", "unknown")
+                    snippet = r.get("snippet", "")[:500]
+                    rag_snippets.append(f"[{source}]: {snippet}")
+                if rag_snippets:
+                    rag_context = "\n\n--- Repo Context ---\n" + "\n\n".join(rag_snippets)
+        except Exception:
+            pass  # Continue without RAG if search fails
+        
         # Load Scholar context
         repo_root = Path(__file__).parent.parent.parent.resolve()
         peirro_doc = repo_root / "sop" / "gpt-knowledge" / "PEIRRO.md"
@@ -366,7 +526,7 @@ def api_scholar_generate_answer():
                 additional_context += f"\nKWIK Framework: {kwik_content}\n"
             except: pass
         
-        full_context = context + additional_context
+        full_context = context + additional_context + rag_context
         
         # Append history to context if available (limit to last 10 messages to avoid overflow)
         if messages:
@@ -403,6 +563,156 @@ def api_scholar_generate_answer():
         })
     except Exception as e:
         return jsonify({"ok": False, "message": f"Error generating answer: {e}"}), 500
+
+
+@dashboard_bp.route("/api/scholar/questions/answer", methods=["POST"])
+def api_scholar_answer_single():
+    """Save a single answer by question index."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"ok": False, "message": "No data provided"}), 400
+        
+        question_index = data.get("question_index")
+        answer_text = data.get("answer", "").strip()
+        
+        if question_index is None:
+            return jsonify({"ok": False, "message": "Missing 'question_index'"}), 400
+        if not answer_text:
+            return jsonify({"ok": False, "message": "Answer cannot be empty"}), 400
+        
+        repo_root = Path(__file__).parent.parent.parent.resolve()
+        orchestrator_runs = repo_root / "scholar" / "outputs" / "orchestrator_runs"
+        
+        # Find the questions file with unanswered questions
+        question_files = sorted(
+            orchestrator_runs.glob("questions_needed_*.md"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True
+        )
+        
+        if not question_files:
+            return jsonify({"ok": False, "message": "No questions file found"}), 404
+        
+        # Find file with unanswered questions - check for Q: format OR list format
+        target_file = question_files[0]
+        for q_file in question_files[:5]:
+            try:
+                content = q_file.read_text(encoding="utf-8").strip()
+                if not content or content == "(none)":
+                    continue
+                    
+                if "Q:" in content:
+                    # Q:/A: format - check for unanswered
+                    lines = content.split("\n")
+                    for i, line in enumerate(lines):
+                        if line.strip().startswith("Q:"):
+                            if i + 1 >= len(lines) or not lines[i + 1].strip().startswith("A:") or lines[i + 1].replace("A:", "").strip().lower() in ["(pending)", "(none)", ""]:
+                                target_file = q_file
+                                break
+                else:
+                    # List format (bullets or numbers) - check for non-empty content
+                    for line in content.split("\n"):
+                        line = line.strip()
+                        if line and not line.startswith("#") and line != "(none)":
+                            target_file = q_file
+                            break
+            except:
+                continue
+        
+        content = target_file.read_text(encoding="utf-8")
+        lines = content.split("\n")
+        
+        # Detect format: Q:/A: vs list format
+        uses_qa_format = "Q:" in content
+        
+        # Find and update the specific UNANSWERED question by index
+        unanswered_count = 0
+        updated = False
+        new_lines = []
+        i = 0
+        
+        if uses_qa_format:
+            # Q:/A: format
+            while i < len(lines):
+                line = lines[i]
+                if line.strip().startswith("Q:"):
+                    # Check if this question is unanswered
+                    is_unanswered = True
+                    if i + 1 < len(lines) and lines[i + 1].strip().startswith("A:"):
+                        answer_line = lines[i + 1].replace("A:", "").strip().lower()
+                        if answer_line and answer_line not in ["(pending)", "(none)", ""]:
+                            is_unanswered = False
+                    
+                    new_lines.append(line)
+                    
+                    if is_unanswered and unanswered_count == question_index:
+                        # This is the unanswered question we want to update
+                        if i + 1 < len(lines) and lines[i + 1].strip().startswith("A:"):
+                            new_lines.append(f"A: {answer_text}")
+                            i += 1  # Skip old A: line
+                        else:
+                            new_lines.append(f"A: {answer_text}")
+                        updated = True
+                    
+                    if is_unanswered:
+                        unanswered_count += 1
+                else:
+                    new_lines.append(line)
+                i += 1
+        else:
+            # List format (bullets or numbered) - convert to Q:/A: format on first answer
+            while i < len(lines):
+                line = lines[i]
+                stripped = line.strip()
+                
+                # Check if this is a question line (bullet, numbered, or plain text, not header/blank)
+                is_question_line = False
+                if stripped and not stripped.startswith("#") and stripped != "(none)":
+                    # Remove bullet/number prefix
+                    clean_line = re.sub(r"^[-*•]\s*", "", stripped)
+                    clean_line = re.sub(r"^\d+\.\s*", "", clean_line)
+                    if clean_line:
+                        is_question_line = True
+                
+                if is_question_line:
+                    clean_question = re.sub(r"^[-*•]\s*", "", stripped)
+                    clean_question = re.sub(r"^\d+\.\s*", "", clean_question)
+                    
+                    if unanswered_count == question_index:
+                        # Convert this question to Q:/A: format with answer
+                        new_lines.append(f"Q: {clean_question}")
+                        new_lines.append(f"A: {answer_text}")
+                        updated = True
+                    else:
+                        # Convert to Q:/A: format with pending answer
+                        new_lines.append(f"Q: {clean_question}")
+                        new_lines.append("A: (pending)")
+                    unanswered_count += 1
+                else:
+                    new_lines.append(line)
+                i += 1
+        
+        if not updated:
+            return jsonify({"ok": False, "message": f"Question index {question_index} not found (checked {unanswered_count} unanswered questions)"}), 404
+        
+        # Atomic write
+        new_content = "\n".join(new_lines)
+        fd, tmp_path = tempfile.mkstemp(suffix='.md', dir=str(target_file.parent))
+        try:
+            with os.fdopen(fd, 'w', encoding='utf-8') as tmp_file:
+                tmp_file.write(new_content)
+            os.replace(tmp_path, str(target_file))
+        except Exception:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+            raise
+        
+        return jsonify({"ok": True, "message": f"Answer saved for question {question_index + 1}"})
+    except Exception as e:
+        return jsonify({"ok": False, "message": f"Error saving answer: {e}"}), 500
 
 
 @dashboard_bp.route("/api/scholar/questions", methods=["POST"])
@@ -784,12 +1094,60 @@ def api_scholar_proposal_get(filename):
         return jsonify({"ok": False, "message": f"Error reading proposal: {e}"}), 500
 
 
+def update_proposal_status_in_markdown(filepath: Path, new_status: str) -> bool:
+    """
+    Update the Status: field inside a markdown proposal file.
+    
+    Args:
+        filepath: Path to the markdown file
+        new_status: New status value (e.g., "approved", "rejected")
+    
+    Returns:
+        True if Status line was found and updated, False otherwise
+    """
+    try:
+        content = filepath.read_text(encoding="utf-8")
+        lines = content.split("\n")
+        updated = False
+        
+        for i, line in enumerate(lines):
+            # Match "Status:" at start of line (case-insensitive, with optional whitespace)
+            if re.match(r'^Status\s*:', line, re.IGNORECASE):
+                lines[i] = f"Status: {new_status}"
+                updated = True
+                break
+        
+        if updated:
+            filepath.write_text("\n".join(lines), encoding="utf-8")
+        
+        return updated
+    except Exception:
+        return False
+
+
+def _extract_proposal_title(content: str) -> str:
+    """Extract title from first markdown heading or first line."""
+    # Try to find first heading
+    match = re.search(r'^#\s+(.+)$', content, re.MULTILINE)
+    if match:
+        return match.group(1).strip()[:200]
+    # Fallback to first non-empty line
+    for line in content.split("\n"):
+        line = line.strip()
+        if line:
+            return line[:200]
+    return "Untitled Proposal"
+
+
 @dashboard_bp.route("/api/scholar/proposal/<filename>/action", methods=["POST"])
 def api_scholar_proposal_action(filename):
-    """Approve or reject a proposal."""
+    """Approve or reject a proposal, update database and markdown Status field."""
     try:
+        import hashlib
+        
         data = request.get_json() or {}
         action = data.get("action", "").lower()
+        reviewer_notes = data.get("reviewer_notes", "")
         
         if action not in ("approve", "reject"):
             return jsonify({"ok": False, "message": "Action must be 'approve' or 'reject'"}), 400
@@ -801,28 +1159,110 @@ def api_scholar_proposal_action(filename):
         if not proposal_path.exists():
             return jsonify({"ok": False, "message": "Proposal not found"}), 404
         
+        # Read content for database insert
+        content = proposal_path.read_text(encoding="utf-8")
+        title = _extract_proposal_title(content)
+        content_hash = hashlib.md5(content.encode("utf-8")).hexdigest()
+        
+        # Determine proposal_type from filename pattern (e.g., "sop_update_", "research_")
+        proposal_type = "unknown"
+        fname_lower = filename.lower()
+        if "sop" in fname_lower or "update" in fname_lower:
+            proposal_type = "sop_update"
+        elif "research" in fname_lower:
+            proposal_type = "research"
+        elif "friction" in fname_lower or "alert" in fname_lower:
+            proposal_type = "friction_alert"
+        elif "insight" in fname_lower or "digest" in fname_lower:
+            proposal_type = "insight"
+        
+        # Set status based on action
+        new_status = "approved" if action == "approve" else "rejected"
+        reviewed_at = datetime.now().isoformat()
+        
+        # Update Status field in markdown before moving
+        update_proposal_status_in_markdown(proposal_path, new_status)
+        
+        # Determine destination and move file
         if action == "approve":
-            # Move to proposals folder (approved)
-            approved_dir = repo_root / "scholar" / "outputs" / "proposals" / "approved"
-            approved_dir.mkdir(parents=True, exist_ok=True)
-            dest = approved_dir / filename
-            proposal_path.rename(dest)
-            message = f"Proposal approved and moved to {dest.relative_to(repo_root)}"
+            dest_dir = repo_root / "scholar" / "outputs" / "proposals" / "approved"
         else:
-            # Move to proposals/rejected folder
-            rejected_dir = repo_root / "scholar" / "outputs" / "proposals" / "rejected"
-            rejected_dir.mkdir(parents=True, exist_ok=True)
-            dest = rejected_dir / filename
-            proposal_path.rename(dest)
-            message = f"Proposal rejected and moved to {dest.relative_to(repo_root)}"
+            dest_dir = repo_root / "scholar" / "outputs" / "proposals" / "rejected"
+        
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest = dest_dir / filename
+        proposal_path.rename(dest)
+        
+        # Insert or update in database
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO scholar_proposals 
+                (filename, filepath, title, proposal_type, status, created_at, reviewed_at, reviewer_notes, content_hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(filename) DO UPDATE SET
+                filepath = excluded.filepath,
+                status = excluded.status,
+                reviewed_at = excluded.reviewed_at,
+                reviewer_notes = excluded.reviewer_notes
+            """,
+            (
+                filename,
+                str(dest.relative_to(repo_root)),
+                title,
+                proposal_type,
+                new_status,
+                reviewed_at,  # created_at (on conflict, not updated)
+                reviewed_at,
+                reviewer_notes,
+                content_hash
+            )
+        )
+        conn.commit()
+        conn.close()
+        
+        message = f"Proposal {new_status} and moved to {dest.relative_to(repo_root)}"
         
         return jsonify({
             "ok": True,
             "action": action,
+            "status": new_status,
+            "reviewed_at": reviewed_at,
             "message": message
         })
     except Exception as e:
         return jsonify({"ok": False, "message": f"Error processing proposal: {e}"}), 500
+
+
+@dashboard_bp.route("/api/scholar/proposals/check-similar", methods=["GET"])
+def api_scholar_check_similar():
+    """Check for similar existing proposals to warn about duplicates.
+    
+    Query params:
+        title (required): Title of the candidate proposal
+        scope (optional): Scope text to include in similarity check
+    
+    Returns:
+        List of similar proposals with similarity scores (> 0.5)
+    """
+    try:
+        title = request.args.get("title", "").strip()
+        scope = request.args.get("scope", "").strip()
+        
+        if not title:
+            return jsonify({"ok": False, "message": "title parameter is required"}), 400
+        
+        similar = check_proposal_similarity(title, scope)
+        
+        return jsonify({
+            "ok": True,
+            "query": {"title": title, "scope": scope},
+            "similar_proposals": similar,
+            "has_duplicates": len(similar) > 0
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "message": f"Error checking similarity: {e}"}), 500
 
 
 @dashboard_bp.route("/api/scholar/execute-via-ai", methods=["POST"])
@@ -1046,6 +1486,104 @@ def api_create_session():
         return jsonify({"ok": False, "error": f"Server error: {e}"}), 500
 
 
+@dashboard_bp.route("/api/sessions/<int:session_id>", methods=["GET"])
+def api_get_session(session_id):
+    """Get a single session by ID for editing."""
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM sessions WHERE id = ?", (session_id,))
+    row = cur.fetchone()
+    conn.close()
+    
+    if not row:
+        return jsonify({"ok": False, "error": "Session not found"}), 404
+    
+    session = dict(row)
+    return jsonify({"ok": True, "session": session})
+
+
+@dashboard_bp.route("/api/sessions/<int:session_id>", methods=["PUT"])
+def api_update_session(session_id):
+    """Update a session by ID."""
+    conn = get_connection()
+    cur = conn.cursor()
+    
+    # Check session exists
+    cur.execute("SELECT id, source_path FROM sessions WHERE id = ?", (session_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"ok": False, "error": "Session not found"}), 404
+    
+    source_path = row[1] if len(row) > 1 else None
+    
+    data = request.get_json() or {}
+    
+    # Build update query dynamically
+    updatable_fields = [
+        'session_date', 'session_time', 'time_spent_minutes', 'duration_minutes',
+        'study_mode', 'topic', 'main_topic', 'target_exam', 'source_lock',
+        'plan_of_attack', 'subtopics', 'frameworks_used', 'sop_modules_used',
+        'engines_used', 'region_covered', 'landmarks_mastered', 'muscles_attached',
+        'understanding_level', 'retention_confidence', 'system_performance',
+        'what_worked', 'what_needs_fixing', 'gaps_identified', 'notes_insights',
+        'next_topic', 'next_focus', 'next_materials'
+    ]
+    
+    updates = []
+    values = []
+    for field in updatable_fields:
+        if field in data:
+            updates.append(f"{field} = ?")
+            values.append(data[field])
+    
+    if not updates:
+        conn.close()
+        return jsonify({"ok": False, "error": "No fields to update"}), 400
+    
+    # Ensure main_topic is synced with topic
+    if 'topic' in data and 'main_topic' not in data:
+        updates.append("main_topic = ?")
+        values.append(data['topic'])
+    
+    values.append(session_id)
+    
+    try:
+        cur.execute(f"UPDATE sessions SET {', '.join(updates)} WHERE id = ?", values)
+        conn.commit()
+        
+        # If source_path exists, sync changes back to markdown file
+        if source_path and os.path.exists(source_path):
+            try:
+                # Get updated session data
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                cur.execute("SELECT * FROM sessions WHERE id = ?", (session_id,))
+                updated_row = cur.fetchone()
+                if updated_row:
+                    from session_sync import session_to_markdown
+                    from db_setup import compute_file_checksum, mark_file_ingested
+                    
+                    session_dict = dict(updated_row)
+                    md_content = session_to_markdown(session_dict)
+                    with open(source_path, 'w', encoding='utf-8') as f:
+                        f.write(md_content)
+                    
+                    # Update checksum tracking
+                    new_checksum = compute_file_checksum(source_path)
+                    mark_file_ingested(conn, source_path, new_checksum, session_id)
+            except Exception as sync_err:
+                # Log but don't fail the update
+                print(f"[WARN] Could not sync to markdown: {sync_err}")
+        
+        conn.close()
+        return jsonify({"ok": True, "message": "Session updated"})
+    except Exception as e:
+        conn.close()
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @dashboard_bp.route("/api/sessions/<int:session_id>", methods=["DELETE"])
 def api_delete_session(session_id):
     """Delete a session by ID."""
@@ -1059,6 +1597,117 @@ def api_delete_session(session_id):
     conn.commit()
     conn.close()
     return jsonify({"ok": True, "message": "Session deleted"})
+
+
+# --------------------------------------------------------------------------
+#  Sync / Ingestion Management Routes
+# --------------------------------------------------------------------------
+
+@dashboard_bp.route("/api/sync/status", methods=["GET"])
+def api_sync_status():
+    """Get ingestion tracking status from ingested_files table."""
+    conn = get_connection()
+    cur = conn.cursor()
+    
+    # Total files tracked
+    cur.execute("SELECT COUNT(*) FROM ingested_files")
+    total_files = cur.fetchone()[0]
+    
+    # Files with valid sessions (session_id IS NOT NULL)
+    cur.execute("SELECT COUNT(*) FROM ingested_files WHERE session_id IS NOT NULL")
+    valid_sessions = cur.fetchone()[0]
+    
+    # Files that failed validation (session_id IS NULL)
+    cur.execute("SELECT COUNT(*) FROM ingested_files WHERE session_id IS NULL")
+    failed_validation = cur.fetchone()[0]
+    
+    # Last sync timestamp
+    cur.execute("SELECT MAX(ingested_at) FROM ingested_files")
+    last_sync = cur.fetchone()[0]
+    
+    conn.close()
+    
+    return jsonify({
+        "ok": True,
+        "files_tracked": total_files,
+        "valid_sessions": valid_sessions,
+        "failed_validation": failed_validation,
+        "last_sync": last_sync
+    })
+
+
+@dashboard_bp.route("/api/sync/run", methods=["POST"])
+def api_sync_run():
+    """Trigger a sync/re-ingestion of all .md files in session_logs/."""
+    from ingest_session import ingest_file
+    
+    payload = request.get_json() or {}
+    force = payload.get("force", False)
+    
+    # Get all .md files in session_logs directory
+    if not os.path.exists(SESSION_LOGS_DIR):
+        return jsonify({
+            "ok": False,
+            "error": f"Session logs directory not found: {SESSION_LOGS_DIR}"
+        }), 404
+    
+    md_files = [
+        os.path.join(SESSION_LOGS_DIR, f) 
+        for f in os.listdir(SESSION_LOGS_DIR) 
+        if f.endswith('.md') and not f.startswith('TEMPLATE') and not f.startswith('SAMPLE')
+    ]
+    
+    ingested = 0
+    skipped = 0
+    errors = 0
+    error_files = []
+    
+    for filepath in md_files:
+        try:
+            result = ingest_file(filepath, force=force)
+            if result:
+                # ingest_file returns True for both ingested and skipped (unchanged)
+                # We can't easily distinguish, but let's count as ingested for now
+                ingested += 1
+            else:
+                errors += 1
+                error_files.append(os.path.basename(filepath))
+        except Exception as e:
+            errors += 1
+            error_files.append(f"{os.path.basename(filepath)}: {str(e)}")
+    
+    return jsonify({
+        "ok": True,
+        "ingested": ingested,
+        "skipped": skipped,
+        "errors": errors,
+        "error_files": error_files if error_files else None,
+        "force": force
+    })
+
+
+@dashboard_bp.route("/api/sync/clear-tracking", methods=["POST"])
+def api_sync_clear_tracking():
+    """Clear all ingestion tracking records (for reset)."""
+    conn = get_connection()
+    cur = conn.cursor()
+    
+    try:
+        cur.execute("DELETE FROM ingested_files")
+        deleted_count = cur.rowcount
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            "ok": True,
+            "message": f"Cleared {deleted_count} ingestion tracking records"
+        })
+    except Exception as e:
+        conn.close()
+        return jsonify({
+            "ok": False,
+            "error": str(e)
+        }), 500
 
 
 @dashboard_bp.route("/api/tutor/session/start", methods=["POST"])
@@ -1289,6 +1938,45 @@ def api_tutor_set_study_folder_enabled():
     conn.commit()
     conn.close()
     return jsonify({"ok": True, "message": f"Study folder '{folder_path or '[root]'}' set to enabled={enabled}"})
+
+
+@dashboard_bp.route("/api/rag/index-repo", methods=["POST"])
+def api_rag_index_repo():
+    """Index repository files (sop/, brain/, docs/) into rag_docs for RAG search."""
+    try:
+        repo_root = Path(__file__).parent.parent.parent.resolve()
+        result = index_repo_to_rag(str(repo_root))
+        return jsonify({
+            "ok": result.get("ok", False),
+            "processed": result.get("processed", 0),
+            "chunks_created": result.get("chunks_created", 0),
+            "errors": result.get("errors", []),
+            "message": f"Indexed {result.get('processed', 0)} files into {result.get('chunks_created', 0)} chunks.",
+        })
+    except Exception as exc:
+        return jsonify({"ok": False, "message": f"Repo indexing failed: {exc}"}), 500
+
+
+@dashboard_bp.route("/api/rag/search", methods=["GET"])
+def api_rag_search():
+    """Search RAG documents for relevant content."""
+    query = request.args.get("q", "").strip()
+    corpus = request.args.get("corpus")  # Optional: filter by corpus
+    limit = request.args.get("limit", 5, type=int)
+    
+    if not query:
+        return jsonify({"ok": False, "message": "Missing query parameter 'q'"}), 400
+    
+    try:
+        results = search_rag_docs(query, limit=limit, corpus=corpus)
+        return jsonify({
+            "ok": True,
+            "query": query,
+            "count": len(results),
+            "results": results,
+        })
+    except Exception as exc:
+        return jsonify({"ok": False, "message": f"Search failed: {exc}"}), 500
 
 
 @dashboard_bp.route("/api/tutor/runtime/items", methods=["GET"])

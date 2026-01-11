@@ -11,7 +11,10 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'pt_study.db')
+from db_setup import (
+    DB_PATH, compute_file_checksum, is_file_ingested, 
+    mark_file_ingested, remove_ingested_file, get_ingested_session_id
+)
 
 def parse_markdown_session(filepath):
     """
@@ -355,7 +358,7 @@ def insert_session(data):
             'anchors_locked', 'weak_anchors',
             'what_worked', 'what_needs_fixing', 'gaps_identified', 'notes_insights',
             'next_topic', 'next_focus', 'next_materials',
-            'created_at', 'schema_version'
+            'created_at', 'schema_version', 'source_path'
         ]
         placeholders = ", ".join(["?"] * len(columns))
         values = (
@@ -402,7 +405,8 @@ def insert_session(data):
             data.get('next_focus', ''),
             data.get('next_materials', ''),
             data.get('created_at'),
-            data.get('schema_version', '9.1')
+            data.get('schema_version', '9.1'),
+            data.get('source_path', '')
         )
         cursor.execute(f'''INSERT INTO sessions ({", ".join(columns)}) VALUES ({placeholders})''', values)
         
@@ -431,15 +435,50 @@ def insert_session(data):
         conn.close()
         return False, f"Error: {e}"
 
-def ingest_file(filepath):
+def ingest_file(filepath, force=False):
     """
     Main function to ingest a session log file.
+    
+    Args:
+        filepath: Path to the session log markdown file.
+        force: If True, bypass checksum tracking and force re-ingestion.
+    
+    Returns:
+        bool: True if successful (or skipped), False on error.
     """
-    print(f"\n[INFO] Processing: {filepath}")
+    # Normalize the filepath for consistent tracking
+    filepath = os.path.abspath(filepath)
+    filename = os.path.basename(filepath)
+    
+    print(f"\n[INFO] Processing: {filename}")
     
     if not os.path.exists(filepath):
         print(f"[ERROR] File not found: {filepath}")
         return False
+    
+    # Compute checksum for tracking
+    checksum = compute_file_checksum(filepath)
+    
+    # Check if already ingested (unless force flag is set)
+    if not force:
+        conn = sqlite3.connect(DB_PATH)
+        already_ingested, existing_session_id = is_file_ingested(conn, filepath, checksum)
+        
+        if already_ingested:
+            conn.close()
+            print(f"[SKIP] Already ingested (unchanged): {filename}")
+            return True
+        
+        # Check if file exists but with different checksum (modified file)
+        old_session_id = get_ingested_session_id(conn, filepath)
+        if old_session_id:
+            print(f"[INFO] File modified since last ingestion, re-ingesting...")
+            # Delete the old session record
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM sessions WHERE id = ?", (old_session_id,))
+            remove_ingested_file(conn, filepath)
+            conn.commit()
+        conn.close()
     
     # Parse the file
     try:
@@ -448,10 +487,17 @@ def ingest_file(filepath):
         print(f"[ERROR] Failed to parse file: {e}")
         return False
     
+    # Store the source path for bidirectional sync
+    data['source_path'] = filepath
+    
     # Validate
     is_valid, error = validate_session_data(data)
     if not is_valid:
         print(f"[ERROR] Validation failed: {error}")
+        # Track the file anyway to skip on future runs (with session_id=None to indicate failure)
+        conn = sqlite3.connect(DB_PATH)
+        mark_file_ingested(conn, filepath, checksum, None)
+        conn.close()
         return False
     
     # Preview parsed data
@@ -471,17 +517,29 @@ def ingest_file(filepath):
     success, message = insert_session(data)
     if success:
         print(f"[OK] {message}")
+        # Mark file as ingested for future runs
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id FROM sessions WHERE session_date = ? AND main_topic = ? ORDER BY id DESC LIMIT 1",
+            (data['session_date'], data['main_topic'])
+        )
+        result = cursor.fetchone()
+        session_id = result[0] if result else None
+        mark_file_ingested(conn, filepath, checksum, session_id)
+        conn.close()
     else:
         print(f"[ERROR] {message}")
     
     return success
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("Usage: python ingest_session.py <session_log.md>")
-        print("       python ingest_session.py brain/session_logs/2025-12-04_anatomy.md")
-        sys.exit(1)
+    import argparse
+    parser = argparse.ArgumentParser(description='Ingest session log files')
+    parser.add_argument('filepath', help='Path to the session log markdown file')
+    parser.add_argument('--force', '-f', action='store_true', 
+                        help='Force re-ingestion, bypassing checksum tracking')
+    args = parser.parse_args()
     
-    filepath = sys.argv[1]
-    success = ingest_file(filepath)
+    success = ingest_file(args.filepath, force=args.force)
     sys.exit(0 if success else 1)

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Tutor Engine - Codex-powered conversational tutor for PT Study Brain.
+Tutor Engine - OpenRouter-powered conversational tutor for PT Study Brain.
 
 This module provides the core Tutor functionality:
-- Codex CLI integration for LLM responses
+- OpenRouter API integration for LLM responses
 - RAG search with source-lock filtering
 - Mode-specific behavior (Core/Sprint/Drill)
 - Session context management
@@ -15,12 +15,18 @@ from __future__ import annotations
 import os
 import re
 import json
-import subprocess
 import sqlite3
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal, Optional, cast
+
+# Check if requests library is available
+try:
+    import requests
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    REQUESTS_AVAILABLE = False
 
 # Import our types
 import sys
@@ -30,6 +36,26 @@ from tutor_api_types import (
     TutorCitation, TutorTurnResponse
 )
 from db_setup import DB_PATH, init_database
+
+# API config path (same as used by dashboard.utils)
+API_CONFIG_PATH = Path(__file__).parent / "data" / "api_config.json"
+
+
+def load_api_config() -> dict:
+    """Load API configuration from file (local copy to avoid circular imports)."""
+    if API_CONFIG_PATH.exists():
+        try:
+            with open(API_CONFIG_PATH, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            pass
+    return {
+        "openai_api_key": "",
+        "openrouter_api_key": "",
+        "api_provider": "openrouter",
+        "model": "openrouter/auto"
+    }
+
 
 # Doc type literal for type safety
 DocType = Literal[
@@ -50,8 +76,8 @@ DocType = Literal[
 # Configuration
 # -----------------------------------------------------------------------------
 
-MAX_RAG_RESULTS = 5
-MAX_CONTEXT_CHARS = 50000  # ~12k tokens for context, leaving room for response
+MAX_RAG_RESULTS = 4  # Reduced for faster responses
+MAX_CONTEXT_CHARS = 8000  # Aggressive limit for faster API responses
 MAX_HISTORY_TURNS = 10
 MAX_HISTORY_CHARS_PER_TURN = 500
 
@@ -149,6 +175,7 @@ def search_rag_documents(
     limit: int = MAX_RAG_RESULTS,
     *,
     corpus: Optional[str] = None,
+    corpuses: Optional[list[str]] = None,
     enabled_only: bool = True,
 ) -> list[RAGDocument]:
     """
@@ -158,6 +185,11 @@ def search_rag_documents(
     - If allowed_doc_ids is non-empty, only return those IDs
     - If allowed_kinds is specified, filter by doc_type
     - Exclude any disallowed_doc_ids
+    
+    Corpus filtering:
+    - If corpuses is specified, search across those corpuses (e.g., ['study', 'repo', 'runtime'])
+    - If corpus is specified (legacy), search only that corpus
+    - If neither is specified, search ALL enabled documents (no corpus filter)
     """
     init_database()
     conn = sqlite3.connect(DB_PATH)
@@ -168,10 +200,15 @@ def search_rag_documents(
     conditions: list[str] = []
     params: list[Any] = []
 
-    # Corpus isolation
-    if corpus:
+    # Corpus isolation - support multiple corpuses or single corpus
+    if corpuses:
+        placeholders = ",".join("?" * len(corpuses))
+        conditions.append(f"COALESCE(corpus, 'runtime') IN ({placeholders})")
+        params.extend(corpuses)
+    elif corpus:
         conditions.append("COALESCE(corpus, 'runtime') = ?")
         params.append(corpus)
+    # If neither specified, search all corpuses (no filter added)
 
     # Enabled filter
     if enabled_only:
@@ -200,11 +237,33 @@ def search_rag_documents(
         conditions.append("(course_id = ? OR course_id IS NULL)")
         params.append(course_id)
     
-    # Text search (LIKE-based for now, embeddings in v2)
+    # Text search - tokenize query into keywords for better matching
+    # Extract significant words (3+ chars) and search for each
     if query:
-        like_pattern = f"%{query}%"
-        conditions.append("(content LIKE ? OR topic_tags LIKE ? OR source_path LIKE ?)")
-        params.extend([like_pattern, like_pattern, like_pattern])
+        # Extract keywords from query (words 3+ characters, skip common stop words)
+        stop_words = {'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 
+                      'has', 'her', 'was', 'one', 'our', 'out', 'his', 'had', 'this',
+                      'that', 'with', 'from', 'they', 'what', 'when', 'how', 'who'}
+        keywords = [w for w in re.findall(r'\b\w{3,}\b', query.lower()) 
+                   if w not in stop_words]
+        
+        if keywords:
+            # Search for documents containing ANY of the keywords
+            keyword_conditions = []
+            for kw in keywords[:5]:  # Limit to 5 keywords to avoid huge queries
+                like_pattern = f"%{kw}%"
+                keyword_conditions.append(
+                    "(content LIKE ? COLLATE NOCASE OR topic_tags LIKE ? COLLATE NOCASE OR source_path LIKE ? COLLATE NOCASE)"
+                )
+                params.extend([like_pattern, like_pattern, like_pattern])
+            
+            if keyword_conditions:
+                conditions.append(f"({' OR '.join(keyword_conditions)})")
+        else:
+            # Fall back to full query search
+            like_pattern = f"%{query}%"
+            conditions.append("(content LIKE ? COLLATE NOCASE OR topic_tags LIKE ? COLLATE NOCASE OR source_path LIKE ? COLLATE NOCASE)")
+            params.extend([like_pattern, like_pattern, like_pattern])
     
     where_clause = " AND ".join(conditions) if conditions else "1=1"
     
@@ -295,9 +354,9 @@ def build_rag_context(docs: list[RAGDocument], max_chars: int = MAX_CONTEXT_CHAR
     total_chars = 0
     
     for doc in docs:
-        # Prepare snippet for context
-        snippet = doc.content[:2000]  # First 2000 chars per doc
-        if len(doc.content) > 2000:
+        # Prepare snippet for context (reduced for faster responses)
+        snippet = doc.content[:400]  # First 400 chars per doc (optimized)
+        if len(doc.content) > 400:
             snippet += "\n[... content truncated ...]"
         
         doc_context = f"""
@@ -316,7 +375,7 @@ def build_rag_context(docs: list[RAGDocument], max_chars: int = MAX_CONTEXT_CHAR
             doc_id=doc.id,
             source_path=doc.source_path,
             doc_type=_normalize_doc_type(doc.doc_type),
-            snippet=doc.content[:200] + "..." if len(doc.content) > 200 else doc.content
+            snippet=doc.content[:150] + "..." if len(doc.content) > 150 else doc.content
         ))
     
     return "\n".join(context_parts), citations
@@ -369,83 +428,116 @@ def get_or_create_session(session_id: str) -> SessionContext:
 
 
 # -----------------------------------------------------------------------------
-# Codex CLI Integration
+# OpenRouter API Integration
 # -----------------------------------------------------------------------------
 
-def find_codex_cli() -> Optional[str]:
-    """Find Codex CLI executable path."""
-    # Check npm global install location first (Windows)
-    npm_path = Path(os.environ.get("APPDATA", "")) / "npm" / "codex.cmd"
-    if npm_path.exists():
-        return str(npm_path)
-    
-    # Try to find in PATH
-    try:
-        result = subprocess.run(
-            ["where.exe", "codex"] if os.name == "nt" else ["which", "codex"],
-            capture_output=True,
-            timeout=5,
-            text=True,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            return result.stdout.strip().split('\n')[0]
-    except:
-        pass
-    
-    return None
+# Maximum context size to send to API (approx 12k tokens = ~50k chars)
+MAX_API_CONTEXT_CHARS = 50000
 
 
-def call_codex(prompt: str, system_prompt: str, timeout: int = 60) -> tuple[Optional[str], Optional[str]]:
+def _truncate_for_api(text: str, max_chars: int = MAX_API_CONTEXT_CHARS) -> str:
     """
-    Call Codex CLI with the given prompt.
+    Truncate text to fit within API token limits.
+    Keeps the beginning (most important context) and truncates the end.
+    """
+    if not text or len(text) <= max_chars:
+        return text
+    
+    truncated = text[:max_chars]
+    # Try to cut at a natural boundary (newline or sentence)
+    last_newline = truncated.rfind('\n', max_chars - 500, max_chars)
+    if last_newline > max_chars - 1000:
+        truncated = truncated[:last_newline]
+    
+    return truncated + "\n\n[... context truncated due to length ...]"
+
+
+def call_openrouter(prompt: str, system_prompt: str, timeout: int = 30) -> tuple[Optional[str], Optional[str]]:
+    """
+    Call OpenRouter API with the given prompt.
+    Uses the same api_config.json as Scholar.
+    Timeout reduced to 30s for faster responses.
     
     Returns: (response_text, error_message)
     """
-    codex_cmd = find_codex_cli()
-    if not codex_cmd:
-        return None, "Codex CLI not found. Install with: npm install -g @openai/codex"
+    if not REQUESTS_AVAILABLE:
+        return None, "requests library not installed. Install with: pip install requests"
     
-    repo_root = Path(__file__).parent.parent.resolve()
+    config = load_api_config()
+    api_provider = config.get("api_provider", "openrouter")
     
-    # Build the full prompt
-    full_prompt = f"""System Instructions:
-{system_prompt}
-
----
-
-User Question:
-{prompt}
-
----
-
-Respond as the Tutor. Follow the mode-specific behavior described above.
-"""
+    if api_provider == "openrouter":
+        api_key = config.get("openrouter_api_key", "").strip()
+        model = config.get("model", "openrouter/auto")
+        if not model or model == "zai-ai/glm-4.7":
+            model = "openrouter/auto"
+        api_url = "https://openrouter.ai/api/v1/chat/completions"
+    else:
+        # Fallback to OpenAI
+        api_key = config.get("openai_api_key", "").strip()
+        model = config.get("model", "gpt-4o-mini")
+        api_url = "https://api.openai.com/v1/chat/completions"
+    
+    if not api_key:
+        return None, f"API key not configured. Please set your {api_provider} API key in Settings."
+    
+    # Truncate prompt if needed
+    safe_prompt = _truncate_for_api(prompt)
     
     try:
-        result = subprocess.run(
-            [
-                codex_cmd, "exec",
-                "--dangerously-bypass-approvals-and-sandbox",
-                "-C", str(repo_root),
-                full_prompt
-            ],
-            capture_output=True,
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+        
+        # Add OpenRouter-specific headers
+        if api_provider == "openrouter":
+            headers["HTTP-Referer"] = "https://github.com/pt-study-brain"
+            headers["X-Title"] = "PT Study Tutor"
+        
+        response = requests.post(
+            api_url,
+            headers=headers,
+            json={
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": safe_prompt}
+                ],
+                "temperature": 0.7,
+                "max_tokens": 600,  # Reduced for faster responses (was 2000)
+            },
             timeout=timeout,
-            text=True,
-            cwd=str(repo_root),
-            encoding="utf-8"
         )
         
-        if result.returncode == 0:
-            return result.stdout.strip(), None
+        if response.status_code == 200:
+            result = response.json()
+            answer = result["choices"][0]["message"]["content"].strip()
+            return answer, None
         else:
-            error = result.stderr.strip() if result.stderr else f"Codex exited with code {result.returncode}"
-            return None, error
+            try:
+                error_msg = response.json().get("error", {}).get("message", "Unknown error")
+            except:
+                error_msg = f"HTTP {response.status_code}"
+            return None, f"API error: {error_msg}"
             
-    except subprocess.TimeoutExpired:
-        return None, "Codex request timed out"
+    except requests.exceptions.Timeout:
+        return None, "Request timed out. Please try again."
+    except requests.exceptions.RequestException as e:
+        return None, f"Network error: {str(e)}"
     except Exception as e:
-        return None, f"Codex error: {str(e)}"
+        return None, f"Error: {str(e)}"
+
+
+# Legacy alias for backwards compatibility (if any code references this)
+def find_codex_cli() -> Optional[str]:
+    """Deprecated: Codex CLI is no longer used. Returns None."""
+    return None  # OpenRouter is now used instead
+    
+# Legacy alias for backwards compatibility (if any code references call_codex)
+def call_codex(prompt: str, system_prompt: str, timeout: int = 60) -> tuple[Optional[str], Optional[str]]:
+    """Deprecated: Now uses OpenRouter API instead of Codex CLI."""
+    return call_openrouter(prompt, system_prompt, timeout)
 
 
 # -----------------------------------------------------------------------------
@@ -462,12 +554,13 @@ def process_tutor_turn(query: TutorQueryV1) -> TutorTurnResponse:
     # Add user question to history
     session.add_turn("user", query.question)
     
-    # 1. Search Study RAG with source-lock
+    # 1. Search RAG documents across all relevant corpuses (study, repo, runtime)
+    # This allows the Tutor to access course materials, repository knowledge, and runtime catalog
     rag_docs = search_rag_documents(
         query=query.question,
         sources=query.sources,
         course_id=query.course_id,
-        corpus="study",
+        corpuses=["study", "repo", "runtime"],  # Search all corpuses for comprehensive context
         enabled_only=True,
     )
     
@@ -511,8 +604,8 @@ def process_tutor_turn(query: TutorQueryV1) -> TutorTurnResponse:
     
     full_user_prompt = "\n".join(user_prompt_parts)
     
-    # 4. Call Codex
-    response_text, error = call_codex(full_user_prompt, system_prompt)
+    # 4. Call OpenRouter API (replaces Codex CLI)
+    response_text, error = call_openrouter(full_user_prompt, system_prompt)
     
     if error:
         # Return error response

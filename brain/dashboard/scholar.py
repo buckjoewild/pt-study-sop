@@ -9,6 +9,13 @@ from datetime import datetime, timedelta
 from typing import Optional, Tuple
 from dashboard.utils import load_api_config
 
+# Check if requests library is available
+try:
+    import requests
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    REQUESTS_AVAILABLE = False
+
 # Maximum context size to send to API (approx 30k tokens = ~120k chars)
 MAX_CONTEXT_CHARS = 100000
 
@@ -311,6 +318,7 @@ def build_scholar_stats():
         "last_updated": None,
         "safe_mode": False,
         "questions": [],
+        "answered_questions": [],
         "proposals": [],
         "coverage": {
             "complete": 0,
@@ -407,18 +415,27 @@ def build_scholar_stats():
                 
                 if "Q:" in file_content:
                     current_question = None
+                    current_answer = None
                     question_answered = False
                     lines_list = file_content.split("\n")
                     
                     for i, line in enumerate(lines_list):
                         line = line.strip()
                         if line.startswith("Q:"):
-                            if current_question and not question_answered:
-                                result["questions"].append(current_question)
-                                found_unanswered = True
+                            # Save previous question
+                            if current_question:
+                                if question_answered and current_answer:
+                                    result["answered_questions"].append({
+                                        "question": current_question,
+                                        "answer": current_answer
+                                    })
+                                elif not question_answered:
+                                    result["questions"].append(current_question)
+                                    found_unanswered = True
                             
                             question_text = line.replace("Q:", "").strip()
                             current_question = question_text
+                            current_answer = None
                             question_answered = False
                             
                             if i + 1 < len(lines_list):
@@ -427,14 +444,22 @@ def build_scholar_stats():
                                     answer_text = next_line.replace("A:", "").strip()
                                     if answer_text and answer_text.lower() not in ["(pending)", "(none)", ""]:
                                         question_answered = True
+                                        current_answer = answer_text
                         elif line.startswith("A:"):
                             continue
                         elif current_question and line and not question_answered:
                             current_question += " " + line
                     
-                    if current_question and not question_answered:
-                        result["questions"].append(current_question)
-                        found_unanswered = True
+                    # Save last question
+                    if current_question:
+                        if question_answered and current_answer:
+                            result["answered_questions"].append({
+                                "question": current_question,
+                                "answer": current_answer
+                            })
+                        elif not question_answered:
+                            result["questions"].append(current_question)
+                            found_unanswered = True
                 else:
                     for line in file_content.split("\n"):
                         line = line.strip()
@@ -1478,3 +1503,120 @@ def get_latest_insights():
             pass
     
     return result
+
+
+# -----------------------------------------------------------------------------
+# Proposal Similarity Detection
+# -----------------------------------------------------------------------------
+
+def _tokenize_for_similarity(text: str) -> set:
+    """
+    Tokenize text for similarity comparison.
+    Returns a set of lowercase word tokens, filtering out very short words.
+    """
+    if not text:
+        return set()
+    # Lowercase and split on non-alphanumeric
+    words = re.split(r'[^a-z0-9]+', text.lower())
+    # Filter out very short words (< 3 chars) and empty strings
+    return {w for w in words if len(w) >= 3}
+
+
+def _jaccard_similarity(set_a: set, set_b: set) -> float:
+    """
+    Compute Jaccard similarity between two sets.
+    Returns 0.0 if both sets are empty.
+    """
+    if not set_a and not set_b:
+        return 0.0
+    intersection = len(set_a & set_b)
+    union = len(set_a | set_b)
+    if union == 0:
+        return 0.0
+    return intersection / union
+
+
+def _extract_proposal_title_from_content(content: str) -> str:
+    """Extract title from first markdown heading or first line."""
+    match = re.search(r'^#\s+(.+)$', content, re.MULTILINE)
+    if match:
+        return match.group(1).strip()
+    # Fallback to first non-empty line
+    for line in content.split("\n"):
+        line = line.strip()
+        if line:
+            return line
+    return ""
+
+
+def _extract_scope_from_content(content: str) -> str:
+    """Extract scope field from proposal content."""
+    match = re.search(r'^-?\s*Scope\s*:\s*(.+)$', content, re.MULTILINE | re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    return ""
+
+
+def check_proposal_similarity(title: str, scope_text: str = "") -> list:
+    """
+    Scan existing proposals in promotion_queue and find similar ones.
+    
+    Uses a combined similarity score:
+    - 70% weight on title-to-title similarity (most important)
+    - 30% weight on full text (title+scope) similarity
+    
+    Args:
+        title: Title of the new/candidate proposal
+        scope_text: Optional scope text to include in similarity check
+    
+    Returns:
+        List of dicts with keys: filename, title, similarity, scope
+        Only returns proposals with similarity >= 0.4
+    """
+    repo_root = Path(__file__).parent.parent.parent.resolve()
+    promotion_queue = repo_root / "scholar" / "outputs" / "promotion_queue"
+    
+    if not promotion_queue.exists():
+        return []
+    
+    # Tokenize candidate title and full text separately
+    candidate_title_tokens = _tokenize_for_similarity(title)
+    candidate_full_tokens = _tokenize_for_similarity(f"{title} {scope_text}")
+    
+    if not candidate_title_tokens:
+        return []
+    
+    similar_proposals = []
+    
+    for proposal_file in promotion_queue.glob("*.md"):
+        try:
+            content = proposal_file.read_text(encoding="utf-8")
+            existing_title = _extract_proposal_title_from_content(content)
+            existing_scope = _extract_scope_from_content(content)
+            
+            # Tokenize existing proposal
+            existing_title_tokens = _tokenize_for_similarity(existing_title)
+            existing_full_tokens = _tokenize_for_similarity(f"{existing_title} {existing_scope}")
+            
+            if not existing_title_tokens:
+                continue
+            
+            # Calculate weighted similarity: 70% title, 30% full text
+            title_sim = _jaccard_similarity(candidate_title_tokens, existing_title_tokens)
+            full_sim = _jaccard_similarity(candidate_full_tokens, existing_full_tokens)
+            similarity = 0.7 * title_sim + 0.3 * full_sim
+            
+            if similarity >= 0.4:
+                similar_proposals.append({
+                    "filename": proposal_file.name,
+                    "title": existing_title[:200] if existing_title else proposal_file.stem,
+                    "scope": existing_scope[:200] if existing_scope else "",
+                    "similarity": round(similarity, 3)
+                })
+        except Exception:
+            continue
+    
+    # Sort by similarity descending
+    similar_proposals.sort(key=lambda x: x["similarity"], reverse=True)
+    
+    return similar_proposals

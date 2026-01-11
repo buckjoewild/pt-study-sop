@@ -580,6 +580,189 @@ def sync_runtime_catalog(repo_root: str) -> dict:
     return {"ok": len(errors) == 0, "processed": processed, "errors": errors}
 
 
+def _chunk_text(text: str, chunk_size: int = 2000, overlap: int = 200) -> List[str]:
+    """Split text into overlapping chunks for better RAG retrieval."""
+    if len(text) <= chunk_size:
+        return [text]
+    
+    chunks = []
+    start = 0
+    while start < len(text):
+        end = start + chunk_size
+        chunk = text[start:end]
+        chunks.append(chunk)
+        start = end - overlap
+    return chunks
+
+
+def index_repo_to_rag(repo_root: str) -> dict:
+    """Index repository files (sop/, brain/, docs/) into rag_docs for RAG search.
+    
+    Files are chunked and stored with source attribution for retrieval.
+    Existing entries are updated if content changes (checksum-based).
+    
+    Returns: dict with ok, processed, chunks_created, errors
+    """
+    root = Path(repo_root)
+    if not root.exists():
+        raise FileNotFoundError(f"Repo root not found: {repo_root}")
+    
+    # Folders to index
+    index_folders = ["sop", "brain", "docs"]
+    # File extensions to index
+    allowed_exts = {".md", ".py", ".txt", ".json"}
+    # Folders/patterns to skip
+    exclude_patterns = {"__pycache__", ".git", "node_modules", "data", "output", ".venv", "venv"}
+    
+    processed = 0
+    chunks_created = 0
+    errors: List[str] = []
+    
+    for folder_name in index_folders:
+        folder = root / folder_name
+        if not folder.exists():
+            continue
+        
+        for dirpath, dirnames, filenames in os.walk(str(folder)):
+            # Prune excluded directories
+            dirnames[:] = [d for d in dirnames if d not in exclude_patterns]
+            
+            for filename in filenames:
+                file_path = Path(dirpath) / filename
+                if file_path.suffix.lower() not in allowed_exts:
+                    continue
+                
+                try:
+                    content = file_path.read_text(encoding="utf-8")
+                    rel_path = file_path.relative_to(root).as_posix()
+                    
+                    # Determine doc type based on extension
+                    ext = file_path.suffix.lower()
+                    if ext == ".py":
+                        doc_type = "code"
+                    elif ext == ".md":
+                        doc_type = "documentation"
+                    elif ext == ".json":
+                        doc_type = "config"
+                    else:
+                        doc_type = "text"
+                    
+                    # Chunk the content
+                    chunks = _chunk_text(content)
+                    
+                    for i, chunk in enumerate(chunks):
+                        chunk_id = f"{rel_path}::chunk_{i}" if len(chunks) > 1 else rel_path
+                        
+                        # Build chunk with source header for context
+                        chunk_with_header = f"# Source: {rel_path}\n\n{chunk}"
+                        
+                        checksum = _checksum(chunk_with_header)
+                        metadata = {
+                            "source_file": rel_path,
+                            "chunk_index": i,
+                            "total_chunks": len(chunks),
+                            "kind": "repo_index",
+                            "folder": folder_name,
+                        }
+                        
+                        _upsert_rag_doc(
+                            source_path=chunk_id,
+                            doc_type=doc_type,
+                            course_id=None,
+                            topic_tags=f"repo, {folder_name}, {doc_type}",
+                            content=chunk_with_header,
+                            checksum=checksum,
+                            metadata=metadata,
+                            corpus="repo",
+                            folder_path=folder_name,
+                            enabled=1,
+                        )
+                        chunks_created += 1
+                    
+                    processed += 1
+                except Exception as exc:
+                    errors.append(f"{file_path}: {exc}")
+    
+    return {
+        "ok": len(errors) == 0,
+        "processed": processed,
+        "chunks_created": chunks_created,
+        "errors": errors[:20],  # Limit error list
+    }
+
+
+def search_rag_docs(query: str, limit: int = 5, corpus: Optional[str] = None) -> List[dict]:
+    """Search RAG documents for relevant content.
+    
+    Returns list of dicts with id, source_path, content, doc_type, corpus, snippet.
+    """
+    if not query:
+        return []
+    
+    conn = _connect()
+    cur = conn.cursor()
+    like = f"%{query}%"
+    
+    if corpus:
+        cur.execute(
+            """
+            SELECT id, source_path, content, doc_type, corpus, topic_tags
+            FROM rag_docs
+            WHERE (content LIKE ? OR topic_tags LIKE ? OR source_path LIKE ?)
+              AND corpus = ?
+              AND enabled = 1
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (like, like, like, corpus, limit),
+        )
+    else:
+        cur.execute(
+            """
+            SELECT id, source_path, content, doc_type, corpus, topic_tags
+            FROM rag_docs
+            WHERE (content LIKE ? OR topic_tags LIKE ? OR source_path LIKE ?)
+              AND enabled = 1
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (like, like, like, limit),
+        )
+    
+    rows = cur.fetchall()
+    conn.close()
+    
+    results = []
+    for row in rows:
+        content = row[2] or ""
+        # Create snippet around query match
+        content_lower = content.lower()
+        query_lower = query.lower()
+        idx = content_lower.find(query_lower)
+        if idx >= 0:
+            start = max(0, idx - 100)
+            end = min(len(content), idx + len(query) + 100)
+            snippet = content[start:end].replace("\n", " ").strip()
+            if start > 0:
+                snippet = "..." + snippet
+            if end < len(content):
+                snippet = snippet + "..."
+        else:
+            snippet = content[:200].replace("\n", " ").strip() + "..."
+        
+        results.append({
+            "id": row[0],
+            "source_path": row[1],
+            "content": content,
+            "doc_type": row[3],
+            "corpus": row[4],
+            "topic_tags": row[5],
+            "snippet": snippet,
+        })
+    
+    return results
+
+
 def ingest_markdown_note(
     path: str,
     course_id: Optional[int] = None,

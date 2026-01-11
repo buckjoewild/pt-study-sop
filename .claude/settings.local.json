@@ -5,7 +5,11 @@
       "Bash(python:*)",
       "Bash(tasklist /FI \"IMAGENAME eq python.exe\" /FO LIST)",
       "Bash(powershell:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(dir \"C:\\\\Users\\\\treyt\\\\Downloads\\\\School_schedule_JSON\" /s /b)",
+      "Bash(find:*)",
+      "Bash(sqlite3:*)",
+      "Bash(.md$ \")"
     ]
   }
 }

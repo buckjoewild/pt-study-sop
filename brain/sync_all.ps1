@@ -2,12 +2,16 @@
 #
 # Usage (from repo root):
 #   pwsh -File brain\sync_all.ps1
-#   # or simply: .\brain\sync_all.ps1
+#   pwsh -File brain\sync_all.ps1 -Force   # Re-ingest ALL files (bypass checksum tracking)
 #
 # What it does:
 # 1) Pulls any stray markdown logs from the old location in DrCodePT-Swarm\pt-study-sop\logs.
-# 2) Ingests every log under brain\session_logs\.
+# 2) Ingests every log under brain\session_logs\ (skips unchanged files unless -Force).
 # 3) Regenerates brain\output\session_resume.md.
+
+param(
+    [switch]$Force  # When set, bypasses checksum tracking and re-ingests all files
+)
 
 $ErrorActionPreference = 'Stop'
 
@@ -61,10 +65,26 @@ if (-not $logFiles) {
 }
 
 Write-Host "Ingesting $($logFiles.Count) log(s)..."
+$skipped = 0
+$ingested = 0
 foreach ($file in $logFiles) {
-    Write-Host " - $($file.Name)"
-    & $pythonExe @pythonArgs $ingest $file.FullName
+    Write-Host " - $($file.Name)" -NoNewline
+    $ingestArgs = @($ingest, $file.FullName)
+    if ($Force) {
+        $ingestArgs += '--force'
+    }
+    $output = & $pythonExe @pythonArgs @ingestArgs 2>&1
+    if ($output -match '\[SKIP\]') {
+        Write-Host " [SKIP]" -ForegroundColor DarkGray
+        $skipped++
+    } else {
+        Write-Host " [OK]" -ForegroundColor Green
+        $ingested++
+    }
 }
+
+Write-Host ""
+Write-Host "Summary: $ingested ingested, $skipped skipped (unchanged)" -ForegroundColor Cyan
 
 # Step 3: regenerate resume
 Write-Host "Regenerating session resume..."

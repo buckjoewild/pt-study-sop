@@ -92,6 +92,7 @@ def init_database():
             -- Metadata
             created_at TEXT NOT NULL,
             schema_version TEXT DEFAULT '9.1',
+            source_path TEXT,  -- Path to the source markdown file
 
             UNIQUE(session_date, session_time, main_topic)
         )
@@ -148,6 +149,7 @@ def init_database():
         "next_materials": "TEXT",
         "created_at": "TEXT NOT NULL",
         "schema_version": "TEXT DEFAULT '9.1'",
+        "source_path": "TEXT",
     }
     
     # Add missing columns (skip id and constraints that can't be added via ALTER TABLE)
@@ -265,6 +267,22 @@ def init_database():
             created_at TEXT NOT NULL,
             updated_at TEXT,
             FOREIGN KEY(course_id) REFERENCES courses(id)
+        )
+    """
+    )
+
+    # ------------------------------------------------------------------
+    # Ingestion tracking table for smart file processing
+    # ------------------------------------------------------------------
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ingested_files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            filepath TEXT NOT NULL UNIQUE,
+            checksum TEXT NOT NULL,
+            session_id INTEGER,
+            ingested_at TEXT NOT NULL,
+            FOREIGN KEY(session_id) REFERENCES sessions(id)
         )
     """
     )
@@ -427,6 +445,7 @@ def init_database():
         CREATE TABLE IF NOT EXISTS tutor_turns (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             session_id TEXT NOT NULL,        -- e.g., "sess-20260109-143022"
+            user_id TEXT,                    -- optional user identifier
             course_id INTEGER,
             topic_id INTEGER,
             mode TEXT,                        -- Core/Sprint/Drill
@@ -463,6 +482,12 @@ def init_database():
         ON tutor_turns(topic_id)
     """
     )
+
+    # Migration: Add user_id column if missing (for existing databases)
+    cursor.execute("PRAGMA table_info(tutor_turns)")
+    existing_cols = {row[1] for row in cursor.fetchall()}
+    if "user_id" not in existing_cols:
+        cursor.execute("ALTER TABLE tutor_turns ADD COLUMN user_id TEXT")
 
     # ------------------------------------------------------------------
     # Topic Mastery tracking table (for relearning/weak area detection)
@@ -550,6 +575,72 @@ def init_database():
         except sqlite3.OperationalError:
             pass  # Column might already exist
 
+    # ------------------------------------------------------------------
+    # Scholar Digests table (strategic analysis documents)
+    # ------------------------------------------------------------------
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS scholar_digests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            filename TEXT NOT NULL,
+            filepath TEXT NOT NULL,
+            title TEXT,
+            digest_type TEXT DEFAULT 'strategic',
+            created_at TEXT NOT NULL,
+            content_hash TEXT
+        )
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_scholar_digests_filename
+        ON scholar_digests(filename)
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_scholar_digests_type
+        ON scholar_digests(digest_type)
+    """
+    )
+
+    # ------------------------------------------------------------------
+    # Scholar Proposals table (change proposals from Scholar workflows)
+    # ------------------------------------------------------------------
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS scholar_proposals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            filename TEXT NOT NULL UNIQUE,
+            filepath TEXT NOT NULL,
+            title TEXT,
+            proposal_type TEXT,
+            status TEXT DEFAULT 'draft',
+            created_at TEXT,
+            reviewed_at TEXT,
+            reviewer_notes TEXT,
+            superseded_by INTEGER REFERENCES scholar_proposals(id),
+            content_hash TEXT
+        )
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_scholar_proposals_status
+        ON scholar_proposals(status)
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_scholar_proposals_type
+        ON scholar_proposals(proposal_type)
+    """
+    )
+
     conn.commit()
     conn.close()
 
@@ -611,6 +702,74 @@ def get_connection():
     Get a database connection.
     """
     return sqlite3.connect(DB_PATH)
+
+
+# ------------------------------------------------------------------
+# Ingestion tracking helper functions
+# ------------------------------------------------------------------
+import hashlib
+
+def compute_file_checksum(filepath: str) -> str:
+    """
+    Compute MD5 checksum of a file's contents.
+    """
+    hash_md5 = hashlib.md5()
+    with open(filepath, 'rb') as f:
+        for chunk in iter(lambda: f.read(8192), b''):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
+def is_file_ingested(conn, filepath: str, checksum: str) -> tuple:
+    """
+    Check if a file has already been ingested with the same checksum.
+    Returns (is_ingested: bool, session_id: int or None).
+    """
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT session_id FROM ingested_files WHERE filepath = ? AND checksum = ?",
+        (filepath, checksum)
+    )
+    result = cursor.fetchone()
+    if result:
+        return True, result[0]
+    return False, None
+
+def mark_file_ingested(conn, filepath: str, checksum: str, session_id: int = None):
+    """
+    Mark a file as ingested. Updates if filepath exists, inserts otherwise.
+    """
+    from datetime import datetime
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO ingested_files (filepath, checksum, session_id, ingested_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(filepath) DO UPDATE SET
+            checksum = excluded.checksum,
+            session_id = excluded.session_id,
+            ingested_at = excluded.ingested_at
+        """,
+        (filepath, checksum, session_id, datetime.now().isoformat())
+    )
+    conn.commit()
+
+def remove_ingested_file(conn, filepath: str):
+    """
+    Remove ingestion tracking record for a file.
+    """
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM ingested_files WHERE filepath = ?", (filepath,))
+    conn.commit()
+
+def get_ingested_session_id(conn, filepath: str) -> int:
+    """
+    Get the session_id linked to an ingested file, if any.
+    """
+    cursor = conn.cursor()
+    cursor.execute("SELECT session_id FROM ingested_files WHERE filepath = ?", (filepath,))
+    result = cursor.fetchone()
+    return result[0] if result else None
+
 
 def get_schema_version():
     """

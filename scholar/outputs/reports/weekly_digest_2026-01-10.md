@@ -36,3 +36,36 @@
 
 ### Top Recommendations (one change each)
 1. Define a fallback audit rule for empty windows (audit most recent prior log + mark stale).
+
+## Update - Run ID: 2026-01-10_190911
+
+### Window
+- Target window: 2026-01-03 to 2026-01-10
+- Session logs in window: none
+- Fallback signal: not used (strict window)
+
+### Patterns Across Sessions
+- No logged sessions in the target window; no fallback used in this run.
+
+### Technique Usage Stats
+- Sample size: 0 sessions (no data)
+
+### Top Recommendations (one change each)
+1. Adopt a fallback audit rule for empty windows (audit most recent prior log + mark stale).
+
+
+## Update - Run ID: 2026-01-10_201637
+
+### Window
+- Target window: 2026-01-03 to 2026-01-10
+- Session logs in window: none
+- Fallback signal: not used (strict window)
+
+### Patterns Across Sessions
+- No logged sessions in the target window; no fallback used in this run.
+
+### Technique Usage Stats
+- Sample size: 0 sessions (no data)
+
+### Top Recommendations (one change each)
+1. Add a daily audit gate that flags empty 7-day windows and requires a manual session log check.

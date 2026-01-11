@@ -374,6 +374,8 @@ let calendarData = { events: [], sessions: [], planned: [] };
 let syllabusEvents = [];
 let syllabusViewMode = 'calendar';
 let currentScholarQuestions = [];
+let currentScholarAnsweredQuestions = [];
+let answeredQuestionsExpanded = false;
 let modeChartInstance = null; // Global chart instance for updates
 
 // DOM Elements
@@ -402,7 +404,7 @@ const btnResume = document.getElementById('btn-resume');
 const tutorQuestion = document.getElementById('tutor-question');
 const tutorAnswerBox = document.getElementById('tutor-answer-box');
 const btnTutorSend = document.getElementById('btn-tutor-send');
-const tutorModeSelect = document.getElementById('tutor-mode');
+const tutorModeSelect = document.getElementById('tutor-mode-select');
 const btnTutorNewSession = document.getElementById('btn-tutor-new-session');
 
 const tutorKindNote = document.getElementById('tutor-kind-note');
@@ -494,6 +496,12 @@ async function loadScholarInsights() {
   } catch (error) {
     console.error('Failed to load Scholar insights:', error);
   }
+}
+
+// Load all data needed for the Overview tab
+function loadOverviewData() {
+  loadStats();
+  loadScholarInsights();
 }
 
 function renderScholarInsights(data) {
@@ -631,6 +639,7 @@ function renderSessions(data) {
             <td>
               <div style="display: flex; gap: 6px;">
                 <button class="btn" onclick="toggleSessionDetails(${s.id})" title="View details">View</button>
+                <button class="btn" onclick="openEditModal(${s.id})" title="Edit session">✎</button>
                 <button class="btn" onclick="deleteSession(${s.id})" title="Delete session" style="color: var(--error);">✕</button>
               </div>
             </td>
@@ -683,6 +692,83 @@ async function deleteSession(sessionId) {
   } catch (err) {
     alert('Error deleting session: ' + err.message);
   }
+}
+
+// Open the edit modal and populate with session data
+async function openEditModal(sessionId) {
+  try {
+    const resp = await fetch(`/api/sessions/${sessionId}`);
+    const data = await resp.json();
+    if (!data.ok) {
+      alert('Error loading session: ' + (data.error || 'Unknown error'));
+      return;
+    }
+    const s = data.session;
+    
+    // Populate form fields
+    document.getElementById('edit-session-id').value = s.id;
+    document.getElementById('edit-date').value = s.session_date || '';
+    document.getElementById('edit-start-time').value = s.session_time || '';
+    document.getElementById('edit-topic').value = s.main_topic || s.topic || '';
+    document.getElementById('edit-study-mode').value = s.study_mode || 'Core';
+    document.getElementById('edit-duration').value = s.time_spent_minutes || s.duration_minutes || '';
+    document.getElementById('edit-understanding').value = s.understanding_level || '';
+    document.getElementById('edit-retention').value = s.retention_confidence || '';
+    document.getElementById('edit-system-performance').value = s.system_performance || '';
+    document.getElementById('edit-goal').value = s.plan_of_attack || '';
+    document.getElementById('edit-summary').value = s.notes_insights || '';
+    document.getElementById('edit-wins').value = s.what_worked || '';
+    document.getElementById('edit-friction').value = s.what_needs_fixing || '';
+    
+    // Show modal
+    document.getElementById('edit-session-modal').style.display = 'flex';
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+}
+
+// Save session edits
+async function saveSession(event) {
+  event.preventDefault();
+  
+  const sessionId = document.getElementById('edit-session-id').value;
+  const data = {
+    session_date: document.getElementById('edit-date').value,
+    session_time: document.getElementById('edit-start-time').value,
+    topic: document.getElementById('edit-topic').value,
+    study_mode: document.getElementById('edit-study-mode').value,
+    time_spent_minutes: parseInt(document.getElementById('edit-duration').value) || 0,
+    understanding_level: parseInt(document.getElementById('edit-understanding').value) || null,
+    retention_confidence: parseInt(document.getElementById('edit-retention').value) || null,
+    system_performance: parseInt(document.getElementById('edit-system-performance').value) || null,
+    plan_of_attack: document.getElementById('edit-goal').value,
+    notes_insights: document.getElementById('edit-summary').value,
+    what_worked: document.getElementById('edit-wins').value,
+    what_needs_fixing: document.getElementById('edit-friction').value
+  };
+  
+  try {
+    const resp = await fetch(`/api/sessions/${sessionId}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data)
+    });
+    const result = await resp.json();
+    if (result.ok) {
+      closeEditModal();
+      loadStats();
+      loadOverviewData();
+    } else {
+      alert('Error saving: ' + (result.error || 'Unknown error'));
+    }
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+}
+
+// Close the edit modal
+function closeEditModal() {
+  document.getElementById('edit-session-modal').style.display = 'none';
 }
 
 function toggleSessionDetails(sessionId) {
@@ -1303,7 +1389,26 @@ async function setTutorRuntimeItemEnabled(id, enabled) {
   }
 }
 
-function renderTutorCitations(citations) {
+function renderTutorCitations(citations, messageId) {
+  // If messageId is provided, update citations in that specific message
+  if (messageId) {
+    const citationsContainer = document.getElementById(`citations-${messageId}`);
+    if (citationsContainer) {
+      if (!citations || citations.length === 0) {
+        citationsContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 12px;">No citations available.</div>';
+      } else {
+        const lines = citations.map((c) => {
+          const header = `[${c.doc_id}] (${c.doc_type}) ${c.source_path}`;
+          const snippet = (c.snippet || '').trim();
+          return snippet ? `<div style="margin-bottom: 8px;"><strong>${header}</strong><br><span style="color: var(--text-secondary);">${snippet}</span></div>` : `<div style="margin-bottom: 8px;">${header}</div>`;
+        });
+        citationsContainer.innerHTML = lines.join('');
+      }
+    }
+    return;
+  }
+  
+  // Legacy: update hidden citations box for backward compatibility
   if (!tutorCitationsBox) return;
   if (!citations || citations.length === 0) {
     tutorCitationsBox.textContent = 'No citations.';
@@ -1453,6 +1558,7 @@ function loadTutor() {
 
   if (btnTutorNewSession) btnTutorNewSession.addEventListener('click', () => {
     activeTutorSessionId = null;
+    clearChatMessages();
     if (tutorAnswerBox) tutorAnswerBox.textContent = 'New session started. Ask a question when ready.';
     renderTutorCitations([]);
   });
@@ -1577,15 +1683,168 @@ function setupStudyRagPathControls() {
   }
 }
 
-if (btnTutorSend && tutorQuestion && tutorAnswerBox) {
-  btnTutorSend.addEventListener('click', async () => {
+// ===== Chat UI Helper Functions =====
+let tutorMessageCounter = 0;
+
+function getChatContainer() {
+  return document.getElementById('tutor-chat-messages');
+}
+
+function scrollChatToBottom() {
+  const container = getChatContainer();
+  if (container) {
+    container.scrollTop = container.scrollHeight;
+  }
+}
+
+function addChatMessage(sender, text, options = {}) {
+  const container = getChatContainer();
+  if (!container) return null;
+  
+  const messageId = `msg-${++tutorMessageCounter}`;
+  const isUser = sender === 'user';
+  const senderLabel = isUser ? 'You' : 'Tutor';
+  const senderColor = isUser ? 'var(--success)' : 'var(--primary)';
+  const bubbleBg = isUser ? 'var(--primary)' : 'var(--surface-2)';
+  const bubbleColor = isUser ? '#fff' : 'var(--text-primary)';
+  const bubbleRadius = isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px';
+  const align = isUser ? 'flex-end' : 'flex-start';
+  
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `chat-message ${sender}`;
+  messageDiv.id = messageId;
+  messageDiv.style.cssText = `align-self: ${align}; max-width: 85%;`;
+  
+  let citationsHtml = '';
+  if (!isUser && options.showCitationsToggle) {
+    citationsHtml = `
+      <div style="margin-top: 8px;">
+        <button type="button" class="btn-citation-toggle" onclick="toggleCitations('${messageId}')" style="
+          background: transparent;
+          border: 1px solid var(--border);
+          color: var(--text-secondary);
+          padding: 4px 10px;
+          border-radius: 12px;
+          font-size: 11px;
+          cursor: pointer;
+          transition: var(--transition);
+        ">Show Citations</button>
+        <div id="citations-${messageId}" class="citations-content" style="
+          display: none;
+          margin-top: 8px;
+          padding: 10px;
+          background: var(--surface-1);
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          font-size: 12px;
+          color: var(--text-secondary);
+          max-height: 200px;
+          overflow-y: auto;
+        ">Loading citations...</div>
+      </div>
+    `;
+  }
+  
+  // Handle unverified banner
+  let displayText = text;
+  let unverifiedBadge = '';
+  if (options.unverified) {
+    unverifiedBadge = `<span style="
+      display: inline-block;
+      background: var(--warning);
+      color: #000;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    ">UNVERIFIED</span><br>`;
+  }
+  
+  messageDiv.innerHTML = `
+    <div class="chat-sender" style="font-size: 11px; font-weight: 600; color: ${senderColor}; margin-bottom: 4px; text-align: ${isUser ? 'right' : 'left'};">${senderLabel}</div>
+    <div class="chat-bubble" style="
+      background: ${bubbleBg};
+      color: ${bubbleColor};
+      padding: 12px 16px;
+      border-radius: ${bubbleRadius};
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    ">${unverifiedBadge}${escapeHtml(displayText)}</div>
+    ${citationsHtml}
+  `;
+  
+  container.appendChild(messageDiv);
+  scrollChatToBottom();
+  
+  return messageId;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function updateChatMessage(messageId, newText) {
+  const messageEl = document.getElementById(messageId);
+  if (messageEl) {
+    const bubble = messageEl.querySelector('.chat-bubble');
+    if (bubble) {
+      bubble.innerHTML = escapeHtml(newText);
+    }
+  }
+}
+
+function toggleCitations(messageId) {
+  const citationsEl = document.getElementById(`citations-${messageId}`);
+  const msgEl = document.getElementById(messageId);
+  if (citationsEl && msgEl) {
+    const btn = msgEl.querySelector('.btn-citation-toggle');
+    if (citationsEl.style.display === 'none') {
+      citationsEl.style.display = 'block';
+      if (btn) btn.textContent = 'Hide Citations';
+    } else {
+      citationsEl.style.display = 'none';
+      if (btn) btn.textContent = 'Show Citations';
+    }
+  }
+}
+
+function clearChatMessages() {
+  const container = getChatContainer();
+  if (container) {
+    container.innerHTML = `
+      <div class="chat-message tutor" style="align-self: flex-start; max-width: 85%;">
+        <div class="chat-sender" style="font-size: 11px; font-weight: 600; color: var(--primary); margin-bottom: 4px;">Tutor</div>
+        <div class="chat-bubble" style="
+          background: var(--surface-2);
+          color: var(--text-primary);
+          padding: 12px 16px;
+          border-radius: 16px 16px 16px 4px;
+          font-size: 14px;
+          line-height: 1.5;
+        ">New session started! Ask me anything.</div>
+      </div>
+    `;
+  }
+}
+
+if (btnTutorSend && tutorQuestion) {
+  // Send tutor question logic - extracted for reuse
+  async function sendTutorQuestion() {
     const question = (tutorQuestion.value || '').trim();
     if (!question) {
-      tutorAnswerBox.textContent = 'Please enter a question first.';
       return;
     }
-    tutorAnswerBox.textContent = 'Thinking...';
-    if (tutorCitationsBox) tutorCitationsBox.textContent = '...';
+    
+    // Add user message to chat
+    addChatMessage('user', question);
+    tutorQuestion.value = '';
+    
+    // Add thinking message
+    const thinkingId = addChatMessage('tutor', 'Thinking...', { showCitationsToggle: false });
 
     try {
       if (!activeTutorSessionId) {
@@ -1596,7 +1855,7 @@ if (btnTutorSend && tutorQuestion && tutorAnswerBox) {
         });
         const startData = await startRes.json();
         if (!startData.ok) {
-          tutorAnswerBox.textContent = '[ERROR] Failed to start Tutor session.';
+          updateChatMessage(thinkingId, '[ERROR] Failed to start Tutor session.');
           return;
         }
         activeTutorSessionId = startData.session_id;
@@ -1625,16 +1884,43 @@ if (btnTutorSend && tutorQuestion && tutorAnswerBox) {
       });
       const data = await res.json();
       if (!data.ok) {
-        tutorAnswerBox.textContent = `[ERROR] ${data.message || 'Tutor call failed.'}`;
+        updateChatMessage(thinkingId, `[ERROR] ${data.message || 'Tutor call failed.'}`);
         return;
       }
       activeTutorSessionId = data.session_id;
-      const unverifiedBanner = data.unverified ? '[UNVERIFIED]\n\n' : '';
-      tutorAnswerBox.textContent = unverifiedBanner + (data.answer || '');
+      
+      // Remove thinking message and add real response with citations toggle
+      const thinkingEl = document.getElementById(thinkingId);
+      if (thinkingEl) thinkingEl.remove();
+      
+      const responseId = addChatMessage('tutor', data.answer || '', {
+        showCitationsToggle: true,
+        unverified: data.unverified
+      });
+      
+      // Render citations into the collapsible section
+      renderTutorCitations(data.citations || [], responseId);
+      
+      // Also update legacy elements for compatibility
+      if (tutorAnswerBox) {
+        const unverifiedBanner = data.unverified ? '[UNVERIFIED]\n\n' : '';
+        tutorAnswerBox.textContent = unverifiedBanner + (data.answer || '');
+      }
       renderTutorCitations(data.citations || []);
+      
     } catch (error) {
-      tutorAnswerBox.textContent = `Failed to contact Tutor: ${error.message}`;
-      renderTutorCitations([]);
+      updateChatMessage(thinkingId, `Failed to contact Tutor: ${error.message}`);
+    }
+  }
+
+  // Send on button click
+  btnTutorSend.addEventListener('click', sendTutorQuestion);
+
+  // Send on Enter key (Shift+Enter allows newlines)
+  tutorQuestion.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendTutorQuestion();
     }
   });
 }
@@ -1744,6 +2030,10 @@ async function loadScholar() {
     const res = await fetch('/api/scholar');
     const data = await res.json();
     renderScholar(data);
+    // Also load saved digests
+    if (typeof loadSavedDigests === 'function') {
+      loadSavedDigests();
+    }
   } catch (error) {
     console.error('Failed to load Scholar data:', error);
   }
@@ -1794,11 +2084,12 @@ function renderScholar(data) {
 
   // Questions
   const questionsContainer = document.getElementById('scholar-questions');
-  const questionsHeaderCount = document.getElementById('scholar-questions-header-count');
+  const questionsSectionCount = document.getElementById('scholar-questions-section-count');
   const questions = data.questions || [];
   currentScholarQuestions = questions;
-  if (questionsHeaderCount) {
-    questionsHeaderCount.textContent = `(${questions.length})`;
+  // Update Scholar tab section count
+  if (questionsSectionCount) {
+    questionsSectionCount.textContent = `(${questions.length})`;
   }
   // Also update overview count
   const overviewQuestionsCount = document.getElementById('scholar-questions-count');
@@ -1818,104 +2109,90 @@ function renderScholar(data) {
   } else {
     saveAnswersBtn.style.display = 'inline-block';
     questionsContainer.innerHTML = questions.map((q, i) => `
-          <div style="padding: 12px 0; border-bottom: 1px solid var(--border); ${i === questions.length - 1 ? 'border-bottom: none;' : ''}">
-            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
-              <div style="font-size: 13px; color: var(--text-primary); font-weight: 600; flex: 1;">Q${i + 1}: ${q}</div>
-              <div style="display: flex; gap: 4px; margin-left: 8px;">
-                <button
-                  class="btn"
-                  style="font-size: 11px; padding: 4px 8px;"
-                  onclick="openScholarChat(${i}, 'clarify')"
-                  id="btn-chat-${i}"
-                  title="Chat to clarify or refine"
+          <div class="scholar-question-card" style="padding: 16px; margin-bottom: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;">
+            <!-- Question -->
+            <div style="font-size: 14px; color: var(--text-primary); font-weight: 600; margin-bottom: 12px;">Q${i + 1}: ${q}</div>
+            
+            <!-- Chat Response Area -->
+            <div id="chat-response-${i}" style="max-height: 250px; overflow-y: auto; margin-bottom: 12px; padding: 10px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; display: flex; flex-direction: column; gap: 8px; min-height: 60px;">
+              <div style="color: var(--text-muted); font-size: 12px;">Ask a question to get an AI response with repo context...</div>
+            </div>
+            
+            <!-- Chat Input -->
+            <div style="display: flex; gap: 8px; align-items: flex-end;">
+              <textarea 
+                id="chat-input-${i}" 
+                class="form-textarea" 
+                rows="2" 
+                placeholder="Ask about this question..."
+                style="flex: 1; font-size: 13px; resize: vertical;"
+                onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();askScholarQuestion(${i})}"
+              ></textarea>
+              <button 
+                class="btn btn-primary" 
+                style="padding: 8px 16px; height: fit-content;"
+                onclick="askScholarQuestion(${i})" 
+                id="btn-ask-${i}"
+              >
+                Ask
+              </button>
+            </div>
+            
+            <!-- Answer Section with per-question submit -->
+            <div id="answer-section-${i}" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">💬 Your Answer:</span>
+                <span id="answer-status-${i}" style="font-size: 11px; color: var(--text-muted);"></span>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: flex-end;">
+                <textarea 
+                  id="answer-${i}" 
+                  class="form-textarea" 
+                  rows="2" 
+                  placeholder="Type your answer here..."
+                  style="flex: 1; font-size: 13px; resize: vertical;"
+                  onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();submitSingleAnswer(${i})}"
+                ></textarea>
+                <button 
+                  class="btn btn-success" 
+                  style="padding: 8px 12px; height: fit-content; background: var(--success); color: white;"
+                  onclick="submitSingleAnswer(${i})" 
+                  id="btn-submit-answer-${i}"
+                  title="Submit this answer"
                 >
-                  💬 Chat
-                </button>
-                <button
-                  class="btn"
-                  style="font-size: 11px; padding: 4px 8px;"
-                  onclick="openScholarChat(${i}, 'generate', true)"
-                  id="btn-generate-${i}"
-                  title="Generate a draft via chat"
-                >
-                  ✨ Generate (Chat)
+                  ✓ Submit
                 </button>
               </div>
             </div>
-            
-            <!-- Chat Panel -->
-            <div id="chat-panel-${i}" style="display: none; padding: 12px; background: rgba(31, 111, 235, 0.05); border-left: 3px solid var(--accent); border-radius: 4px; margin-bottom: 8px;">
-               <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 6px;">
-                 <span style="font-size: 11px; color: var(--text-muted);">Mode:</span>
-                 <button
-                   class="btn"
-                   id="chat-mode-clarify-${i}"
-                   style="font-size: 10px; padding: 3px 8px;"
-                   onclick="setChatMode(${i}, 'clarify')"
-                 >
-                   Clarify
-                 </button>
-                 <button
-                   class="btn"
-                   id="chat-mode-generate-${i}"
-                   style="font-size: 10px; padding: 3px 8px;"
-                   onclick="setChatMode(${i}, 'generate')"
-                 >
-                   Generate
-                 </button>
-               </div>
-               <div id="chat-history-${i}" style="max-height: 200px; overflow-y: auto; margin-bottom: 8px; font-size: 12px; display: flex; flex-direction: column; gap: 8px;">
-                    <!-- History Items -->
-               </div>
-               
-               <textarea 
-                 id="chat-input-${i}" 
-                 class="form-textarea" 
-                 rows="2" 
-                  placeholder="Ask a follow-up or request a draft answer..."
-                  style="width: 100%; font-size: 12px; margin-bottom: 6px;"
-                ></textarea>
-               
-               <div style="display: flex; gap: 6px;">
-                 <button 
-                   class="btn btn-primary" 
-                   style="font-size: 11px; padding: 4px 10px;"
-                    onclick="sendChatMessage(${i})"
-                  >
-                    Send
-                  </button>
-                 <button 
-                   class="btn" 
-                   style="font-size: 11px; padding: 4px 10px;"
-                   onclick="clearChatAndReset(${i})"
-                 >
-                   Clear Chat
-                 </button>
-                 <button 
-                   class="btn" 
-                   style="font-size: 11px; padding: 4px 10px;"
-                   onclick="document.getElementById('chat-panel-${i}').style.display='none'"
-                 >
-                   Close
-                 </button>
-               </div>
-            </div>
-
-            <div id="generated-answer-${i}" style="display: none; margin-bottom: 8px; padding: 8px; background: var(--bg-alt); border: 1px dashed var(--accent);">
-                <div style="font-size: 11px; color: var(--accent); font-weight: 600; margin-bottom: 4px;">Last AI Reply:</div>
-                <div id="generated-text-${i}" style="font-size: 13px; white-space: pre-wrap; margin-bottom: 6px;"></div>
-                <button class="btn" style="font-size: 10px;" onclick="useGeneratedAnswer(${i})">Use Reply</button>
-            </div>
-
-            <textarea 
-              id="answer-${i}" 
-              class="form-textarea" 
-              rows="3" 
-              placeholder="Enter your answer here..."
-              style="width: 100%; font-size: 13px; resize: vertical;"
-            ></textarea>
           </div>
         `).join('');
+  }
+
+  // Answered Questions
+  const answeredContainer = document.getElementById('scholar-answered-questions');
+  const answeredSectionCount = document.getElementById('scholar-answered-section-count');
+  const answeredQuestions = data.answered_questions || [];
+  currentScholarAnsweredQuestions = answeredQuestions;
+  
+  if (answeredSectionCount) {
+    answeredSectionCount.textContent = `(${answeredQuestions.length})`;
+  }
+  
+  if (answeredContainer) {
+    if (answeredQuestions.length === 0) {
+      answeredContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">No answered questions yet.</div>';
+    } else {
+      answeredContainer.innerHTML = answeredQuestions.map((item, i) => `
+        <div style="padding: 12px; margin-bottom: 8px; background: rgba(63, 185, 80, 0.05); border: 1px solid rgba(63, 185, 80, 0.2); border-radius: 8px;">
+          <div style="font-size: 13px; color: var(--text-primary); font-weight: 500; margin-bottom: 8px;">
+            <span style="color: var(--success);">✓</span> ${item.question}
+          </div>
+          <div style="font-size: 12px; color: var(--text-secondary); padding-left: 16px; border-left: 2px solid var(--success);">
+            ${item.answer}
+          </div>
+        </div>
+      `).join('');
+    }
   }
 
   // Coverage
@@ -2485,6 +2762,91 @@ if (btnGenerateDigest) btnGenerateDigest.addEventListener('click', async () => {
 
 // Save answers handling
 const saveAnswersBtn = document.getElementById('btn-save-answers');
+
+// Submit a single answer by question index
+async function submitSingleAnswer(questionIndex) {
+  const answerTextarea = document.getElementById(`answer-${questionIndex}`);
+  const submitBtn = document.getElementById(`btn-submit-answer-${questionIndex}`);
+  const statusSpan = document.getElementById(`answer-status-${questionIndex}`);
+  
+  if (!answerTextarea) return;
+  
+  const answer = answerTextarea.value.trim();
+  if (!answer) {
+    if (statusSpan) statusSpan.innerHTML = '<span style="color: var(--warning);">Please enter an answer</span>';
+    answerTextarea.focus();
+    return;
+  }
+  
+  // Disable UI
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving...';
+  }
+  if (statusSpan) statusSpan.innerHTML = '<span style="color: var(--text-muted);">Saving...</span>';
+  
+  try {
+    const res = await fetch('/api/scholar/questions/answer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question_index: questionIndex, answer: answer })
+    });
+    
+    const data = await res.json();
+    
+    if (data.ok) {
+      if (statusSpan) statusSpan.innerHTML = '<span style="color: var(--success);">✓ Saved!</span>';
+      if (submitBtn) {
+        submitBtn.textContent = '✓ Saved';
+        submitBtn.style.background = 'var(--success)';
+      }
+      // Animate and remove the answered question card
+      const card = answerTextarea.closest('.scholar-question-card');
+      if (card) {
+        card.style.transition = 'opacity 0.5s, transform 0.5s';
+        card.style.opacity = '0.5';
+        card.style.transform = 'scale(0.98)';
+      }
+      // Reload to reflect updated questions (now shows in Answered section)
+      setTimeout(() => {
+        loadScholar();
+      }, 1000);
+    } else {
+      if (statusSpan) statusSpan.innerHTML = `<span style="color: var(--error);">✗ ${data.message}</span>`;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '✓ Submit';
+      }
+    }
+  } catch (error) {
+    if (statusSpan) statusSpan.innerHTML = `<span style="color: var(--error);">✗ Network error</span>`;
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '✓ Submit';
+    }
+  }
+}
+window.submitSingleAnswer = submitSingleAnswer;
+
+// Toggle answered questions section visibility
+function toggleAnsweredQuestions() {
+  const container = document.getElementById('scholar-answered-questions');
+  const chevron = document.getElementById('answered-questions-chevron');
+  
+  if (!container) return;
+  
+  answeredQuestionsExpanded = !answeredQuestionsExpanded;
+  
+  if (answeredQuestionsExpanded) {
+    container.style.display = 'block';
+    if (chevron) chevron.textContent = '▼';
+  } else {
+    container.style.display = 'none';
+    if (chevron) chevron.textContent = '▶';
+  }
+}
+window.toggleAnsweredQuestions = toggleAnsweredQuestions;
+
 if (saveAnswersBtn) saveAnswersBtn.addEventListener('click', async () => {
   const questionsContainer = document.getElementById('scholar-questions');
   if (!questionsContainer) return;
@@ -2759,6 +3121,7 @@ function setupTabs() {
 
 // Calendar rendering
 async function loadCalendar() {
+  console.log('[Calendar] loadCalendar() called');
   const courseId = document.getElementById('calendar-filter-course')?.value || '';
   const eventType = document.getElementById('calendar-filter-type')?.value || '';
   const viewRange = document.getElementById('calendar-view-range')?.value || 'month';
@@ -2781,15 +3144,26 @@ async function loadCalendar() {
   if (eventType) params.append('event_type', eventType);
 
   try {
+    console.log('[Calendar] Fetching calendar data...');
     const res = await fetch(`/api/calendar/data?${params}`);
     const data = await res.json();
+    console.log('[Calendar] API response:', data);
     if (data.ok) {
       calendarData = data;
-      renderCalendar();
+    } else {
+      console.warn('[Calendar] API returned ok=false, using empty data');
+      // Ensure calendarData has empty arrays so renderCalendar works
+      calendarData = { events: [], sessions: [], planned: [], ok: true };
     }
   } catch (error) {
-    console.error('Failed to load calendar:', error);
+    console.error('[Calendar] Failed to load calendar data:', error);
+    // Ensure calendarData has empty arrays so renderCalendar works
+    calendarData = { events: [], sessions: [], planned: [], ok: true };
   }
+  
+  // Always render calendar grid (even if empty)
+  console.log('[Calendar] Rendering calendar with data:', calendarData);
+  renderCalendar();
 }
 
 // Type icons for syllabus events
@@ -3163,12 +3537,26 @@ function setSyllabusView(mode) {
 }
 
 function renderCalendar() {
+  console.log('[Calendar] renderCalendar() called');
   const grid = document.getElementById('calendar-grid');
-  if (!grid) return;
+  if (!grid) {
+    console.warn('[Calendar] calendar-grid element not found');
+    return;
+  }
+
+  // Ensure calendarData has required arrays
+  if (!calendarData || !calendarData.events) {
+    console.warn('[Calendar] calendarData missing, initializing empty');
+    calendarData = { events: [], sessions: [], planned: [] };
+  }
+  calendarData.events = calendarData.events || [];
+  calendarData.sessions = calendarData.sessions || [];
+  calendarData.planned = calendarData.planned || [];
 
   const year = currentCalendarDate.getFullYear();
   const month = currentCalendarDate.getMonth();
   const today = new Date();
+  console.log('[Calendar] Rendering for', year, month + 1);
 
   // Update month/year header
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -3253,6 +3641,8 @@ function renderCalendar() {
   for (let i = 0; i < remainingCells; i++) {
     grid.innerHTML += '<div class="calendar-day other-month"></div>';
   }
+  
+  console.log('[Calendar] Calendar rendered successfully with', calendarData.events.length, 'events,', calendarData.sessions.length, 'sessions,', calendarData.planned.length, 'planned');
 }
 
 // ========================================
@@ -3611,7 +4001,7 @@ if (planDateInput) {
 }
 
 // Initialize immediately
-function initDashboard() {
+async function initDashboard() {
   console.log('[Dashboard] Initializing data...');
 
   // Restore Scholar run state from sessionStorage
@@ -3632,7 +4022,9 @@ function initDashboard() {
   loadScholar();
   loadScholarInsights();  // Load Scholar insights for Overview tab
   if (typeof loadApiKeyStatus === 'function') loadApiKeyStatus();
-  loadCoursesForCalendar();
+  
+  // Load courses first, then calendar (courses needed for color rendering)
+  await loadCoursesForCalendar();
   loadCalendar();
 
   // Check Hash for initial tab
@@ -3705,6 +4097,94 @@ window.setChatMode = function (index, mode) {
 // Store chat history with localStorage persistence
 const chatHistories = {}; // index -> { clarify: [{role, content}], generate: [{role, content}] }
 const chatModes = {}; // index -> 'clarify' | 'generate'
+// Simplified chat history per question (unified, no modes)
+const scholarChatHistories = {}; // index -> [{role, content}]
+
+// Simplified Scholar question chat function
+window.askScholarQuestion = async function(index) {
+  const inputEl = document.getElementById(`chat-input-${index}`);
+  const responseEl = document.getElementById(`chat-response-${index}`);
+  const askBtn = document.getElementById(`btn-ask-${index}`);
+  if (!inputEl || !responseEl) return;
+  
+  const userMessage = inputEl.value.trim();
+  if (!userMessage) return;
+  
+  const scholarQuestion = (currentScholarQuestions[index] || '').trim();
+  
+  // Initialize history for this question if needed
+  if (!scholarChatHistories[index]) {
+    scholarChatHistories[index] = [];
+  }
+  const history = scholarChatHistories[index];
+  
+  // Clear placeholder if this is first message
+  if (history.length === 0) {
+    responseEl.innerHTML = '';
+  }
+  
+  // Add user message to UI and history
+  history.push({ role: 'user', content: userMessage });
+  const userDiv = document.createElement('div');
+  userDiv.style.cssText = "align-self: flex-end; background: var(--accent); color: #fff; padding: 8px 12px; border-radius: 12px 12px 4px 12px; max-width: 85%; font-size: 13px;";
+  userDiv.textContent = userMessage;
+  responseEl.appendChild(userDiv);
+  
+  // Clear input and disable while loading
+  inputEl.value = '';
+  inputEl.disabled = true;
+  if (askBtn) askBtn.disabled = true;
+  
+  // Show loading indicator
+  const loadingDiv = document.createElement('div');
+  loadingDiv.style.cssText = "align-self: flex-start; color: var(--text-muted); font-size: 12px; padding: 8px;";
+  loadingDiv.textContent = '⏳ Thinking...';
+  responseEl.appendChild(loadingDiv);
+  responseEl.scrollTop = responseEl.scrollHeight;
+  
+  try {
+    const res = await fetch('/api/scholar/questions/clarify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        scholar_question: scholarQuestion,
+        clarifying_question: userMessage,
+        messages: history
+      })
+    });
+    const data = await res.json();
+    
+    // Remove loading indicator
+    responseEl.removeChild(loadingDiv);
+    
+    if (data.ok) {
+      const answer = data.clarification || data.answer || 'No response received.';
+      history.push({ role: 'assistant', content: answer });
+      
+      const aiDiv = document.createElement('div');
+      aiDiv.style.cssText = "align-self: flex-start; background: var(--bg-alt, #1e293b); border: 1px solid var(--border); padding: 8px 12px; border-radius: 12px 12px 12px 4px; max-width: 85%; font-size: 13px; white-space: pre-wrap;";
+      aiDiv.textContent = answer;
+      responseEl.appendChild(aiDiv);
+    } else {
+      const errorDiv = document.createElement('div');
+      errorDiv.style.cssText = "align-self: flex-start; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; padding: 8px 12px; border-radius: 8px; max-width: 85%; font-size: 12px;";
+      errorDiv.textContent = '❌ ' + (data.message || 'Failed to get response');
+      responseEl.appendChild(errorDiv);
+    }
+  } catch (error) {
+    responseEl.removeChild(loadingDiv);
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = "align-self: flex-start; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; padding: 8px 12px; border-radius: 8px; max-width: 85%; font-size: 12px;";
+    errorDiv.textContent = '❌ Network error: ' + error.message;
+    responseEl.appendChild(errorDiv);
+  }
+  
+  // Re-enable input
+  inputEl.disabled = false;
+  if (askBtn) askBtn.disabled = false;
+  inputEl.focus();
+  responseEl.scrollTop = responseEl.scrollHeight;
+};
 
 function saveScholarChatHistory(questionIndex, mode, messages) {
   try {
@@ -3936,7 +4416,394 @@ async function loadBrainMastery() {
 function loadBrain() {
   loadBrainStatus();
   loadBrainMastery();
+  loadAnkiPendingCount();
 }
+
+// ============================================
+// ANKI CARD MANAGEMENT FUNCTIONS
+// ============================================
+
+// Track Anki connection status
+let ankiConnected = false;
+
+/**
+ * Check if Anki is connected via AnkiConnect and update status indicator.
+ */
+async function loadAnkiStatus() {
+  const statusEl = document.getElementById('anki-status');
+  const statusText = document.getElementById('anki-status-text');
+  const syncBtn = document.getElementById('anki-sync-btn');
+  
+  if (!statusEl) return;
+  
+  try {
+    // Try to check if anki sync endpoint is reachable
+    const resp = await fetch('/api/cards/drafts/pending');
+    const data = await resp.json();
+    
+    if (data.ok) {
+      ankiConnected = true;
+      statusEl.className = 'status-indicator connected';
+      if (statusText) statusText.textContent = 'Ready';
+      if (syncBtn) syncBtn.disabled = false;
+    } else {
+      ankiConnected = false;
+      statusEl.className = 'status-indicator disconnected';
+      if (statusText) statusText.textContent = 'Error';
+      if (syncBtn) syncBtn.disabled = true;
+    }
+  } catch (err) {
+    ankiConnected = false;
+    statusEl.className = 'status-indicator disconnected';
+    if (statusText) statusText.textContent = 'Disconnected';
+    if (syncBtn) syncBtn.disabled = true;
+    console.warn('Anki status check failed:', err);
+  }
+}
+
+/**
+ * Load pending card count and update badge.
+ */
+async function loadAnkiPendingCount() {
+  const badge = document.getElementById('anki-pending-count');
+  if (!badge) return;
+  
+  try {
+    const resp = await fetch('/api/cards/drafts/pending');
+    const data = await resp.json();
+    
+    if (data.ok) {
+      const count = data.pending_count || 0;
+      badge.textContent = count;
+      badge.style.display = count > 0 ? 'inline-block' : 'none';
+    }
+  } catch (err) {
+    console.warn('Failed to load pending count:', err);
+    badge.style.display = 'none';
+  }
+}
+
+/**
+ * Fetch card drafts from API and render in table.
+ */
+async function loadAnkiDrafts(statusFilter = '') {
+  const tbody = document.getElementById('anki-drafts-body');
+  const emptyMsg = document.getElementById('anki-drafts-empty');
+  const statusEl = document.getElementById('anki-drafts-status');
+  
+  if (!tbody) return;
+  
+  // Show loading state
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-muted);">Loading drafts...</td></tr>';
+  if (emptyMsg) emptyMsg.style.display = 'none';
+  
+  try {
+    let url = '/api/cards/drafts?limit=100';
+    if (statusFilter) {
+      url += `&status=${encodeURIComponent(statusFilter)}`;
+    }
+    
+    const resp = await fetch(url);
+    const data = await resp.json();
+    
+    if (!data.ok) {
+      throw new Error(data.message || 'Failed to load drafts');
+    }
+    
+    const drafts = data.drafts || [];
+    
+    if (drafts.length === 0) {
+      tbody.innerHTML = '';
+      if (emptyMsg) {
+        emptyMsg.style.display = 'block';
+        emptyMsg.textContent = statusFilter 
+          ? `No ${statusFilter} cards found.`
+          : 'No card drafts yet. Create cards from Tutor sessions or use the form below.';
+      }
+      return;
+    }
+    
+    if (emptyMsg) emptyMsg.style.display = 'none';
+    
+    tbody.innerHTML = drafts.map(draft => {
+      const frontPreview = (draft.front || '').substring(0, 60) + ((draft.front || '').length > 60 ? '...' : '');
+      const backPreview = (draft.back || '').substring(0, 60) + ((draft.back || '').length > 60 ? '...' : '');
+      
+      const statusClass = {
+        'pending': 'badge-warning',
+        'approved': 'badge-success',
+        'rejected': 'badge-error',
+        'synced': 'badge-info'
+      }[draft.status] || 'badge-default';
+      
+      const actionButtons = draft.status === 'pending' 
+        ? `<button class="btn btn-sm btn-success" onclick="approveCard(${draft.id})" title="Approve">✓</button>
+           <button class="btn btn-sm btn-error" onclick="rejectCard(${draft.id})" title="Reject">✗</button>`
+        : draft.status === 'approved'
+          ? `<button class="btn btn-sm" onclick="rejectCard(${draft.id})" title="Reject">✗</button>`
+          : '';
+      
+      return `<tr data-card-id="${draft.id}">
+        <td style="max-width: 200px;" title="${(draft.front || '').replace(/"/g, '&quot;')}">${frontPreview}</td>
+        <td style="max-width: 200px;" title="${(draft.back || '').replace(/"/g, '&quot;')}">${backPreview}</td>
+        <td><span class="badge ${statusClass}">${draft.status}</span></td>
+        <td>${draft.deck_name || 'Default'}</td>
+        <td class="actions-cell">${actionButtons}</td>
+      </tr>`;
+    }).join('');
+    
+    // Update status
+    if (statusEl) {
+      statusEl.textContent = `Showing ${drafts.length} drafts`;
+    }
+    
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--error);">Error: ${err.message}</td></tr>`;
+    console.error('Failed to load Anki drafts:', err);
+  }
+}
+
+/**
+ * Approve a card draft (PATCH to update status).
+ */
+async function approveCard(cardId) {
+  try {
+    const resp = await fetch(`/api/cards/drafts/${cardId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'approved' })
+    });
+    
+    const data = await resp.json();
+    
+    if (data.ok) {
+      showStatus('anki-drafts-status', 'Card approved!', 'success');
+      loadAnkiDrafts();
+      loadAnkiPendingCount();
+    } else {
+      showStatus('anki-drafts-status', `Error: ${data.message}`, 'error');
+    }
+  } catch (err) {
+    showStatus('anki-drafts-status', `Error: ${err.message}`, 'error');
+    console.error('Failed to approve card:', err);
+  }
+}
+
+/**
+ * Reject a card draft (PATCH to update status).
+ */
+async function rejectCard(cardId) {
+  if (!confirm('Reject this card draft? It will not be synced to Anki.')) {
+    return;
+  }
+  
+  try {
+    const resp = await fetch(`/api/cards/drafts/${cardId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'rejected' })
+    });
+    
+    const data = await resp.json();
+    
+    if (data.ok) {
+      showStatus('anki-drafts-status', 'Card rejected.', 'warning');
+      loadAnkiDrafts();
+      loadAnkiPendingCount();
+    } else {
+      showStatus('anki-drafts-status', `Error: ${data.message}`, 'error');
+    }
+  } catch (err) {
+    showStatus('anki-drafts-status', `Error: ${err.message}`, 'error');
+    console.error('Failed to reject card:', err);
+  }
+}
+
+/**
+ * Sync approved cards to Anki via AnkiConnect.
+ */
+async function syncToAnki(dryRun = false) {
+  const syncBtn = document.getElementById('anki-sync-btn');
+  const statusEl = document.getElementById('anki-sync-status');
+  
+  if (syncBtn) {
+    syncBtn.disabled = true;
+    syncBtn.textContent = dryRun ? 'Previewing...' : 'Syncing...';
+  }
+  
+  showStatus('anki-sync-status', dryRun ? 'Checking cards...' : 'Syncing to Anki...', 'info');
+  
+  try {
+    const resp = await fetch('/api/cards/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dry_run: dryRun })
+    });
+    
+    const data = await resp.json();
+    
+    if (data.ok) {
+      const syncedCount = data.synced_count || 0;
+      const errors = data.errors || [];
+      
+      if (dryRun) {
+        showStatus('anki-sync-status', `Preview: ${syncedCount} cards ready to sync`, 'info');
+      } else if (syncedCount > 0) {
+        showStatus('anki-sync-status', `✓ Synced ${syncedCount} cards to Anki!`, 'success');
+        loadAnkiDrafts();
+        loadAnkiPendingCount();
+        loadBrainStatus();
+      } else if (errors.length > 0) {
+        showStatus('anki-sync-status', `⚠ Sync completed with errors: ${errors.join(', ')}`, 'warning');
+      } else {
+        showStatus('anki-sync-status', 'No approved cards to sync.', 'info');
+      }
+    } else {
+      showStatus('anki-sync-status', `Error: ${data.message}`, 'error');
+    }
+  } catch (err) {
+    showStatus('anki-sync-status', `Error: ${err.message}`, 'error');
+    console.error('Failed to sync to Anki:', err);
+  } finally {
+    if (syncBtn) {
+      syncBtn.disabled = false;
+      syncBtn.textContent = 'Sync to Anki';
+    }
+  }
+}
+
+/**
+ * Handle new card draft form submission.
+ */
+async function createCardDraft(event) {
+  if (event) event.preventDefault();
+  
+  const form = document.getElementById('anki-create-form');
+  if (!form) return;
+  
+  const frontEl = document.getElementById('anki-card-front');
+  const backEl = document.getElementById('anki-card-back');
+  const typeEl = document.getElementById('anki-card-type');
+  const deckEl = document.getElementById('anki-card-deck');
+  const courseEl = document.getElementById('anki-card-course');
+  const tagsEl = document.getElementById('anki-card-tags');
+  
+  const front = (frontEl?.value || '').trim();
+  const back = (backEl?.value || '').trim();
+  const cardType = typeEl?.value || 'basic';
+  const deckName = (deckEl?.value || '').trim() || 'PT Study::Default';
+  const courseId = courseEl?.value ? parseInt(courseEl.value) : null;
+  const tags = (tagsEl?.value || '').trim();
+  
+  if (!front || !back) {
+    showStatus('anki-create-status', 'Front and Back are required.', 'error');
+    return;
+  }
+  
+  showStatus('anki-create-status', 'Creating card draft...', 'info');
+  
+  try {
+    const payload = {
+      front,
+      back,
+      card_type: cardType,
+      deck_name: deckName,
+      tags
+    };
+    if (courseId) payload.course_id = courseId;
+    
+    const resp = await fetch('/api/cards/draft', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    
+    const data = await resp.json();
+    
+    if (data.ok) {
+      showStatus('anki-create-status', `✓ Card draft created (ID: ${data.card_id})`, 'success');
+      // Clear form
+      if (frontEl) frontEl.value = '';
+      if (backEl) backEl.value = '';
+      if (tagsEl) tagsEl.value = '';
+      // Refresh lists
+      loadAnkiDrafts();
+      loadAnkiPendingCount();
+    } else {
+      showStatus('anki-create-status', `Error: ${data.message}`, 'error');
+    }
+  } catch (err) {
+    showStatus('anki-create-status', `Error: ${err.message}`, 'error');
+    console.error('Failed to create card draft:', err);
+  }
+}
+
+/**
+ * Filter drafts by status using dropdown.
+ */
+function filterAnkiDrafts() {
+  const filterEl = document.getElementById('anki-filter-status');
+  const status = filterEl?.value || '';
+  loadAnkiDrafts(status);
+}
+
+/**
+ * Initialize Anki section event listeners.
+ */
+function initAnkiSection() {
+  // Form submission
+  const form = document.getElementById('anki-create-form');
+  if (form) {
+    form.addEventListener('submit', createCardDraft);
+  }
+  
+  // Sync button
+  const syncBtn = document.getElementById('anki-sync-btn');
+  if (syncBtn) {
+    syncBtn.addEventListener('click', () => syncToAnki(false));
+  }
+  
+  // Preview sync button
+  const previewBtn = document.getElementById('anki-preview-btn');
+  if (previewBtn) {
+    previewBtn.addEventListener('click', () => syncToAnki(true));
+  }
+  
+  // Filter dropdown
+  const filterEl = document.getElementById('anki-filter-status');
+  if (filterEl) {
+    filterEl.addEventListener('change', filterAnkiDrafts);
+  }
+  
+  // Refresh button
+  const refreshBtn = document.getElementById('anki-refresh-btn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => {
+      loadAnkiStatus();
+      loadAnkiDrafts();
+      loadAnkiPendingCount();
+    });
+  }
+  
+  // Observe when Anki section becomes visible (for lazy loading)
+  const ankiSection = document.getElementById('anki-cards-section');
+  if (ankiSection) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          loadAnkiStatus();
+          loadAnkiDrafts();
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    
+    observer.observe(ankiSection);
+  }
+}
+
+// Initialize Anki section on DOM ready
+document.addEventListener('DOMContentLoaded', initAnkiSection);
 
 // ============================================
 // SCHOLAR DIGEST SAVE FUNCTION
@@ -3963,6 +4830,10 @@ async function saveStrategicDigest() {
     const data = await resp.json();
     if (data.ok) {
       alert('Digest saved to: ' + data.file);
+      // Refresh the saved digests list
+      if (typeof loadSavedDigests === 'function') {
+        loadSavedDigests();
+      }
     } else {
       alert('Error: ' + data.message);
     }
@@ -3970,6 +4841,158 @@ async function saveStrategicDigest() {
     alert('Error saving digest: ' + err.message);
   }
 }
+
+// ============================================
+// SAVED DIGESTS FUNCTIONS
+// ============================================
+
+async function loadSavedDigests() {
+  const listContainer = document.getElementById('saved-digests-list');
+  const countEl = document.getElementById('saved-digests-count');
+  
+  if (!listContainer) return;
+  
+  listContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">Loading saved digests...</div>';
+  
+  try {
+    const res = await fetch('/api/scholar/digests');
+    const data = await res.json();
+    
+    if (!data.ok) {
+      listContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">Failed to load digests.</div>';
+      return;
+    }
+    
+    const digests = data.digests || [];
+    if (countEl) {
+      countEl.textContent = `(${digests.length})`;
+    }
+    
+    if (digests.length === 0) {
+      listContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">No saved digests yet. Generate and save a digest to see it here.</div>';
+      return;
+    }
+    
+    // Render digests as a table
+    listContainer.innerHTML = `
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--border); text-align: left;">
+            <th style="padding: 8px 12px; color: var(--text-muted); font-weight: 600;">Title</th>
+            <th style="padding: 8px 12px; color: var(--text-muted); font-weight: 600; width: 100px;">Type</th>
+            <th style="padding: 8px 12px; color: var(--text-muted); font-weight: 600; width: 140px;">Date</th>
+            <th style="padding: 8px 12px; color: var(--text-muted); font-weight: 600; width: 100px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${digests.map(d => {
+            const date = d.created_at ? new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown';
+            const typeLabel = d.digest_type === 'strategic' ? '🧠 Strategic' : d.digest_type || 'Other';
+            return `
+              <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px 12px;">
+                  <div style="color: var(--text-primary); font-weight: 500; cursor: pointer;" onclick="viewDigest(${d.id})">${escapeHtml(d.title || 'Untitled')}</div>
+                  <div style="color: var(--text-muted); font-size: 11px; font-family: monospace;">${escapeHtml(d.filename || '')}</div>
+                </td>
+                <td style="padding: 10px 12px; color: var(--text-secondary);">${typeLabel}</td>
+                <td style="padding: 10px 12px; color: var(--text-secondary);">${date}</td>
+                <td style="padding: 10px 12px;">
+                  <div style="display: flex; gap: 4px;">
+                    <button class="btn" style="font-size: 11px; padding: 4px 8px;" onclick="viewDigest(${d.id})">View</button>
+                    <button class="btn" style="font-size: 11px; padding: 4px 8px; color: #ef4444;" onclick="deleteDigest(${d.id}, '${escapeHtml(d.title || 'this digest')}')">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch (err) {
+    console.error('Failed to load saved digests:', err);
+    listContainer.innerHTML = '<div style="color: #ef4444; font-size: 13px;">Error loading digests.</div>';
+  }
+}
+
+async function viewDigest(digestId) {
+  const modal = document.getElementById('digest-viewer-modal');
+  const titleEl = document.getElementById('digest-viewer-title');
+  const contentEl = document.getElementById('digest-viewer-content');
+  
+  if (!modal || !titleEl || !contentEl) {
+    alert('Digest viewer not available');
+    return;
+  }
+  
+  // Show modal with loading state
+  modal.style.display = 'flex';
+  titleEl.textContent = 'Loading...';
+  contentEl.textContent = 'Loading digest content...';
+  
+  try {
+    const res = await fetch(`/api/scholar/digests/${digestId}`);
+    const data = await res.json();
+    
+    if (!data.ok) {
+      titleEl.textContent = 'Error';
+      contentEl.textContent = data.message || 'Failed to load digest.';
+      return;
+    }
+    
+    const digest = data.digest;
+    titleEl.textContent = digest.title || 'Untitled Digest';
+    contentEl.textContent = digest.content || '(No content)';
+  } catch (err) {
+    console.error('Failed to view digest:', err);
+    titleEl.textContent = 'Error';
+    contentEl.textContent = 'Failed to load digest: ' + err.message;
+  }
+}
+
+function closeDigestViewer() {
+  const modal = document.getElementById('digest-viewer-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+async function deleteDigest(digestId, title) {
+  if (!confirm(`Are you sure you want to delete "${title}"? This will remove the file from disk.`)) {
+    return;
+  }
+  
+  try {
+    const res = await fetch(`/api/scholar/digests/${digestId}`, {
+      method: 'DELETE'
+    });
+    const data = await res.json();
+    
+    if (data.ok) {
+      // Refresh the list
+      loadSavedDigests();
+    } else {
+      alert('Failed to delete: ' + (data.message || 'Unknown error'));
+    }
+  } catch (err) {
+    console.error('Failed to delete digest:', err);
+    alert('Failed to delete digest: ' + err.message);
+  }
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(e) {
+  const modal = document.getElementById('digest-viewer-modal');
+  if (modal && e.target === modal) {
+    closeDigestViewer();
+  }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeDigestViewer();
+  }
+});
 
 // Missing Function: loadSyllabusDashboard
 window.loadSyllabusDashboard = async function () {
@@ -4073,5 +5096,80 @@ document.addEventListener('DOMContentLoaded', () => {
   if (dropzone && fileInput) {
     dropzone.addEventListener('click', () => fileInput.click());
   }
+  
+  // 4. Load sync status on page load
+  loadSyncStatus();
 });
 
+/* ===== Sync/Ingestion Management ===== */
+async function loadSyncStatus() {
+  try {
+    const resp = await fetch('/api/sync/status');
+    if (!resp.ok) {
+      console.warn('Sync status endpoint not available');
+      return;
+    }
+    const data = await resp.json();
+    const filesEl = document.getElementById('sync-files-count');
+    const sessionsEl = document.getElementById('sync-sessions-count');
+    const timeEl = document.getElementById('sync-last-time');
+    
+    if (filesEl) filesEl.textContent = data.files_tracked || 0;
+    if (sessionsEl) sessionsEl.textContent = data.valid_sessions || 0;
+    if (timeEl) timeEl.textContent = data.last_sync || 'Never';
+  } catch (e) {
+    console.warn('Failed to load sync status:', e);
+  }
+}
+
+async function runSync(force = false) {
+  const msgEl = document.getElementById('sync-message');
+  if (!msgEl) return;
+  
+  msgEl.textContent = force ? 'Force re-syncing all files...' : 'Syncing...';
+  msgEl.style.color = 'var(--text-muted)';
+  
+  try {
+    const resp = await fetch('/api/sync/run', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({force: force})
+    });
+    const data = await resp.json();
+    
+    if (data.ok) {
+      msgEl.textContent = `✓ Done: ${data.ingested || 0} ingested, ${data.skipped || 0} skipped`;
+      msgEl.style.color = 'var(--success)';
+      // Refresh status and stats
+      loadSyncStatus();
+      if (typeof loadStats === 'function') loadStats();
+      if (typeof loadOverviewData === 'function') loadOverviewData();
+      if (typeof loadBrainStatus === 'function') loadBrainStatus();
+    } else {
+      msgEl.textContent = '✗ Error: ' + (data.error || 'Unknown error');
+      msgEl.style.color = 'var(--error)';
+    }
+  } catch (e) {
+    msgEl.textContent = '✗ Network error: ' + e.message;
+    msgEl.style.color = 'var(--error)';
+  }
+}
+
+async function clearSyncTracking() {
+  if (!confirm('Clear all ingestion tracking? This will cause all files to be re-processed on next sync.')) {
+    return;
+  }
+  
+  try {
+    const resp = await fetch('/api/sync/clear-tracking', {method: 'POST'});
+    const data = await resp.json();
+    if (data.ok) {
+      alert('Tracking cleared. Run sync to re-ingest all files.');
+      loadSyncStatus();
+    } else {
+      alert('Error: ' + (data.error || 'Unknown'));
+    }
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+}

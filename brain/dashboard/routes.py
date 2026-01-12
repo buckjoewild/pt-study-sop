@@ -48,10 +48,11 @@ from rag_notes import (
 from dashboard.utils import allowed_file, load_api_config, save_api_config
 from dashboard.stats import build_stats, get_mastery_stats
 from dashboard.scholar import (
-    build_scholar_stats, 
-    generate_ai_answer, 
+    build_scholar_stats,
+    generate_ai_answer,
     run_scholar_orchestrator,
     generate_weekly_digest,
+    generate_implementation_bundle,
     get_latest_insights,
     check_proposal_similarity,
     MAX_CONTEXT_CHARS,
@@ -265,7 +266,7 @@ def api_scholar_save_digest():
     import hashlib
     from pathlib import Path
     from datetime import datetime
-    from typing import List
+    from typing import List, Tuple
 
     bullet_prefix_re = re.compile(r'^\s*(?:[-*]|\u2022|\u00b7|\u00e2\u20ac\u00a2)\s*')
 
@@ -293,6 +294,33 @@ def api_scholar_save_digest():
                     bullets.append(bullet_prefix_re.sub("", stripped).strip())
         return bullets
 
+    def _parse_resolved_questions(content: str) -> List[Tuple[str, str]]:
+        resolved = []
+        current_q = None
+        current_a = None
+        for line in content.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("Q:"):
+                if current_q and current_a:
+                    resolved.append((current_q, current_a))
+                current_q = stripped.replace("Q:", "").strip()
+                current_a = None
+                continue
+            if stripped.startswith("A:"):
+                answer = stripped.replace("A:", "").strip()
+                if answer and answer.lower() not in ["(pending)", "(none)", ""]:
+                    current_a = answer
+                else:
+                    current_a = None
+                continue
+            if current_q and current_a and stripped:
+                current_a += " " + stripped
+            elif current_q and not current_a and stripped and not stripped.startswith("A:"):
+                current_q += " " + stripped
+        if current_q and current_a:
+            resolved.append((current_q, current_a))
+        return resolved
+
     payload = request.get_json() or {}
     digest_content = payload.get("digest", "").strip()
     if not digest_content:
@@ -312,6 +340,20 @@ def api_scholar_save_digest():
     plan_updates_dir.mkdir(parents=True, exist_ok=True)
     plan_update_filename = f"plan_update_{timestamp}.md"
     plan_update_path = plan_updates_dir / plan_update_filename
+
+    resolved_questions = []
+    orchestrator_runs = repo_root / "scholar" / "outputs" / "orchestrator_runs"
+    resolved_files = sorted(
+        orchestrator_runs.glob("questions_resolved_*.md"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    if resolved_files:
+        try:
+            resolved_content = resolved_files[0].read_text(encoding="utf-8")
+            resolved_questions = _parse_resolved_questions(resolved_content)
+        except Exception:
+            resolved_questions = []
 
     priority_actions = _extract_digest_bullets(digest_content, ["Top 3 Priority Actions", "Priority Actions"])
     proposal_signals = _extract_digest_bullets(digest_content, ["Proposals Review", "Proposal Review", "Proposals"])
@@ -357,6 +399,25 @@ def api_scholar_save_digest():
         plan_lines.append("- (none found)")
     plan_lines.extend([
         "",
+        "## Answered Questions (latest)",
+    ])
+    if resolved_questions:
+        for q, a in resolved_questions[:10]:
+            plan_lines.append(f"- Q: {q}")
+            plan_lines.append(f"  A: {a}")
+    else:
+        plan_lines.append("- (none found)")
+    plan_lines.extend([
+        "",
+        "## Proposal Seeds (from answered questions)",
+    ])
+    if resolved_questions:
+        for q, a in resolved_questions[:10]:
+            plan_lines.append(f"- Seed: {q} -> {a}")
+    else:
+        plan_lines.append("- (none found)")
+    plan_lines.extend([
+        "",
         "## Plan Targets",
         "- `sop/MASTER_PLAN_PT_STUDY.md`",
         "- `sop/gpt-knowledge/M0-planning.md`",
@@ -366,6 +427,26 @@ def api_scholar_save_digest():
         "",
     ])
     plan_update_path.write_text("\n".join(plan_lines), encoding="utf-8")
+
+    # Build proposal seed file to review before RFC drafting
+    proposal_seeds_dir = repo_root / "scholar" / "outputs" / "proposal_seeds"
+    proposal_seeds_dir.mkdir(parents=True, exist_ok=True)
+    proposal_seed_filename = f"proposal_seeds_{timestamp}.md"
+    proposal_seed_path = proposal_seeds_dir / proposal_seed_filename
+    seed_lines = [
+        f"# Proposal Seeds - {timestamp}",
+        "",
+        f"Source Digest: {filename}",
+    ]
+    if resolved_questions:
+        seed_lines.append("## Seeds")
+        for q, a in resolved_questions[:15]:
+            seed_lines.append(f"- Q: {q}")
+            seed_lines.append(f"  A: {a}")
+    else:
+        seed_lines.append("## Seeds")
+        seed_lines.append("- (none found)")
+    proposal_seed_path.write_text("\n".join(seed_lines), encoding="utf-8")
 
     # Extract title from first markdown heading or first line
     title = None
@@ -399,6 +480,7 @@ def api_scholar_save_digest():
         "id": digest_id,
         "file": str(filepath.relative_to(repo_root)),
         "plan_update_file": str(plan_update_path.relative_to(repo_root)),
+        "proposal_seed_file": str(proposal_seed_path.relative_to(repo_root)),
         "message": f"Digest saved to {filename}"
     })
 
@@ -497,8 +579,16 @@ def api_scholar_delete_digest(digest_id):
     filepath = repo_root / row[0]
     if filepath.exists():
         filepath.unlink()
-    
+
     return jsonify({"ok": True, "message": "Digest deleted"})
+
+
+@dashboard_bp.route("/api/scholar/implementation-bundle", methods=["POST"])
+def api_scholar_implementation_bundle():
+    """Generate an implementation bundle from approved proposals with safety checks."""
+    result = generate_implementation_bundle()
+    status_code = 200 if result.get("ok") else 400
+    return jsonify(result), status_code
 
 
 @dashboard_bp.route("/api/mastery")
@@ -1426,6 +1516,68 @@ def _extract_proposal_title(content: str) -> str:
             return line[:200]
     return "Untitled Proposal"
 
+def _get_git_head(repo_root: Path) -> str:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo_root), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return "unknown"
+
+
+def _extract_target_paths(content: str, repo_root: Path) -> list:
+    targets = set()
+    if not content:
+        return []
+    for line in content.splitlines():
+        for match in re.findall(r'([A-Za-z0-9_\-./]+)', line):
+            if not match.startswith(("sop/", "brain/", "dist/")):
+                continue
+            candidate = repo_root / match
+            if candidate.exists():
+                targets.add(match)
+    return sorted(targets)
+
+
+def _hash_file(path: Path) -> str:
+    import hashlib
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _write_proposal_metadata(dest: Path, content: str, repo_root: Path, status: str, reviewed_at: str, title: str, content_hash: str) -> None:
+    meta = {
+        "filename": dest.name,
+        "status": status,
+        "reviewed_at": reviewed_at,
+        "title": title,
+        "content_hash": content_hash,
+        "head_commit": _get_git_head(repo_root),
+        "target_files": [],
+        "target_hashes": {},
+    }
+    targets = _extract_target_paths(content, repo_root)
+    meta["target_files"] = targets
+    for rel_path in targets:
+        try:
+            meta["target_hashes"][rel_path] = _hash_file(repo_root / rel_path)
+        except Exception:
+            continue
+    meta_path = dest.with_suffix(dest.suffix + ".meta.json")
+    try:
+        meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
 
 @dashboard_bp.route("/api/scholar/proposal/<filename>/action", methods=["POST"])
 def api_scholar_proposal_action(filename):
@@ -1480,6 +1632,7 @@ def api_scholar_proposal_action(filename):
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest = dest_dir / filename
         proposal_path.rename(dest)
+        _write_proposal_metadata(dest, content, repo_root, new_status, reviewed_at, title, content_hash)
         
         # Insert or update in database
         conn = get_connection()

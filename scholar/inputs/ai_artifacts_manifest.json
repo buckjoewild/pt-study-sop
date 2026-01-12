@@ -17,6 +17,10 @@
       "patterns": ["scholar/outputs/plan_updates/*.md"]
     },
     {
+      "lane": "proposal_seeds",
+      "patterns": ["scholar/outputs/proposal_seeds/*.md"]
+    },
+    {
       "lane": "research_notebook",
       "patterns": ["scholar/outputs/research_notebook/*.md"]
     }
@@ -55,6 +59,10 @@
         "scholar/outputs/proposals/approved/*.md",
         "scholar/outputs/proposals/rejected/*.md"
       ]
+    },
+    {
+      "lane": "implementation_bundles",
+      "patterns": ["scholar/outputs/implementation_bundles/*.md"]
     },
     {
       "lane": "orchestrator_runs",

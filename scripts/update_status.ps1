@@ -6,6 +6,7 @@ $repoRoot = (Resolve-Path (Join-Path $scriptRoot "..")).Path
 $orchestratorRuns = Join-Path $repoRoot "scholar\\outputs\\orchestrator_runs"
 $systemMap = Join-Path $repoRoot "scholar\\outputs\\system_map"
 $planUpdates = Join-Path $repoRoot "scholar\\outputs\\plan_updates"
+$proposalSeeds = Join-Path $repoRoot "scholar\\outputs\\proposal_seeds"
 $moduleDossiers = Join-Path $repoRoot "scholar\\outputs\\module_dossiers"
 $researchNotebook = Join-Path $repoRoot "scholar\\outputs\\research_notebook"
 $gapAnalysis = Join-Path $repoRoot "scholar\\outputs\\gap_analysis"
@@ -14,6 +15,7 @@ $promotionQueue = Join-Path $repoRoot "scholar\\outputs\\promotion_queue"
 $proposalsRoot = Join-Path $repoRoot "scholar\\outputs\\proposals"
 $proposalsApproved = Join-Path $proposalsRoot "approved"
 $proposalsRejected = Join-Path $proposalsRoot "rejected"
+$implementationBundles = Join-Path $repoRoot "scholar\\outputs\\implementation_bundles"
 $auditManifestPath = Join-Path $repoRoot "scholar\\inputs\\audit_manifest.json"
 $statusPath = Join-Path $repoRoot "scholar\\outputs\\STATUS.md"
 
@@ -50,6 +52,7 @@ $latestVerification = Get-LatestFile $orchestratorRuns "verification_report_*.md
 $latestCoverage = Get-LatestFile $systemMap "coverage_checklist_*.md"
 $latestRepoIndex = Get-LatestFile $systemMap "repo_index_*.md"
 $latestPlanUpdate = Get-LatestFile $planUpdates "*.md"
+$latestProposalSeed = Get-LatestFile $proposalSeeds "*.md"
 $latestDossier = Get-LatestFile $moduleDossiers "*_dossier_*.md"
 $latestResearch = Get-LatestFile $researchNotebook "*.md"
 $latestReport = Get-LatestFile $reports "*.md"
@@ -57,6 +60,7 @@ $latestGap = Get-LatestFile $gapAnalysis "gap_analysis_*.md"
 $latestPromotionQueue = Get-LatestFile $promotionQueue "*.md"
 $latestProposalApproved = Get-LatestFile $proposalsApproved "*.md"
 $latestProposalRejected = Get-LatestFile $proposalsRejected "*.md"
+$latestImplementationBundle = Get-LatestFile $implementationBundles "*.md"
 
 $safeMode = "(unknown)"
 if (Test-Path $auditManifestPath) {
@@ -120,6 +124,7 @@ if ($latestRepoIndex) {
 }
 $linesOut += "- Newest artifacts:"
 $linesOut += "  - plan_updates: " + $(if ($latestPlanUpdate) { "$($latestPlanUpdate.FullName) ($($latestPlanUpdate.LastWriteTime))" } else { "(not found)" })
+$linesOut += "  - proposal_seeds: " + $(if ($latestProposalSeed) { "$($latestProposalSeed.FullName) ($($latestProposalSeed.LastWriteTime))" } else { "(not found)" })
 $linesOut += "  - module_dossiers: " + $(if ($latestDossier) { "$($latestDossier.FullName) ($($latestDossier.LastWriteTime))" } else { "(not found)" })
 $linesOut += "  - research_notebook: " + $(if ($latestResearch) { "$($latestResearch.FullName) ($($latestResearch.LastWriteTime))" } else { "(not found)" })
 $linesOut += "  - reports: " + $(if ($latestReport) { "$($latestReport.FullName) ($($latestReport.LastWriteTime))" } else { "(not found)" })
@@ -135,6 +140,7 @@ $linesOut += "- rejected_count: $rejectedCount"
 $linesOut += (Format-FileEntry "promotion_queue_latest" $latestPromotionQueue)
 $linesOut += (Format-FileEntry "proposals_approved_latest" $latestProposalApproved)
 $linesOut += (Format-FileEntry "proposals_rejected_latest" $latestProposalRejected)
+$linesOut += (Format-FileEntry "implementation_bundle_latest" $latestImplementationBundle)
 $linesOut += ""
 $linesOut += "## What to do now"
 $linesOut += "1) Open the latest unattended_final."
@@ -142,7 +148,8 @@ $linesOut += "2) If questions_needed is non-empty, answer it. (Current: $questio
 $linesOut += "3) Confirm questions_resolved is updated after answering."
 $linesOut += "4) Review pending proposals if any."
 $linesOut += "5) Review latest plan_updates (if present)."
-$linesOut += "6) Ignore everything else."
+$linesOut += "6) Generate or review latest implementation bundle."
+$linesOut += "7) Ignore everything else."
 $linesOut += ""
 $linesOut += "## Counts Snapshot"
 $linesOut += "Folder | #files | newest file"
@@ -150,13 +157,15 @@ $linesOut += "---|---:|---"
 $folderList = @(
   @{Name="system_map"; Path=$systemMap},
   @{Name="plan_updates"; Path=$planUpdates},
+  @{Name="proposal_seeds"; Path=$proposalSeeds},
   @{Name="module_dossiers"; Path=$moduleDossiers},
   @{Name="research_notebook"; Path=$researchNotebook},
   @{Name="gap_analysis"; Path=$gapAnalysis},
   @{Name="reports"; Path=$reports},
   @{Name="promotion_queue"; Path=$promotionQueue},
   @{Name="proposals_approved"; Path=$proposalsApproved},
-  @{Name="proposals_rejected"; Path=$proposalsRejected}
+  @{Name="proposals_rejected"; Path=$proposalsRejected},
+  @{Name="implementation_bundles"; Path=$implementationBundles}
 )
 foreach ($f in $folderList) {
   if (Test-Path $f.Path) {

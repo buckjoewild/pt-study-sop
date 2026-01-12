@@ -2051,6 +2051,151 @@ def get_latest_insights():
     return result
 
 
+def _git_diff_changed_files(repo_root: Path, base_commit: str, paths: List[str]) -> Optional[List[str]]:
+    if not base_commit or base_commit == "unknown" or not paths:
+        return None
+    try:
+        cmd = ["git", "-C", str(repo_root), "diff", "--name-only", base_commit, "HEAD", "--"]
+        cmd.extend(paths)
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode != 0:
+            return None
+        changed = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+        return changed
+    except Exception:
+        return None
+
+
+def _load_proposal_metadata(meta_path: Path) -> Optional[Dict[str, Any]]:
+    try:
+        return json.loads(meta_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _hash_file(path: Path) -> str:
+    import hashlib
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def generate_implementation_bundle() -> Dict[str, Any]:
+    """
+    Build an implementation bundle from approved proposals with safety checks.
+    Returns dict with status and output path.
+    """
+    repo_root = Path(__file__).parent.parent.parent.resolve()
+    proposals_root = repo_root / "scholar" / "outputs" / "proposals" / "approved"
+    bundle_dir = repo_root / "scholar" / "outputs" / "implementation_bundles"
+    bundle_dir.mkdir(parents=True, exist_ok=True)
+
+    approved_files = sorted(proposals_root.glob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not approved_files:
+        return {"ok": False, "message": "No approved proposals found."}
+
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    bundle_path = bundle_dir / f"implementation_bundle_{timestamp}.md"
+
+    bundle_lines = [
+        f"# Implementation Bundle - {timestamp}",
+        "",
+        f"Generated: {datetime.now().isoformat()}",
+        f"Approved proposals: {len(approved_files)}",
+        "",
+    ]
+
+    stale = 0
+    unknown = 0
+
+    bundle_lines.append("## Approved Proposals")
+    for proposal in approved_files:
+        meta_path = proposal.with_suffix(proposal.suffix + ".meta.json")
+        meta = _load_proposal_metadata(meta_path) if meta_path.exists() else None
+        title = proposal.stem.replace("_", " ").title()
+        status = "unknown"
+        target_files = []
+        reviewed_at = None
+        base_commit = None
+        target_hashes = {}
+
+        if meta:
+            title = meta.get("title") or title
+            reviewed_at = meta.get("reviewed_at")
+            target_files = meta.get("target_files") or []
+            base_commit = meta.get("head_commit")
+            target_hashes = meta.get("target_hashes") or {}
+        else:
+            unknown += 1
+
+        changed_files = _git_diff_changed_files(repo_root, base_commit, target_files) if target_files else None
+        if changed_files is None and target_files and target_hashes:
+            changed_files = []
+            for rel_path in target_files:
+                try:
+                    current_hash = _hash_file(repo_root / rel_path)
+                except Exception:
+                    current_hash = None
+                if current_hash and target_hashes.get(rel_path) != current_hash:
+                    changed_files.append(rel_path)
+
+        if target_files:
+            if changed_files is None:
+                status = "unknown"
+                unknown += 1
+            elif changed_files:
+                status = "stale"
+                stale += 1
+            else:
+                status = "ok"
+        else:
+            status = "unknown"
+            unknown += 1
+
+        bundle_lines.append(f"### {title}")
+        bundle_lines.append(f"- file: {proposal.name}")
+        if reviewed_at:
+            bundle_lines.append(f"- reviewed_at: {reviewed_at}")
+        if target_files:
+            bundle_lines.append(f"- target_files: {', '.join(target_files)}")
+        bundle_lines.append(f"- safety_status: {status}")
+        if status == "stale" and changed_files:
+            bundle_lines.append(f"- changed_files: {', '.join(changed_files)}")
+            bundle_lines.append("- action: re-review required before implementation")
+        elif status == "unknown":
+            bundle_lines.append("- action: verify targets before implementation")
+        bundle_lines.append("")
+
+    bundle_lines.append("## Safety Summary")
+    bundle_lines.append(f"- stale: {stale}")
+    bundle_lines.append(f"- unknown: {unknown}")
+    bundle_lines.append("")
+
+    bundle_lines.append("## Pre-Implementation Checklist")
+    bundle_lines.append("- Review bundle for stale/unknown items")
+    bundle_lines.append("- Re-approve any stale proposals after updating targets")
+    bundle_lines.append("- Confirm proposal targets and scope are still valid")
+    bundle_lines.append("- Run required tests: `python -m pytest brain/tests`, `python scripts/release_check.py`")
+    bundle_lines.append("- Apply changes manually (Scholar remains read-only)")
+
+    bundle_path.write_text("\n".join(bundle_lines), encoding="utf-8")
+
+    return {
+        "ok": True,
+        "bundle_file": str(bundle_path.relative_to(repo_root)),
+        "stale_count": stale,
+        "unknown_count": unknown,
+        "approved_count": len(approved_files),
+    }
+
+
 # -----------------------------------------------------------------------------
 # Proposal Similarity Detection
 # -----------------------------------------------------------------------------

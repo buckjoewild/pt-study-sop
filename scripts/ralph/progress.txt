@@ -2,6 +2,7 @@
 Started: 2026-01-12
 
 ## Codebase Patterns
+- Questions lifecycle: `scholar/outputs/orchestrator_runs/questions_needed_*.md` is the primary queue; `scholar/outputs/STATUS.md` points to the latest questions file.
 - Scholar coverage notes should reference `scholar/outputs/system_map/scholar_inventory_*.md` to claim full lane coverage.
 - System health schemas should include per-system required subsections with evidence anchors and priority-ranked improvements.
 
@@ -24,4 +25,11 @@ Started: 2026-01-12
 - Files changed: `scholar/outputs/reports/system_health_2026-01-12.md`, `scripts/ralph/prd.json`, `scripts/ralph/progress.txt`, `AGENTS.md`, `CONTINUITY.md`
 - **Learnings:**
   - Patterns discovered: System health reports should include evidence paths in every subsection and a coverage note referencing the latest scholar inventory.
+---
+## 2026-01-12 - US-004
+- What was implemented: Mapped the Scholar questions lifecycle with generation, storage, answering flow, downstream usage, and gaps, plus a lane coverage note.
+- Files changed: `scholar/outputs/reports/questions_lifecycle_2026-01-12.md`, `scripts/ralph/prd.json`, `scripts/ralph/progress.txt`, `AGENTS.md`, `CONTINUITY.md`
+- **Learnings:**
+  - Patterns discovered: The questions queue lives in `scholar/outputs/orchestrator_runs/questions_needed_*.md` with STATUS pointing to the latest questions file.
+  - Gotchas encountered: WSL `python` is missing; use `cmd.exe /c python` for required checks.
 ---

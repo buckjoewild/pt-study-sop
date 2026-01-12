@@ -118,3 +118,4 @@ Where to add implementation notes:
 - Loop contracts should explicitly map questions, proposals, gaps, digests, and system health artifacts to the loop phases with concrete file paths.
 - System health schemas should require evidence paths and priority-ranked improvements for consistent cross-system summaries.
 - System health reports should include a coverage note that cites representative artifacts per lane and references the latest scholar inventory.
+- Questions lifecycle artifacts live in `scholar/outputs/orchestrator_runs/questions_needed_*.md`, with `scholar/outputs/STATUS.md` pointing to the latest questions file.

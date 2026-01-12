@@ -42,3 +42,9 @@ Started: 2026-01-12
 - **Learnings:**
   - Typecheck waived; pytest passed; release_check.py failed due to _smoke_test.py SystemExit.
 ---
+## 2026-01-12 - US-004
+- What was implemented: Verified scripts/ralph/progress.txt template contains header and sections for Codebase Patterns and Key Files.
+- Files changed: scripts/ralph/prd.json; scripts/ralph/progress.txt.
+- **Learnings:**
+  - Typecheck waived; pytest passed; release_check.py failed due to _smoke_test.py SystemExit.
+---

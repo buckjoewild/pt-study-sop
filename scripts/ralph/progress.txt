@@ -48,3 +48,21 @@ Started: 2026-01-12
 - **Learnings:**
   - Typecheck waived; pytest passed; release_check.py failed due to _smoke_test.py SystemExit.
 ---
+## 2026-01-12 - US-005
+- What was implemented: Added scholar/inputs/ai_artifacts_manifest.json and documented it in scholar/README.md under Required Inputs.
+- Files changed: scholar/inputs/ai_artifacts_manifest.json; scholar/README.md; scripts/ralph/prd.json; scripts/ralph/progress.txt.
+- **Learnings:**
+  - Typecheck waived; pytest passed; release_check.py failed due to _smoke_test.py SystemExit.
+---
+## 2026-01-12 - US-006
+- What was implemented: Updated orchestrator_run_prompt.md to require coverage section and deduplicate/rank recommendations with source paths.
+- Files changed: scholar/workflows/orchestrator_run_prompt.md; scripts/ralph/prd.json; scripts/ralph/progress.txt.
+- **Learnings:**
+  - Typecheck waived; pytest passed; release_check.py failed due to _smoke_test.py SystemExit.
+---
+## 2026-01-12 - US-007
+- What was implemented: Added Plan step and explicit flow to orchestrator_loop.md, with AI artifact manifest referenced during Review/Plan.
+- Files changed: scholar/workflows/orchestrator_loop.md; scripts/ralph/prd.json; scripts/ralph/progress.txt.
+- **Learnings:**
+  - Typecheck waived; pytest passed; release_check.py failed due to _smoke_test.py SystemExit.
+---

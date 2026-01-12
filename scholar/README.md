@@ -12,6 +12,7 @@ The Scholar is a dedicated meta-system designed to audit, analyze, and optimize 
 
 - **Telemetry:** Brain session logs (`brain/session_logs/*.md`).
 - **Source:** Allowlisted Tutor modules (`sop/gpt-knowledge/*.md`).
+- **AI Artifacts Manifest:** `scholar/inputs/ai_artifacts_manifest.json` (output lanes + file patterns for summaries, questions, recommendations).
 *Note: All paths must be explicitly listed in [audit_manifest.json](inputs/audit_manifest.json).*
 
 ## Running the Scholar

@@ -25,6 +25,10 @@ Mark with ⚡: `⚡ [action description]`
 ### Warnings
 Mark with ⚠️: `⚠️ [warning description]`
 
+### Coverage
+List artifacts used (with file paths) and any gaps vs `scholar/inputs/ai_artifacts_manifest.json`.
+
+
 ---
 
 ## EXECUTION PHASES
@@ -46,7 +50,8 @@ Mark with ⚠️: `⚠️ [warning description]`
    - Audit Report: `scholar/outputs/module_audits/<group>_audit.md`
    - Gap Analysis: `scholar/outputs/gap_analysis/<topic>.md`
 2. Update run log: `scholar/outputs/orchestrator_runs/run_<YYYY-MM-DD>.md`
-3. If artifact not produced, write blocker summary explaining why.
+3. Deduplicate and rank recommendations; include source file paths for traceability.
+4. If artifact not produced, write blocker summary explaining why.
 
 ---
 

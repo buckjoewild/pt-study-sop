@@ -1,0 +1,58 @@
+{
+  "summaries": [
+    {
+      "lane": "reports",
+      "patterns": ["scholar/outputs/reports/*.md"]
+    },
+    {
+      "lane": "digests",
+      "patterns": ["scholar/outputs/digests/*.md"]
+    },
+    {
+      "lane": "system_map",
+      "patterns": ["scholar/outputs/system_map/*.md"]
+    },
+    {
+      "lane": "research_notebook",
+      "patterns": ["scholar/outputs/research_notebook/*.md"]
+    }
+  ],
+  "questions": [
+    {
+      "lane": "orchestrator_runs",
+      "patterns": [
+        "scholar/outputs/orchestrator_runs/questions_needed_*.md",
+        "scholar/outputs/orchestrator_runs/_preserved_questions_*.txt"
+      ]
+    }
+  ],
+  "recommendations": [
+    {
+      "lane": "module_audits",
+      "patterns": ["scholar/outputs/module_audits/*.md"]
+    },
+    {
+      "lane": "module_dossiers",
+      "patterns": ["scholar/outputs/module_dossiers/*.md"]
+    },
+    {
+      "lane": "gap_analysis",
+      "patterns": ["scholar/outputs/gap_analysis/*.md"]
+    },
+    {
+      "lane": "promotion_queue",
+      "patterns": ["scholar/outputs/promotion_queue/*.md"]
+    },
+    {
+      "lane": "proposals",
+      "patterns": ["scholar/outputs/proposals/*.md"]
+    },
+    {
+      "lane": "orchestrator_runs",
+      "patterns": [
+        "scholar/outputs/orchestrator_runs/run_*.md",
+        "scholar/outputs/orchestrator_runs/unattended_final_*.md"
+      ]
+    }
+  ]
+}

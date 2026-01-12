@@ -5,13 +5,16 @@
 
 ## The Continuous Improvement Cycle
 
-1. **Review**: Scan the repository and recent session logs to identify targets (modules/engines).
-2. **Understand**: Build an internal model of the target's purpose, logic, and dependencies.
-3. **Question**: Generate clarifying questions where logic is ambiguous or pedagogical alignment is unverified.
-4. **Research**: Perform web research (academic/authoritative sources) to answer questions.
-5. **Synthesize**: Update or create Module Dossiers with research findings and evidence maps.
-6. **Draft**: Propose bounded system improvements via RFCs, Experiments, and Patch Drafts.
-7. **Wait**: Submit findings for human approval. **NEVER** apply changes to production.
+Flow: Review -> Plan -> Understand -> Question -> Research -> Synthesize -> Draft -> Wait.
+
+1. **Review**: Scan the repository and recent session logs to identify targets (modules/engines). Reference `scholar/inputs/ai_artifacts_manifest.json` to see available artifacts.
+2. **Plan**: Decide scope, artifacts to include, and coverage gaps. Use `scholar/inputs/ai_artifacts_manifest.json` during planning.
+3. **Understand**: Build an internal model of the target's purpose, logic, and dependencies.
+4. **Question**: Generate clarifying questions where logic is ambiguous or pedagogical alignment is unverified.
+5. **Research**: Perform web research (academic/authoritative sources) to answer questions.
+6. **Synthesize**: Update or create Module Dossiers with research findings and evidence maps.
+7. **Draft**: Propose bounded system improvements via RFCs, Experiments, and Patch Drafts.
+8. **Wait**: Submit findings for human approval. **NEVER** apply changes to production.
 
 ## Stop Rules
 

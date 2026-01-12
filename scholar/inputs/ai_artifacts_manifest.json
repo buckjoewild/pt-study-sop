@@ -13,6 +13,10 @@
       "patterns": ["scholar/outputs/system_map/*.md"]
     },
     {
+      "lane": "plan_updates",
+      "patterns": ["scholar/outputs/plan_updates/*.md"]
+    },
+    {
       "lane": "research_notebook",
       "patterns": ["scholar/outputs/research_notebook/*.md"]
     }

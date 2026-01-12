@@ -265,7 +265,34 @@ def api_scholar_save_digest():
     import hashlib
     from pathlib import Path
     from datetime import datetime
-    
+    from typing import List
+
+    bullet_prefix_re = re.compile(r'^\s*(?:[-*]|\u2022|\u00b7|\u00e2\u20ac\u00a2)\s*')
+
+    def _extract_digest_bullets(content: str, labels: List[str]) -> List[str]:
+        lines = content.splitlines()
+        in_section = False
+        bullets = []
+        for line in lines:
+            stripped = line.strip()
+            if not in_section:
+                for label in labels:
+                    if label.lower() in stripped.lower():
+                        in_section = True
+                        break
+                if in_section:
+                    continue
+            else:
+                if not stripped:
+                    continue
+                if stripped.startswith("#") or stripped.startswith("---"):
+                    break
+                if re.match(r'^\d+\.\s+', stripped) and not bullet_prefix_re.match(stripped):
+                    break
+                if bullet_prefix_re.match(stripped):
+                    bullets.append(bullet_prefix_re.sub("", stripped).strip())
+        return bullets
+
     payload = request.get_json() or {}
     digest_content = payload.get("digest", "").strip()
     if not digest_content:
@@ -279,7 +306,67 @@ def api_scholar_save_digest():
     filename = f"strategic_digest_{timestamp}.md"
     filepath = digests_dir / filename
     filepath.write_text(digest_content, encoding="utf-8")
-    
+
+    # Build plan update draft from digest content
+    plan_updates_dir = repo_root / "scholar" / "outputs" / "plan_updates"
+    plan_updates_dir.mkdir(parents=True, exist_ok=True)
+    plan_update_filename = f"plan_update_{timestamp}.md"
+    plan_update_path = plan_updates_dir / plan_update_filename
+
+    priority_actions = _extract_digest_bullets(digest_content, ["Top 3 Priority Actions", "Priority Actions"])
+    proposal_signals = _extract_digest_bullets(digest_content, ["Proposals Review", "Proposal Review", "Proposals"])
+    research_recs = _extract_digest_bullets(digest_content, ["Research Recommendations", "Research Recommendation"])
+    health_notes = _extract_digest_bullets(digest_content, ["System Health Assessment", "System Health"])
+
+    plan_lines = [
+        f"# Plan Update Draft - {timestamp}",
+        "",
+        f"Source Digest: {filename}",
+        "Digest Type: strategic",
+        f"Created: {datetime.now().isoformat()}",
+        "",
+        "## Priority Actions (from digest)",
+    ]
+    if priority_actions:
+        plan_lines.extend([f"- {item}" for item in priority_actions])
+    else:
+        plan_lines.append("- (none found)")
+    plan_lines.extend([
+        "",
+        "## Proposal Signals (from digest)",
+    ])
+    if proposal_signals:
+        plan_lines.extend([f"- {item}" for item in proposal_signals])
+    else:
+        plan_lines.append("- (none found)")
+    plan_lines.extend([
+        "",
+        "## Research Follow-ups (from digest)",
+    ])
+    if research_recs:
+        plan_lines.extend([f"- {item}" for item in research_recs])
+    else:
+        plan_lines.append("- (none found)")
+    plan_lines.extend([
+        "",
+        "## System Health Notes (from digest)",
+    ])
+    if health_notes:
+        plan_lines.extend([f"- {item}" for item in health_notes])
+    else:
+        plan_lines.append("- (none found)")
+    plan_lines.extend([
+        "",
+        "## Plan Targets",
+        "- `sop/MASTER_PLAN_PT_STUDY.md`",
+        "- `sop/gpt-knowledge/M0-planning.md`",
+        "",
+        "## Draft Plan Edits (human-in-the-loop)",
+        "- (fill in concrete edits to plan files, then apply manually)",
+        "",
+    ])
+    plan_update_path.write_text("\n".join(plan_lines), encoding="utf-8")
+
     # Extract title from first markdown heading or first line
     title = None
     heading_match = re.match(r'^#+ +(.+)', digest_content, re.MULTILINE)
@@ -311,6 +398,7 @@ def api_scholar_save_digest():
         "ok": True,
         "id": digest_id,
         "file": str(filepath.relative_to(repo_root)),
+        "plan_update_file": str(plan_update_path.relative_to(repo_root)),
         "message": f"Digest saved to {filename}"
     })
 

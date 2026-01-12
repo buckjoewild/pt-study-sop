@@ -5,6 +5,7 @@ $repoRoot = (Resolve-Path (Join-Path $scriptRoot "..")).Path
 
 $orchestratorRuns = Join-Path $repoRoot "scholar\\outputs\\orchestrator_runs"
 $systemMap = Join-Path $repoRoot "scholar\\outputs\\system_map"
+$planUpdates = Join-Path $repoRoot "scholar\\outputs\\plan_updates"
 $moduleDossiers = Join-Path $repoRoot "scholar\\outputs\\module_dossiers"
 $researchNotebook = Join-Path $repoRoot "scholar\\outputs\\research_notebook"
 $gapAnalysis = Join-Path $repoRoot "scholar\\outputs\\gap_analysis"
@@ -48,6 +49,7 @@ $latestVerification = Get-LatestFile $orchestratorRuns "verification_report_*.md
 
 $latestCoverage = Get-LatestFile $systemMap "coverage_checklist_*.md"
 $latestRepoIndex = Get-LatestFile $systemMap "repo_index_*.md"
+$latestPlanUpdate = Get-LatestFile $planUpdates "*.md"
 $latestDossier = Get-LatestFile $moduleDossiers "*_dossier_*.md"
 $latestResearch = Get-LatestFile $researchNotebook "*.md"
 $latestReport = Get-LatestFile $reports "*.md"
@@ -117,6 +119,7 @@ if ($latestRepoIndex) {
   $linesOut += (Format-FileEntry "repo_index" $latestRepoIndex)
 }
 $linesOut += "- Newest artifacts:"
+$linesOut += "  - plan_updates: " + $(if ($latestPlanUpdate) { "$($latestPlanUpdate.FullName) ($($latestPlanUpdate.LastWriteTime))" } else { "(not found)" })
 $linesOut += "  - module_dossiers: " + $(if ($latestDossier) { "$($latestDossier.FullName) ($($latestDossier.LastWriteTime))" } else { "(not found)" })
 $linesOut += "  - research_notebook: " + $(if ($latestResearch) { "$($latestResearch.FullName) ($($latestResearch.LastWriteTime))" } else { "(not found)" })
 $linesOut += "  - reports: " + $(if ($latestReport) { "$($latestReport.FullName) ($($latestReport.LastWriteTime))" } else { "(not found)" })
@@ -138,13 +141,15 @@ $linesOut += "1) Open the latest unattended_final."
 $linesOut += "2) If questions_needed is non-empty, answer it. (Current: $questionsStatus)"
 $linesOut += "3) Confirm questions_resolved is updated after answering."
 $linesOut += "4) Review pending proposals if any."
-$linesOut += "5) Ignore everything else."
+$linesOut += "5) Review latest plan_updates (if present)."
+$linesOut += "6) Ignore everything else."
 $linesOut += ""
 $linesOut += "## Counts Snapshot"
 $linesOut += "Folder | #files | newest file"
 $linesOut += "---|---:|---"
 $folderList = @(
   @{Name="system_map"; Path=$systemMap},
+  @{Name="plan_updates"; Path=$planUpdates},
   @{Name="module_dossiers"; Path=$moduleDossiers},
   @{Name="research_notebook"; Path=$researchNotebook},
   @{Name="gap_analysis"; Path=$gapAnalysis},

@@ -656,6 +656,58 @@ def api_scholar_generate_answer():
         return jsonify({"ok": False, "message": f"Error generating answer: {e}"}), 500
 
 
+def _extract_resolved_questions(content):
+    resolved = []
+    if not content:
+        return resolved
+    current_q = None
+    current_a = None
+    for line in content.splitlines():
+        line_stripped = line.strip()
+        if line_stripped.startswith("Q:"):
+            if current_q and current_a:
+                resolved.append((current_q, current_a))
+            current_q = line_stripped.replace("Q:", "").strip()
+            current_a = None
+            continue
+        if line_stripped.startswith("A:"):
+            answer = line_stripped.replace("A:", "").strip()
+            if answer and answer.lower() not in ["(pending)", "(none)", ""]:
+                current_a = answer
+            else:
+                current_a = None
+            continue
+        if current_q and current_a and line_stripped:
+            current_a += " " + line_stripped
+        elif current_q and not current_a and line_stripped and not line_stripped.startswith("A:"):
+            current_q += " " + line_stripped
+    if current_q and current_a:
+        resolved.append((current_q, current_a))
+    return resolved
+
+
+def _write_questions_resolved(run_dir: Path, source_file: Path, content: str):
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    resolved_path = run_dir / f"questions_resolved_{timestamp}.md"
+    resolved = _extract_resolved_questions(content)
+    lines = [
+        f"# Questions Resolved - {timestamp}",
+        f"Source: {source_file.name}",
+        f"Resolved Count: {len(resolved)}",
+        "",
+        "## Resolved",
+    ]
+    if resolved:
+        for q, a in resolved:
+            lines.append(f"Q: {q}")
+            lines.append(f"A: {a}")
+            lines.append("")
+    else:
+        lines.append("(none)")
+    resolved_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    return resolved_path
+
+
 @dashboard_bp.route("/api/scholar/questions/answer", methods=["POST"])
 def api_scholar_answer_single():
     """Save a single answer by question index."""
@@ -800,8 +852,13 @@ def api_scholar_answer_single():
             except Exception:
                 pass
             raise
-        
-        return jsonify({"ok": True, "message": f"Answer saved for question {question_index + 1}"})
+        resolved_path = _write_questions_resolved(orchestrator_runs, target_file, new_content)
+
+        return jsonify({
+            "ok": True,
+            "message": f"Answer saved for question {question_index + 1}",
+            "resolved_file": resolved_path.name,
+        })
     except Exception as e:
         return jsonify({"ok": False, "message": f"Error saving answer: {e}"}), 500
 
@@ -914,8 +971,13 @@ def api_scholar_answer_questions():
             except Exception:
                 pass
             raise
-        
-        return jsonify({"ok": True, "message": f"Answers saved to {latest_questions_file.name}"})
+        resolved_path = _write_questions_resolved(orchestrator_runs, latest_questions_file, content)
+
+        return jsonify({
+            "ok": True,
+            "message": f"Answers saved to {latest_questions_file.name}",
+            "resolved_file": resolved_path.name,
+        })
     except Exception as e:
         return jsonify({"ok": False, "message": f"Error saving answers: {e}"}), 500
 

@@ -22,7 +22,8 @@
       "lane": "orchestrator_runs",
       "patterns": [
         "scholar/outputs/orchestrator_runs/questions_needed_*.md",
-        "scholar/outputs/orchestrator_runs/_preserved_questions_*.txt"
+        "scholar/outputs/orchestrator_runs/_preserved_questions_*.txt",
+        "scholar/outputs/orchestrator_runs/questions_resolved_*.md"
       ]
     }
   ],

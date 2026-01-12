@@ -39,6 +39,7 @@ function Format-FileEntry {
 
 $latestFinal = Get-LatestFile $orchestratorRuns "unattended_final_*.md"
 $latestQuestions = Get-LatestFile $orchestratorRuns "questions_needed_*.md"
+$latestResolved = Get-LatestFile $orchestratorRuns "questions_resolved_*.md"
 $latestLog = Get-LatestFile $orchestratorRuns "unattended_*.log"
 $latestVerification = Get-LatestFile $orchestratorRuns "verification_report_*.md"
 
@@ -91,6 +92,7 @@ $linesOut += ""
 $linesOut += "## Latest Run"
 $linesOut += (Format-FileEntry "unattended_final" $latestFinal)
 $linesOut += (Format-FileEntry "questions_needed" $latestQuestions)
+$linesOut += (Format-FileEntry "questions_resolved" $latestResolved)
 $linesOut += (Format-FileEntry "unattended_log" $latestLog)
 if ($latestVerification) {
   $linesOut += (Format-FileEntry "verification_report" $latestVerification)
@@ -117,7 +119,8 @@ $linesOut += ""
 $linesOut += "## What to do now"
 $linesOut += "1) Open the latest unattended_final."
 $linesOut += "2) If questions_needed is non-empty, answer it. (Current: $questionsStatus)"
-$linesOut += "3) Ignore everything else."
+$linesOut += "3) Confirm questions_resolved is updated after answering."
+$linesOut += "4) Ignore everything else."
 $linesOut += ""
 $linesOut += "## Counts Snapshot"
 $linesOut += "Folder | #files | newest file"

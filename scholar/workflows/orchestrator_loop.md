@@ -10,7 +10,7 @@ Flow: Review -> Plan -> Understand -> Question -> Research -> Synthesize -> Draf
 1. **Review**: Scan the repository and recent session logs to identify targets (modules/engines). Reference `scholar/inputs/ai_artifacts_manifest.json` to see available artifacts.
 2. **Plan**: Decide scope, artifacts to include, and coverage gaps. Use `scholar/inputs/ai_artifacts_manifest.json` during planning.
 3. **Understand**: Build an internal model of the target's purpose, logic, and dependencies.
-4. **Question**: Generate clarifying questions where logic is ambiguous or pedagogical alignment is unverified.
+4. **Question**: Generate clarifying questions where logic is ambiguous or pedagogical alignment is unverified. Use the latest `scholar/outputs/orchestrator_runs/questions_resolved_*.md` to avoid repeats and keep only open items in `questions_needed_*.md`.
 5. **Research**: Perform web research (academic/authoritative sources) to answer questions.
 6. **Synthesize**: Update or create Module Dossiers with research findings and evidence maps.
 7. **Draft**: Propose bounded system improvements via RFCs, Experiments, and Patch Drafts.
@@ -18,7 +18,7 @@ Flow: Review -> Plan -> Understand -> Question -> Research -> Synthesize -> Draf
 
 ## Stop Rules
 
-- **Completion**: Stop when all clarifying questions for the selected scope are answered.
+- **Completion**: Stop when all clarifying questions for the selected scope are answered (confirm via `questions_resolved_*.md` or answered `questions_needed_*.md`).
 - **Time-Out**: If the loop repeats without progress for > 60 minutes, **STOP**.
   - Output a "blocked" run summary.
   - Provide 3 options to proceed.

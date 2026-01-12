@@ -830,6 +830,13 @@ def _read_text_safe(path: Path, limit: int = 20000) -> str:
     return content
 
 
+def _get_latest_file(folder: Path, pattern: str) -> Optional[Path]:
+    if not folder.exists():
+        return None
+    files = sorted(folder.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
+    return files[0] if files else None
+
+
 def _compose_agent_prompt(template_path: Path, header_lines: List[str], context_blocks: List[str]) -> str:
     try:
         template = template_path.read_text(encoding="utf-8")
@@ -864,6 +871,16 @@ def run_scholar_orchestrator_multi(manifest: Dict[str, Any]) -> Dict[str, Any]:
 
     preserved_questions = collect_unanswered_questions(run_dir)
     preserved_count = len(preserved_questions)
+    resolved_questions_file = _get_latest_file(run_dir, "questions_resolved_*.md")
+    resolved_questions_block = ""
+    if resolved_questions_file:
+        resolved_text = _read_text_safe(resolved_questions_file, limit=8000)
+        if resolved_text:
+            resolved_questions_block = (
+                "## Resolved Questions (latest)\n"
+                + f"Source: {resolved_questions_file.name}\n\n"
+                + resolved_text
+            )
 
     codex_cmd = find_codex_cli()
     if not codex_cmd:
@@ -979,6 +996,10 @@ def run_scholar_orchestrator_multi(manifest: Dict[str, Any]) -> Dict[str, Any]:
                     ],
                     "header": header_common + [f"Agent: Research Scout"],
                 })
+
+                if resolved_questions_block:
+                    for job in jobs:
+                        job["context"].append(resolved_questions_block)
 
                 def _start_job(job):
                     log_file.write(f"[agent] start {job['name']} -> {job['output'].name}\n")
@@ -1287,6 +1308,16 @@ def run_scholar_orchestrator():
                 # Read prompt content to pass via stdin (like the batch script does)
                 with open(prompt_file, "r", encoding="utf-8") as prompt:
                     prompt_content = prompt.read()
+                resolved_questions_file = _get_latest_file(run_dir, "questions_resolved_*.md")
+                if resolved_questions_file:
+                    resolved_text = _read_text_safe(resolved_questions_file, limit=8000)
+                    if resolved_text:
+                        prompt_content += (
+                            "\n\n---\n## Resolved Questions (latest)\n"
+                            + f"Source: {resolved_questions_file.name}\n\n"
+                            + resolved_text
+                            + "\n"
+                        )
                 
                 try:
                     # Use codex exec with stdin (the '-' argument means read from stdin)

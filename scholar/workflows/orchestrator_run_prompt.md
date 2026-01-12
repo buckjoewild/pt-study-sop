@@ -8,6 +8,8 @@ Role: Scholar Meta-System — continuous improvement loop for Tutor/SOP.
 
 - Running non-interactively. Do **NOT** ask questions in terminal.
 - Write questions to `scholar/outputs/orchestrator_runs/questions_needed_<run>.md` and continue.
+- Before generating new questions, read the latest `scholar/outputs/orchestrator_runs/questions_resolved_*.md` (if present). Treat those as answered and do **NOT** re-ask them.
+- Only include **open** items in `questions_needed_<run>.md`; answered items belong in `questions_resolved_*.md`.
 - Use defaults: Module group M0–M6 + bridges. No Promotion Queue unless `safe_mode: true` in `audit_manifest.json`.
 
 ---

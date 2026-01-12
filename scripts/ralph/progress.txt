@@ -2,6 +2,7 @@
 Started: 2026-01-12
 
 ## Codebase Patterns
+- Proposal approvals: dashboard API moves files from `scholar/outputs/promotion_queue/` to `scholar/outputs/proposals/approved` or `scholar/outputs/proposals/rejected` and records them in `brain/data/pt_study.db` (`scholar_proposals`).
 - Questions lifecycle: `scholar/outputs/orchestrator_runs/questions_needed_*.md` is the primary queue; `scholar/outputs/STATUS.md` points to the latest questions file.
 - Scholar coverage notes should reference `scholar/outputs/system_map/scholar_inventory_*.md` to claim full lane coverage.
 - System health schemas should include per-system required subsections with evidence anchors and priority-ranked improvements.
@@ -32,4 +33,11 @@ Started: 2026-01-12
 - **Learnings:**
   - Patterns discovered: The questions queue lives in `scholar/outputs/orchestrator_runs/questions_needed_*.md` with STATUS pointing to the latest questions file.
   - Gotchas encountered: WSL `python` is missing; use `cmd.exe /c python` for required checks.
+---
+## 2026-01-12 - US-005
+- What was implemented: Authored the proposals lifecycle report covering drafting, queueing, approval/rejection, downstream usage, and gaps with evidence paths.
+- Files changed: `scholar/outputs/reports/proposals_lifecycle_2026-01-12.md`, `scripts/ralph/prd.json`, `scripts/ralph/progress.txt`, `AGENTS.md`, `CONTINUITY.md`
+- **Learnings:**
+  - Patterns discovered: Proposal approvals are routed through the dashboard API, which updates markdown Status, moves files into approved/rejected folders, and records them in `brain/data/pt_study.db`.
+  - Gotchas encountered: `scholar/inputs/ai_artifacts_manifest.json` only targets `scholar/outputs/proposals/*.md`, so approved/rejected subfolders are not tracked unless patterns are expanded.
 ---

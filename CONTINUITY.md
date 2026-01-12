@@ -21,10 +21,13 @@ State:
     - Patched `scripts/ralph/ralph.sh`/`scripts/ralph/prompt.md` to avoid premature loop stop.
     - US-004 report drafted: `scholar/outputs/reports/questions_lifecycle_2026-01-12.md`.
     - Checks run: `cmd.exe /c "python -m pytest brain/tests"` and `cmd.exe /c "python scripts/release_check.py"`.
+    - Commit: `feat: US-004 - Map questions lifecycle`.
+    - Drafted US-005 report: `scholar/outputs/reports/proposals_lifecycle_2026-01-12.md`.
+    - US-005 checks run: `cmd.exe /c "python -m pytest brain/tests"` and `cmd.exe /c "python scripts/release_check.py"`.
   - Now:
-    - Stage and commit US-004 changes; update tracking already applied.
+    - Stage and commit only US-005 files.
   - Next:
-    - Continue to next highest-priority failing story after commit.
+    - Update the ledger after commit and proceed to the next failing story.
 
 Open questions (UNCONFIRMED if needed):
 - None.
@@ -36,3 +39,6 @@ Working set (files/ids/commands):
 - `CONTINUITY.md`
 - `git status -sb`
 - `scholar/outputs/reports/questions_lifecycle_2026-01-12.md`
+- `scholar/outputs/reports/proposals_lifecycle_2026-01-12.md`
+- `brain/db_setup.py`
+- `brain/dashboard/routes.py`

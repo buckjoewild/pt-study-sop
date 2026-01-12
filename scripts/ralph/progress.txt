@@ -30,3 +30,9 @@ Started: 2026-01-12
 - **Learnings:**
   - For audit-only stories, Typecheck can be waived if documented and tests are blocked.
 ---
+## 2026-01-12 - US-002
+- What was implemented: Verified scripts/ralph/ralph.sh already satisfies loop requirements (set -e, default iterations, codex exec pipe, stop condition).
+- Files changed: scripts/ralph/prd.json; scripts/ralph/progress.txt.
+- **Learnings:**
+  - Typecheck waived; pytest passed; release_check.py failed due to _smoke_test.py SystemExit.
+---

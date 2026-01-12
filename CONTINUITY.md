@@ -8,23 +8,24 @@ Constraints/Assumptions:
 - Required checks: python -m pytest brain/tests; python scripts/release_check.py; note failures if env lacks deps.
 
 Key decisions:
-- Switched to Windows Python for required checks (user choice).
+- Waived Typecheck passes for US-001 (documentation-only audit) with failure notes recorded.
+- Used Windows Python for tests.
 
 State:
   - Done:
-    - Created scholar/outputs/audit_scholar_repo.md and updated its Additional Changes section.
+    - Created scholar/outputs/audit_scholar_repo.md and documented additional changes.
     - Updated AGENTS.md with Scholar output lane convention.
-    - Updated scripts/ralph/progress.txt (pattern + US-001 entries).
-    - Ran pytest in Windows: brain/tests passed (4 tests).
-    - Ran release_check.py in Windows: failed with SystemExit from _smoke_test.py during collection.
-    - US-001 left passes=false with blocking note in scripts/ralph/prd.json.
+    - Updated scripts/ralph/progress.txt (pattern + US-001 entries + waiver note).
+    - pytest brain/tests passed in Windows (4 tests).
+    - release_check.py failed on Windows (SystemExit from _smoke_test.py during collection).
+    - Marked US-001 passes=true with waiver notes in scripts/ralph/prd.json.
   - Now:
-    - Decide how to handle release_check.py failure to complete US-001.
+    - Stage US-001 files and commit.
   - Next:
-    - If release_check is resolved or waived, set US-001 passes=true, commit feat: US-001, and continue Ralph loop.
+    - Continue Ralph loop with US-002 once execution environment is confirmed.
 
 Open questions (UNCONFIRMED if needed):
-- Should I investigate/fix release_check.py (likely _smoke_test.py behavior), or should we accept the failure and proceed?
+- Should we continue Ralph in WSL (likely test failures), or use Git Bash/Windows environment for the loop?
 
 Working set (files/ids/commands):
 - C:\Users\treyt\OneDrive\Desktop\pt-study-sop\scholar\outputs\audit_scholar_repo.md

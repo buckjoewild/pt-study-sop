@@ -1,29 +1,35 @@
 Goal (incl. success criteria):
-- Fix release_check.py/_smoke_test.py so release_check passes, then remove Typecheck waivers from US-001..US-007.
+- Execute Ralph loop: implement highest-priority `passes:false` story from `scripts/ralph/prd.json`, run required checks, update progress/learners, commit, and mark story passing.
 
 Constraints/Assumptions:
-- Follow pt-study-sop AGENTS.md; update this Continuity Ledger each turn and on state changes.
-- Keep changes minimal and scoped; avoid destructive actions without confirmation.
-- Use scripts/ralph runbook; required checks: python -m pytest brain/tests; python scripts/release_check.py.
+- Follow `AGENTS.md`; update Continuity Ledger each turn and on state changes.
+- Execute Ralph agent steps; stay on current branch; do not stage unrelated changes.
+- Run required checks: `python -m pytest brain/tests`, `python scripts/release_check.py`, manual smoke if UI changes.
+- Use ASCII edits; keep diffs minimal; do not rename canon files casually.
 
 Key decisions:
-- Continue on branch main.
+- Use Ralph loop: pick highest-priority `passes:false` story; implement only that story.
 
 State:
   - Done:
-    - Updated _smoke_test.py to avoid pytest collection side effects.
-    - pytest brain/tests passed; release_check.py passed on Windows.
-    - Removed waiver notes from scripts/ralph/prd.json.
+    - Read `CONTINUITY.md`.
+    - Read `scripts/ralph/prd.json` and `scripts/ralph/progress.txt` (Codebase Patterns).
+    - Confirmed highest-priority failing story is US-001 (Define Scholar loop contract).
+    - Reviewed Scholar guardrail docs and key outputs for loop context.
+    - Drafted `scholar/outputs/reports/scholar_loop_contract_2026-01-12.md`.
+    - Ran checks: pytest and release check via Windows `cmd.exe` Python.
+    - Updated `AGENTS.md`, `scripts/ralph/prd.json`, and `scripts/ralph/progress.txt`.
   - Now:
-    - Stage and commit release_check fix + waiver cleanup.
+    - Stage story files and commit.
   - Next:
-    - (Optional) push commits if desired.
+    - Provide final summary and next steps.
 
 Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
-- C:\Users\treyt\OneDrive\Desktop\pt-study-sop\_smoke_test.py
-- C:\Users\treyt\OneDrive\Desktop\pt-study-sop\scripts\ralph\prd.json
-- C:\Users\treyt\OneDrive\Desktop\pt-study-sop\scripts\ralph\progress.txt
-- C:\Users\treyt\OneDrive\Desktop\pt-study-sop\CONTINUITY.md
+- `scripts/ralph/prd.json`
+- `scripts/ralph/progress.txt`
+- `AGENTS.md`
+- `CONTINUITY.md`
+- `scholar/outputs/reports/scholar_loop_contract_2026-01-12.md`

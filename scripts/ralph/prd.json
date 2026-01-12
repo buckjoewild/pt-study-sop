@@ -15,7 +15,7 @@
                                                    ],
                             "priority":  1,
                             "passes":  false,
-                            "notes":  ""
+                            "notes":  "Blocked: release_check.py failed on Windows (SystemExit from _smoke_test.py during collection)."
                         },
                         {
                             "id":  "US-002",

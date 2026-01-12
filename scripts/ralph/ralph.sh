@@ -20,7 +20,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     | "$CODEX_BIN" exec --dangerously-bypass-approvals-and-sandbox - 2>&1 \
     | tee /dev/stderr) || true
 
-  if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then
+  if echo "$OUTPUT" | awk 'found { print } /^codex$/ { found=1 }' | grep -q "^<promise>COMPLETE</promise>$"; then
     echo "? Done!"
     exit 0
   fi

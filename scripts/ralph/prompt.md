@@ -21,6 +21,11 @@
 - If "git status -sb" shows unrelated changes, do NOT stage them.
 - Stage only files touched for the current story (avoid "git add -A").
 - If you cannot safely isolate changes for the story, stop and report in progress.txt instead of committing.
+
+## Known Local Changes (do not block)
+- Expected unrelated changes may appear in git status; ignore them and proceed.
+- Known paths: brain/static/css/dashboard.css, DASHBOARD_ARCHITECTURE.md, scripts/ralph/archive/, scripts/ralph/prompt.md
+- Stay on the current branch and continue unless the user explicitly asks to switch.
 ## Repo Checks
 
 - Typecheck: `python -m pytest brain/tests`
@@ -62,3 +67,6 @@ Add reusable patterns to the TOP of progress.txt:
 
 If ALL stories pass, reply:
 <promise>COMPLETE</promise>
+
+- Before outputting `<promise>COMPLETE</promise>`, re-check `scripts/ralph/prd.json` and confirm there are no `passes: false` stories remaining. Do not output the token if any story is still failing.
+- Output the completion token on its own line with no extra text.

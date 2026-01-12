@@ -36,3 +36,9 @@ Started: 2026-01-12
 - **Learnings:**
   - Typecheck waived; pytest passed; release_check.py failed due to _smoke_test.py SystemExit.
 ---
+## 2026-01-12 - US-003
+- What was implemented: Verified scripts/ralph/prompt.md includes required iteration steps, progress format, and stop condition.
+- Files changed: scripts/ralph/prd.json; scripts/ralph/progress.txt.
+- **Learnings:**
+  - Typecheck waived; pytest passed; release_check.py failed due to _smoke_test.py SystemExit.
+---

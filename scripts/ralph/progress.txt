@@ -3,6 +3,7 @@ Started: 2026-01-12
 
 ## Codebase Patterns
 - Scholar coverage notes should reference `scholar/outputs/system_map/scholar_inventory_*.md` to claim full lane coverage.
+- System health schemas should include per-system required subsections with evidence anchors and priority-ranked improvements.
 
 ## 2026-01-12 - US-001
 - What was implemented: Authored Scholar loop contract with artifact inventory, loop feed mapping, and cadence details.
@@ -10,4 +11,11 @@ Started: 2026-01-12
 - **Learnings:**
   - Patterns discovered: Loop contracts should map questions, proposals, gaps, digests, and system health to explicit file paths and loop phases.
   - Gotchas encountered: Linux `python`/`pytest` were missing; ran checks via Windows `cmd.exe` Python instead.
+---
+## 2026-01-12 - US-002
+- What was implemented: Defined the system health schema with per-system templates, evidence anchors, and coverage note.
+- Files changed: `scholar/outputs/reports/system_health_schema_2026-01-12.md`, `scripts/ralph/prd.json`, `scripts/ralph/progress.txt`, `AGENTS.md`, `CONTINUITY.md`
+- **Learnings:**
+  - Patterns discovered: Health schemas should require evidence paths for every subsection to keep system summaries auditable.
+  - Gotchas encountered: WSL `python` lacked pytest; ran checks via Windows `cmd.exe` Python instead.
 ---

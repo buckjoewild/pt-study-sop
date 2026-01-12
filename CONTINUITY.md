@@ -1,35 +1,40 @@
 Goal (incl. success criteria):
-- Execute Ralph loop: implement highest-priority `passes:false` story from `scripts/ralph/prd.json`, run required checks, update progress/learners, commit, and mark story passing.
+- Run Ralph loop: implement the highest-priority `passes:false` story from `scripts/ralph/prd.json`, run required checks, update AGENTS/progress, commit, and mark the story passing.
 
 Constraints/Assumptions:
-- Follow `AGENTS.md`; update Continuity Ledger each turn and on state changes.
-- Execute Ralph agent steps; stay on current branch; do not stage unrelated changes.
-- Run required checks: `python -m pytest brain/tests`, `python scripts/release_check.py`, manual smoke if UI changes.
-- Use ASCII edits; keep diffs minimal; do not rename canon files casually.
+- Follow `AGENTS.md` and Ralph instructions; update this ledger each turn and on state changes.
+- Stay on the current branch; do not stage unrelated changes.
+- Required checks: `python -m pytest brain/tests`, `python scripts/release_check.py`, manual smoke if UI changes.
+- Prefer minimal, ASCII-only edits; keep folder structure and naming conventions intact.
 
 Key decisions:
-- Use Ralph loop: pick highest-priority `passes:false` story; implement only that story.
+- Selected US-002 (Specify system health schema) as highest-priority `passes:false` story.
 
 State:
   - Done:
     - Read `CONTINUITY.md`.
-    - Read `scripts/ralph/prd.json` and `scripts/ralph/progress.txt` (Codebase Patterns).
-    - Confirmed highest-priority failing story is US-001 (Define Scholar loop contract).
-    - Reviewed Scholar guardrail docs and key outputs for loop context.
-    - Drafted `scholar/outputs/reports/scholar_loop_contract_2026-01-12.md`.
-    - Ran checks: pytest and release check via Windows `cmd.exe` Python.
-    - Updated `AGENTS.md`, `scripts/ralph/prd.json`, and `scripts/ralph/progress.txt`.
+    - Read `scripts/ralph/prd.json` and Codebase Patterns in `scripts/ralph/progress.txt`.
+    - Checked git status/branch (on `main`).
+    - Read required Scholar inputs/outputs for the story scope.
+    - Created `scholar/outputs/reports/system_health_schema_2026-01-12.md`.
+    - Ran checks via Windows Python: `python -m pytest brain/tests`, `python scripts/release_check.py`.
+    - Updated `AGENTS.md` and `scripts/ralph/progress.txt`; marked US-002 passing in `scripts/ralph/prd.json`.
+    - Committed story changes with `feat: US-002 - Specify system health schema`.
   - Now:
-    - Stage story files and commit.
+    - Ready for next Ralph story selection.
   - Next:
-    - Provide final summary and next steps.
+    - Continue Ralph loop with next highest-priority failing story.
 
 Open questions (UNCONFIRMED if needed):
-- None.
+- Are there unrelated local changes to avoid staging?
 
 Working set (files/ids/commands):
 - `scripts/ralph/prd.json`
 - `scripts/ralph/progress.txt`
 - `AGENTS.md`
 - `CONTINUITY.md`
-- `scholar/outputs/reports/scholar_loop_contract_2026-01-12.md`
+- `scholar/README.md`
+- `scholar/CHARTER.md`
+- `scholar/inputs/audit_manifest.json`
+- `scholar/workflows/orchestrator_loop.md`
+- `scholar/outputs/reports/system_health_schema_2026-01-12.md`

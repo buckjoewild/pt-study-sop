@@ -116,3 +116,4 @@ Where to add implementation notes:
 ## 10) Learnings
 - Scholar inventories should list all output lanes plus `scholar/outputs/` root files using repo-relative paths.
 - Loop contracts should explicitly map questions, proposals, gaps, digests, and system health artifacts to the loop phases with concrete file paths.
+- System health schemas should require evidence paths and priority-ranked improvements for consistent cross-system summaries.

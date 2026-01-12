@@ -66,3 +66,9 @@ Started: 2026-01-12
 - **Learnings:**
   - Typecheck waived; pytest passed; release_check.py failed due to _smoke_test.py SystemExit.
 ---
+## 2026-01-12 - Release check fix
+- What was implemented: Updated _smoke_test.py to avoid pytest collection side effects; release_check.py now passes.
+- Files changed: _smoke_test.py; scripts/ralph/prd.json; scripts/ralph/progress.txt.
+- **Learnings:**
+  - Avoid top-level side effects in files matching pytest patterns; wrap in main and use non-test function names.
+---

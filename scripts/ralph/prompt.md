@@ -28,8 +28,8 @@
 - Stay on the current branch and continue unless the user explicitly asks to switch.
 ## Repo Checks
 
-- Typecheck: `python -m pytest brain/tests`
-- Release check: `python scripts/release_check.py`
+- Typecheck (Windows): `powershell.exe -Command "python -m pytest brain/tests"`
+- Release check (Windows): `powershell.exe -Command "python scripts/release_check.py"`
 - Manual smoke test (UI changes): Run `Run_Brain_All.bat` and verify http://127.0.0.1:5000
 
 If any required command fails, fix the issues before marking a story complete.
@@ -37,6 +37,7 @@ If any required command fails, fix the issues before marking a story complete.
 ## Scholar Focus (when a story touches scholar/)
 
 - Read `scholar/README.md`, `scholar/CHARTER.md`, `scholar/inputs/audit_manifest.json`, and `scholar/workflows/orchestrator_loop.md` before changes.
+- Use web research when required by the story: prioritize peer-reviewed papers and official documentation; include source links and a brief citations section in every research artifact.
 - Use all available AI-generated artifacts in `scholar/outputs/` (reports, digests, orchestrator_runs, research_notebook, promotion_queue, system_map, module_dossiers, module_audits, gap_analysis).
 - When synthesizing recommendations, deduplicate and rank them; include source file paths for traceability.
 - Add or update a coverage note/report listing artifacts used and any gaps.

@@ -1,38 +1,31 @@
 Goal (incl. success criteria):
-- Commit and push all current working-tree changes to main (Scholar proposal fixes + existing dashboard/UX edits), with required checks already run.
+- Run a 100-iteration Ralph deep‑research loop on tutor systems (M0+ modules, engines, and integrations) with web research outputs in scholar/outputs/.
 
 Constraints/Assumptions:
-- Keep edits minimal and ASCII; follow AGENTS.md.
-- Required checks: `python -m pytest brain/tests` and `python scripts/release_check.py` (already run).
+- Follow AGENTS.md and Ralph Agent instructions; keep edits minimal and ASCII.
+- Run required checks: `python -m pytest brain/tests` and `python scripts/release_check.py`.
 
 Key decisions:
-- Include all modified files in the commit (per user choice B).
+- Keep commit `865d517`.
 
 State:
   - Done:
-    - Implemented SLIP-001..SLIP-004 changes (mastery column, M0 interleave step, digest auto-save, data freshness warnings).
-    - Tests passed: `python -m pytest brain/tests` and `python scripts/release_check.py`.
-    - Committed and pushed all modified files to main; repository clean.
+    - Ralph iteration 1 completed US-001 and committed `865d517` (readiness helper).
+    - Tests attempted in WSL: `python -m pytest brain/tests` and `python3 scripts/release_check.py` failed (python/pytest missing).
+    - Investigated commit scope: with whitespace ignored, only small content changes remain (line-ending churn likely).
+    - Decision: keep commit `865d517`.
+    - Authored new 100-story research PRD and updated Ralph prompt to use Windows Python checks.
   - Now:
-    - None.
+    - Sync new PRD/progress/prompt into the clean Ralph worktree and start the 100-iteration run.
   - Next:
-    - None.
+    - Monitor the loop and review outputs when complete.
 
 Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
-- `brain/db_setup.py`
-- `brain/ingest_session.py`
-- `brain/dashboard/routes.py`
-- `brain/dashboard/scholar.py`
-- `scripts/scholar_health_check.py`
-- `brain/session_logs/TEMPLATE.md`
-- `brain/README.md`
-- `sop/gpt-knowledge/M0-planning.md`
-- `sop/MASTER_PLAN_PT_STUDY.md`
-- `brain/dashboard/stats.py`
-- `brain/dashboard/syllabus.py`
-- `brain/static/js/dashboard.js`
-- `brain/templates/dashboard.html`
+- `scripts/ralph/prd.json`
+- `scripts/ralph/progress.txt`
+- `scripts/ralph/archive/`
 - `CONTINUITY.md`
+- Commit `865d517`

@@ -1,32 +1,21 @@
 Goal (incl. success criteria):
-- Rebuild dashboard starting with Google-Calendar-style Calendar tab at /v3.
-- Success: Month/Week/Day views, calendar list toggles, event CRUD + recurring, two-way Google sync, tests per phase.
+- Review provided zipped rework of repo to identify missing items vs current repo.
+- Success: clear list of missing files/dirs or discrepancies with evidence.
 Constraints/Assumptions:
-- Reuse existing backend/API/DB where possible.
-- New project folder at repo root for rebuild assets.
-- Modular, template-driven UI; keep changes minimal and additive.
+- Need zip file path or location before review.
+- Compare against current repo contents; no destructive changes.
 Key decisions:
-- Serve new UI at /v3 during rebuild.
-- Include recurring events in initial Calendar build (pending implementation).
-- Connectivity map stored at `dashboard_rebuild/connectivity_map.md`.
+- UNCONFIRMED
 State:
   - Done:
-    - Cleared stale OpenCode session cache causing rs_ errors.
-    - Added /v3 scaffold: blueprint + template + static assets.
-    - Added /api/v3/calendar/data endpoint returning FullCalendar-friendly events.
-    - Extended calendar data output with course metadata for filters.
+    - Read existing CONTINUITY ledger.
   - Now:
-    - Verify /v3 renders and calendar loads data from /api/v3/calendar/data.
+    - Await zip file location/details to begin comparison.
   - Next:
-    - Add event CRUD + recurrence handling.
-    - Add tests/QA gates for calendar API + UI.
+    - Inspect zip contents and compare to repo.
+    - Report missing items with paths.
 Open questions (UNCONFIRMED if needed):
-- Do we want to wire Vite now, or keep CDN/static for initial pass?
+- Where is the zip file located (path)?
+- Should comparison be strict file-by-file or focus on key folders only?
 Working set (files/ids/commands):
-- `dashboard_rebuild/connectivity_map.md`
-- `dashboard_rebuild/code/templates/v3_calendar.html`
-- `dashboard_rebuild/code/static/v3_calendar.js`
-- `dashboard_rebuild/code/static/v3_calendar.css`
-- `brain/dashboard/v3_routes.py`
-- `brain/dashboard/app.py`
-- `brain/dashboard/calendar.py`
+- `CONTINUITY.md`

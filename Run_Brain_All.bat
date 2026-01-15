@@ -40,19 +40,32 @@ if not exist "brain\sync_all.ps1" (
 )
 powershell -ExecutionPolicy Bypass -File brain\sync_all.ps1
 
-echo [3/5] Starting dashboard server (window titled 'PT Study Brain Dashboard')...
+echo [4/5] Starting dashboard server (window titled 'PT Study Brain Dashboard')...
 set "SERVER_DIR=%~dp0brain"
 if not exist "%SERVER_DIR%\dashboard_web.py" (
     echo [ERROR] Could not find brain\dashboard_web.py from %~dp0.
     goto END
 )
-start "PT Study Brain Dashboard" cmd /k cd /d "%SERVER_DIR%" ^& "%PYEXE%" %PYEXE_ARGS% dashboard_web.py
 
-echo [4/5] Giving the server a few seconds to start...
+rem Check if Frontend Build exists
+if not exist "%SERVER_DIR%\static\react\index.html" (
+    echo [INFO] Frontend build missing. Installing and building Arcade Frontend...
+    set "CLIENT_DIR=%~dp0dashboard_rebuild\client"
+    cd /d "!CLIENT_DIR!"
+    if not exist "node_modules\" call npm install
+    call npm run build
+    
+    echo [INFO] Copying build files...
+    robocopy "%~dp0dashboard_rebuild\dist" "%SERVER_DIR%\static\react" /E /NFL /NDL /NJH /NJS /nc /ns /np
+)
+
+start "PT Study Brain Dashboard" cmd /k "cd /d "%SERVER_DIR%" && "%PYEXE%" %PYEXE_ARGS% dashboard_web.py"
+
+echo [5/5] Giving the server a few seconds to start...
 timeout /t 5 /nobreak >nul
 
 :OPEN_BROWSER
-echo [5/5] Opening dashboard in browser...
+echo Opening dashboard in browser...
 start "" http://127.0.0.1:5000
 
 :END

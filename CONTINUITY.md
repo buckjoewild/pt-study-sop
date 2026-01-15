@@ -26,10 +26,14 @@ State:
     - Reordered nav buttons to Dashboard > Calendar > Brain > Scholar > Tutor on desktop/mobile and updated labels.
   - Now:
     - Removed the mobile hamburger/nav panel markup.
-    - Restored main content scale to full size, and increased the header title size/position.
+    - Restored main content scale to full size, increased the header title size/position, and pushed the title area lower.
+    - Lowered the title underline further and increased top-nav padding to move the title/line down.
+    - Removed a stray mobile-only CSS block that was overriding desktop header sizing.
+    - Bumped asset query params to force CSS/JS refresh.
     - Removed legacy sidebar/top-nav CSS selectors after audit (unused in current template).
   - Next:
     - Confirm header placement, title size, and main content scale; optionally run required checks.
+
 
 Open questions (UNCONFIRMED if needed):
 - Any other style tweaks needed beyond the header buttons?

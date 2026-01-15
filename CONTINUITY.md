@@ -1,5 +1,6 @@
-﻿Goal (incl. success criteria):
-- Restore the intended dashboard header (title, buttons, shrink behavior) and ensure Scholar/Ralph panels show in main.
+Goal (incl. success criteria):
+- Restore dashboard header buttons, Notes tab, "Let's Study" text under the brain, and scroll-shrink behavior.
+- Confirm/recover any other missing dashboard elements once the UI is reviewed.
 Constraints/Assumptions:
 - Follow AGENTS.md; keep changes minimal and additive.
 - Update CONTINUITY.md each turn.
@@ -12,16 +13,25 @@ State:
     - Copied Scholar/Ralph dashboard UI + API + proposal running sheet + local-state session scripts from ralph-readiness into main.
     - Updated opencode launcher default project path to main so session worktrees launch from pt-study-sop.
     - Copied `scripts/launch_codex_session.ps1` into main and updated `C:\Users\treyt\OneDrive\Desktop\LAUNCH_CODEX.bat` to default to main with error handling.
-    - Identified a background dashboard server on port 5000 and terminated it to avoid serving the old header.
+    - Identified a background dashboard server on port 5000 earlier to avoid serving the old header.
     - Restored top nav title text to "TREY'S STUDY SYSTEM" in main dashboard header.
     - Removed Overview/v3.0/TT header elements and added scroll-driven header collapse behavior.
+    - Replaced mojibake apostrophes and updated dashboard title to "Trey's Study System".
+    - Restarted the dashboard server from `C:\Users\treyt\OneDrive\Desktop\pt-study-sop\brain` to serve updated assets.
+    - Cloned `vercel-labs/agent-skills` into `C:\Users\treyt\.codex\skills\agent-skills` (per request).
+    - Copied `react-best-practices` to top-level `C:\Users\treyt\.codex\skills\react-best-practices` for direct use.
+    - Removed Sync from nav, added a top-right notes toggle + side notes panel, and set logo badge text to "LET'S STUDY".
+    - Added notes sidebar JS (localStorage-backed) and updated notes button styling.
+    - Added Notes edit button with update-in-place behavior.
+    - Reordered nav buttons to Dashboard > Calendar > Brain > Scholar > Tutor on desktop/mobile and updated labels.
   - Now:
-    - Confirm header matches intended layout; capture correct nav button labels/order.
+    - Updated header button styling to a cleaner neo-retro look per request.
   - Next:
-    - Adjust header buttons/labels to match your intended design.
+    - Confirm the updated header button style; optionally run required checks.
 
 Open questions (UNCONFIRMED if needed):
-- What exact button labels/order should the header use?
+- Which areas should be restyled (header/nav, notes panel, main content, overall theme)?
+- What style direction/palette should we target?
 
 Working set (files/ids/commands):
 - CONTINUITY.md

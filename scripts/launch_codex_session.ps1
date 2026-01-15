@@ -1,11 +1,11 @@
-$ErrorActionPreference = "Stop"
-
 param(
   [string]$Task = "",
   [string]$WorktreesRoot = "C:\\Users\\treyt\\OneDrive\\Desktop\\pt-study-sop-worktrees",
   [string]$BaseRef = "HEAD",
   [string]$CodexArgs = "--dangerously-bypass-approvals-and-sandbox --search"
 )
+
+$ErrorActionPreference = "Stop"
 
 $scriptRoot = $PSScriptRoot
 $launcher = Join-Path $scriptRoot "new_session_worktree.ps1"

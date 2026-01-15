@@ -1,5 +1,3 @@
-$ErrorActionPreference = "Stop"
-
 param(
   [string]$Task = "",
   [string]$WorktreesRoot = "C:\\Users\\treyt\\OneDrive\\Desktop\\pt-study-sop-worktrees",
@@ -7,6 +5,8 @@ param(
   [switch]$OpenShell,
   [switch]$CopyBacklogEnv
 )
+
+$ErrorActionPreference = "Stop"
 
 function Get-RepoRoot {
   $root = (& git rev-parse --show-toplevel 2>$null)

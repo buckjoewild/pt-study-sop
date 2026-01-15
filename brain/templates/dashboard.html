@@ -1,5 +1,5 @@
-﻿<!DOCTYPE html>
-<!-- PT Study Brain Dashboard v3.0 - Updated: 2026-01-11 - SaaS Professional UI -->
+<!DOCTYPE html>
+<!-- PT Study Brain Dashboard - Updated: 2026-01-11 - SaaS Professional UI -->
 <html lang="en">
 
 <head>
@@ -9,7 +9,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>PT Study Brain v3.0</title>
+  <title>Trey's Study System</title>
 
   <link
     href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Orbitron:wght@500;600;700;800&family=Press+Start+2P&family=VT323&display=swap"
@@ -36,8 +36,8 @@
         <div class="inner">
           <img src="/static/images/logo-brain-new.jpg" alt="Neural Core">
         </div>
-        <div class="status-badge">
-          <span>SYSTEM_LINK_STABLE</span>
+      <div class="status-badge">
+          <span>LET'S STUDY</span>
         </div>
       </div>
 
@@ -54,17 +54,17 @@
             </div>
             <span class="btn-label">DASHBOARD</span>
           </a>
+          <a href="#syllabus" class="arcade-nav-btn" onclick="openTab(event, 'syllabus')" data-tab="syllabus" role="tab" id="tab-syllabus-tab" aria-controls="tab-syllabus" aria-selected="false" tabindex="-1">
+            <div class="btn-face">
+              <img src="/static/images/icons/neo-nav-syllabus.svg" alt="" class="nav-icon-img" style="width: 32px; height: 32px;" />
+            </div>
+            <span class="btn-label">CALENDAR</span>
+          </a>
           <a href="#sessions" class="arcade-nav-btn" onclick="openTab(event, 'sessions')" data-tab="sessions" role="tab" id="tab-sessions-tab" aria-controls="tab-sessions" aria-selected="false" tabindex="-1">
             <div class="btn-face">
               <img src="/static/images/icons/neo-nav-brain.svg" alt="" class="nav-icon-img" style="width: 32px; height: 32px;" />
             </div>
             <span class="btn-label">BRAIN</span>
-          </a>
-          <a href="#syllabus" class="arcade-nav-btn" onclick="openTab(event, 'syllabus')" data-tab="syllabus" role="tab" id="tab-syllabus-tab" aria-controls="tab-syllabus" aria-selected="false" tabindex="-1">
-            <div class="btn-face">
-              <img src="/static/images/icons/neo-nav-syllabus.svg" alt="" class="nav-icon-img" style="width: 32px; height: 32px;" />
-            </div>
-            <span class="btn-label">SYLLABUS</span>
           </a>
           <a href="#scholar" class="arcade-nav-btn" onclick="openTab(event, 'scholar')" data-tab="scholar" role="tab" id="tab-scholar-tab" aria-controls="tab-scholar" aria-selected="false" tabindex="-1">
             <div class="btn-face">
@@ -78,24 +78,19 @@
             </div>
             <span class="btn-label">TUTOR</span>
           </a>
-          <a href="#sync" class="arcade-nav-btn" onclick="openTab(event, 'sync')" data-tab="sync" role="tab" id="tab-sync-tab" aria-controls="tab-sync" aria-selected="false" tabindex="-1" style="position: relative;">
-            <div class="btn-face">
-              <img src="/static/images/icons/neo-nav-sync.svg" alt="" class="nav-icon-img" style="width: 32px; height: 32px;" />
-            </div>
-            <span class="btn-label">SYNC_LINK</span>
-            <div class="sync-counter-badge" id="sync-count-badge" style="display: none;">
-              <span>0</span>
-            </div>
-          </a>
         </nav>
       </div>
 
       <!-- Right Section (now visible with Custom GPT entry point) -->
       <div class="top-nav-right" style="display: flex; align-items: center; gap: 10px;">
-        <a class="arcade-btn" href="https://chatgpt.com/g/g-693763cbfa3c8191b22fc700b526f2f6-trey-s-study-sop-v9-2" target="_blank" rel="noopener" style="padding: 8px 12px; font-size: 12px; text-decoration: none;">
-          Open Treyâ€™s Custom GPT
+        <button class="notes-tab-btn" id="notes-tab-btn" type="button" aria-label="Open notes" aria-expanded="false" aria-controls="notes-sidebar" title="Notes">
+          <i class="fa-solid fa-note-sticky"></i>
+        </button>
+        <a class="arcade-btn top-nav-action top-nav-gpt" href="https://chatgpt.com/g/g-693763cbfa3c8191b22fc700b526f2f6-trey-s-study-sop-v9-2" target="_blank" rel="noopener" style="padding: 8px 12px; font-size: 12px; text-decoration: none;">
+          Open Trey's Custom GPT
         </a>
       </div>
+
 
       <!-- Hamburger Button (Mobile) -->
       <button class="hamburger-btn" id="hamburger-btn" onclick="toggleMobileNav()" aria-label="Toggle menu"
@@ -113,18 +108,18 @@
     <nav class="mobile-nav-panel" id="mobile-nav-panel" role="tablist" aria-label="Mobile tabs">
       <a href="#overview" class="mobile-nav-item active" onclick="openTab(event, 'overview'); closeMobileNav();"
         data-tab="overview" role="tab" id="tab-overview-tab-mobile" aria-controls="tab-overview" aria-selected="true" tabindex="0">
-        <img src="/static/images/icons/neo-nav-overview.svg" alt="Overview" class="nav-icon-img">
-        <span class="nav-text">Overview</span>
+        <img src="/static/images/icons/neo-nav-overview.svg" alt="Dashboard" class="nav-icon-img">
+        <span class="nav-text">Dashboard</span>
+      </a>
+      <a href="#syllabus" class="mobile-nav-item" onclick="openTab(event, 'syllabus'); closeMobileNav();"
+        data-tab="syllabus" role="tab" id="tab-syllabus-tab-mobile" aria-controls="tab-syllabus" aria-selected="false" tabindex="-1">
+        <img src="/static/images/icons/neo-nav-syllabus.svg" alt="Calendar" class="nav-icon-img">
+        <span class="nav-text">Calendar</span>
       </a>
       <a href="#sessions" class="mobile-nav-item" onclick="openTab(event, 'sessions'); closeMobileNav();"
         data-tab="sessions" role="tab" id="tab-sessions-tab-mobile" aria-controls="tab-sessions" aria-selected="false" tabindex="-1">
         <img src="/static/images/icons/neo-nav-brain.svg" alt="Brain" class="nav-icon-img">
         <span class="nav-text">Brain</span>
-      </a>
-      <a href="#syllabus" class="mobile-nav-item" onclick="openTab(event, 'syllabus'); closeMobileNav();"
-        data-tab="syllabus" role="tab" id="tab-syllabus-tab-mobile" aria-controls="tab-syllabus" aria-selected="false" tabindex="-1">
-        <img src="/static/images/icons/neo-nav-syllabus.svg" alt="Syllabus" class="nav-icon-img">
-        <span class="nav-text">Syllabus</span>
       </a>
       <a href="#scholar" class="mobile-nav-item" onclick="openTab(event, 'scholar'); closeMobileNav();"
         data-tab="scholar" role="tab" id="tab-scholar-tab-mobile" aria-controls="tab-scholar" aria-selected="false" tabindex="-1">
@@ -135,15 +130,9 @@
         <img src="/static/images/icons/neo-nav-tutor.svg" alt="Tutor" class="nav-icon-img">
         <span class="nav-text">Tutor</span>
       </a>
-      <a href="#brain" class="mobile-nav-item" onclick="openTab(event, 'brain'); closeMobileNav();" data-tab="brain" role="tab" id="tab-brain-tab-mobile" aria-controls="tab-brain" aria-selected="false" tabindex="-1">
-        <img src="/static/images/icons/neo-nav-database.svg" alt="Database" class="nav-icon-img">
-        <span class="nav-text">Database</span>
-      </a>
-      <a href="#sync" class="mobile-nav-item" onclick="openTab(event, 'sync'); closeMobileNav();" data-tab="sync" role="tab" id="tab-sync-tab-mobile" aria-controls="tab-sync" aria-selected="false" tabindex="-1">
-        <img src="/static/images/icons/neo-nav-sync.svg" alt="Sync" class="nav-icon-img">
-        <span class="nav-text">Sync Inbox</span>
-      </a>
     </nav>
+
+
 
     <!-- Legacy Sidebar (Hidden - kept for JS compatibility) -->
     <aside class="sidebar" id="sidebar" aria-hidden="true" style="display: none !important;">
@@ -1843,7 +1832,7 @@ Now say: â€œPaste your syllabus text here (one course at a time).â€ The
           <div class="tab-header">
             <h2 class="page-title">Tutor</h2>
             <div class="tab-controls">
-              <a class="arcade-btn" href="https://chatgpt.com/g/g-693763cbfa3c8191b22fc700b526f2f6-trey-s-study-sop-v9-2" target="_blank" rel="noopener" style="font-size: 12px; text-decoration: none;">Open Treyâ€™s Custom GPT</a>
+              <a class="arcade-btn" href="https://chatgpt.com/g/g-693763cbfa3c8191b22fc700b526f2f6-trey-s-study-sop-v9-2" target="_blank" rel="noopener" style="font-size: 12px; text-decoration: none;">Open Trey's Custom GPT</a>
               <div class="btn-group">
                 <button type="button" class="arcade-btn" onclick="expandAllSections('tab-tutor')">
                   <span style="font-size: 10px;">â–¼</span> Expand All
@@ -2551,7 +2540,26 @@ Now say: â€œPaste your syllabus text here (one course at a time).â€ The
 
     </main><!-- End main-content -->
   </div><!-- End main-wrapper -->
+
+  <!-- Notes Sidebar -->
+  <aside class="notes-sidebar" id="notes-sidebar" aria-hidden="true">
+    <div class="notes-header">
+      <h3>Notes</h3>
+      <button class="notes-close" id="notes-close-btn" type="button" aria-label="Close notes" onclick="closeNotes()">&times;</button>
+    </div>
+    <div class="notes-body">
+      <label class="form-label" for="notes-quick-text">Quick Note</label>
+      <textarea id="notes-quick-text" class="form-textarea" rows="4" placeholder="Capture a quick note..."></textarea>
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn btn-primary" id="notes-save-btn">Save Note</button>
+        <button type="button" class="btn btn-secondary" id="notes-clear-btn">Clear</button>
+      </div>
+      <div class="notes-hint">Saved locally in this browser.</div>
+      <div class="notes-list" id="notes-list"></div>
+    </div>
+  </aside>
   </div><!-- End app-shell -->
+
 
   <!-- Sidebar Toggle Script -->
   <script>
@@ -2577,9 +2585,9 @@ Now say: â€œPaste your syllabus text here (one course at a time).â€ The
 
       // Update header title
       const titles = {
-        'overview': 'Overview',
+        'overview': 'Dashboard',
         'sessions': 'Brain',
-        'syllabus': 'Syllabus & Calendar',
+        'syllabus': 'Calendar',
         'scholar': 'Scholar Research',
         'tutor': 'Tutor',
         'brain': 'Database'

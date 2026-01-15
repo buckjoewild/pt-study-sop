@@ -102,10 +102,181 @@ function initHeaderCollapse() {
 
 document.addEventListener('DOMContentLoaded', initHeaderCollapse);
 
+const NOTES_STORAGE_KEY = 'dashboard_notes_v1';
+let currentEditingNoteId = null;
+
+function getStoredNotes() {
+  try {
+    const raw = localStorage.getItem(NOTES_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    console.warn('Failed to read notes storage', err);
+    return [];
+  }
+}
+
+function saveStoredNotes(notes) {
+  localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(notes));
+}
+
+function setEditingState(noteId = null) {
+  currentEditingNoteId = noteId;
+  const saveBtn = document.getElementById('notes-save-btn');
+  if (saveBtn) {
+    saveBtn.textContent = noteId ? 'Update Note' : 'Save Note';
+  }
+}
+
+function escapeNoteHtml(value) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderNotes() {
+  const list = document.getElementById('notes-list');
+  if (!list) return;
+  const notes = getStoredNotes();
+  if (!notes.length) {
+    list.innerHTML = '<div class="notes-hint">No notes yet.</div>';
+    return;
+  }
+
+  list.innerHTML = notes.map(note => {
+    const safeText = escapeNoteHtml(note.text);
+    return `
+      <div class="notes-item" data-note-id="${note.id}">
+        <div class="notes-item-header">
+          <span>${note.createdAt}</span>
+        </div>
+        <div class="notes-item-body">${safeText}</div>
+        <div class="notes-item-actions">
+          <button type="button" data-action="edit-note" data-note-id="${note.id}">Edit</button>
+          <button type="button" data-action="delete-note" data-note-id="${note.id}">Delete</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function addNote() {
+  const input = document.getElementById('notes-quick-text');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+
+  const notes = getStoredNotes();
+  if (currentEditingNoteId) {
+    const note = notes.find(item => item.id === currentEditingNoteId);
+    if (note) {
+      note.text = text;
+      note.updatedAt = new Date().toLocaleString();
+    } else {
+      notes.unshift({
+        id: Date.now().toString(),
+        text,
+        createdAt: new Date().toLocaleString()
+      });
+    }
+  } else {
+    notes.unshift({
+      id: Date.now().toString(),
+      text,
+      createdAt: new Date().toLocaleString()
+    });
+  }
+  saveStoredNotes(notes.slice(0, 50));
+  input.value = '';
+  setEditingState(null);
+  renderNotes();
+}
+
+function deleteNote(noteId) {
+  const notes = getStoredNotes().filter(note => note.id !== noteId);
+  saveStoredNotes(notes);
+  if (currentEditingNoteId === noteId) {
+    const input = document.getElementById('notes-quick-text');
+    if (input) input.value = '';
+    setEditingState(null);
+  }
+  renderNotes();
+}
+
+function toggleNotes(forceState) {
+  const shouldOpen = typeof forceState === 'boolean'
+    ? forceState
+    : !document.body.classList.contains('notes-open');
+  document.body.classList.toggle('notes-open', shouldOpen);
+
+  const sidebar = document.getElementById('notes-sidebar');
+  if (sidebar) {
+    sidebar.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
+  }
+  const btn = document.getElementById('notes-tab-btn');
+  if (btn) {
+    btn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+  }
+}
+
+function closeNotes() {
+  toggleNotes(false);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const notesBtn = document.getElementById('notes-tab-btn');
+  if (notesBtn) {
+    notesBtn.addEventListener('click', () => toggleNotes());
+  }
+
+  const saveBtn = document.getElementById('notes-save-btn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', addNote);
+  }
+
+  const clearBtn = document.getElementById('notes-clear-btn');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      const input = document.getElementById('notes-quick-text');
+      if (input) input.value = '';
+      setEditingState(null);
+    });
+  }
+
+  const list = document.getElementById('notes-list');
+  if (list) {
+    list.addEventListener('click', event => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const action = target.getAttribute('data-action');
+      const noteId = target.getAttribute('data-note-id');
+      if (!action || !noteId) return;
+      if (action === 'delete-note') {
+        deleteNote(noteId);
+      }
+      if (action === 'edit-note') {
+        const note = getStoredNotes().find(item => item.id === noteId);
+        const input = document.getElementById('notes-quick-text');
+        if (note && input) {
+          input.value = note.text;
+          input.focus();
+          setEditingState(noteId);
+        }
+      }
+    });
+  }
+
+  renderNotes();
+});
+
 // Scroll to top on page load to show hero logo
 window.addEventListener('load', () => {
   window.scrollTo({ top: 0, behavior: 'instant' });
 });
+
 
 /* ===== Mobile Navigation Toggle ===== */
 function toggleMobileNav() {

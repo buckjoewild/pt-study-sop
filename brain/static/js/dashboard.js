@@ -89,18 +89,19 @@ function collapseAllSections(tabId) {
 // Call initCollapsibles on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', initCollapsibles);
 
-function initHeaderCollapse() {
-  const threshold = 140;
-  const apply = () => {
-    const collapsed = window.scrollY > threshold;
-    document.body.classList.toggle('header-collapsed', collapsed);
-  };
-  apply();
-  window.addEventListener('scroll', apply, { passive: true });
-  window.addEventListener('resize', apply);
-}
+// Header collapse disabled - using fixed header size
+// function initHeaderCollapse() {
+//   const threshold = 140;
+//   const apply = () => {
+//     const collapsed = window.scrollY > threshold;
+//     document.body.classList.toggle('header-collapsed', collapsed);
+//   };
+//   apply();
+//   window.addEventListener('scroll', apply, { passive: true });
+//   window.addEventListener('resize', apply);
+// }
 
-document.addEventListener('DOMContentLoaded', initHeaderCollapse);
+// document.addEventListener('DOMContentLoaded', initHeaderCollapse);
 
 const NOTES_STORAGE_KEY = 'dashboard_notes_v1';
 let currentEditingNoteId = null;

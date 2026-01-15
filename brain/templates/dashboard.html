@@ -875,6 +875,30 @@ Gaps: Need to review valve mechanics
                     <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 8px;">
                       Connected as: <strong id="gcal-user-email" style="color: var(--text-primary);">â€”</strong>
                     </p>
+                    <div id="gcal-calendar-config"
+                      style="margin-bottom: 12px; padding: 12px; background: var(--surface-2); border-radius: 10px; border: 1px solid var(--border);">
+                      <div style="font-size: 12px; font-weight: 600; margin-bottom: 6px;">Calendars to sync</div>
+                      <div id="gcal-calendar-list"
+                        style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--text-secondary);">
+                        Loading calendars...
+                      </div>
+                      <div style="margin-top: 8px;">
+                        <label class="form-label" for="gcal-default-calendar" style="font-size: 12px;">Default calendar for new events</label>
+                        <select id="gcal-default-calendar" class="form-select" style="font-size: 12px;">
+                          <option value="">Primary</option>
+                        </select>
+                      </div>
+                      <label for="gcal-sync-all"
+                        style="display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--text-secondary);">
+                        <input id="gcal-sync-all" type="checkbox" style="width: 14px; height: 14px; accent-color: var(--primary);">
+                        Sync all calendars (warning)
+                      </label>
+                      <div id="gcal-calendar-warning" style="display: none; margin-top: 6px; font-size: 11px; color: var(--warning);">
+                        Syncing all calendars can import private events. Review selections before syncing.
+                      </div>
+                      <button id="btn-gcal-save-config" class="arcade-btn" style="margin-top: 8px; width: 100%;">Save Calendar Settings</button>
+                      <div id="gcal-config-status" style="margin-top: 6px; font-size: 11px; color: var(--text-muted);"></div>
+                    </div>
                     <div style="display: flex; gap: 8px; margin-bottom: 8px;">
                       <button id="btn-gcal-sync" class="arcade-btn arcade-btn-primary" style="flex: 1;">
                         ðŸ“… Sync Calendar
@@ -890,6 +914,7 @@ Gaps: Need to review valve mechanics
                       </button>
                     </div>
                     <p id="gcal-sync-status" style="margin-top: 8px; font-size: 12px; color: var(--text-muted);"></p>
+
                   </div>
                 </div>
               </div>
@@ -2257,7 +2282,15 @@ Now say: â€œPaste your syllabus text here (one course at a time).â€ The
               <option value="">Select course</option>
             </select>
           </div>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" for="edit-event-calendar">Google Calendar</label>
+            <select id="edit-event-calendar" class="form-select">
+              <option value="">Default (Primary)</option>
+            </select>
+            <small style="color: var(--text-muted); font-size: 11px;">Used when syncing to Google Calendar.</small>
+          </div>
           <div class="form-group" style="margin-bottom: 16px;">
+
             <label class="form-label" for="edit-event-title">Title</label>
             <input type="text" id="edit-event-title" class="form-input" required>
           </div>

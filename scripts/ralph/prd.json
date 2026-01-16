@@ -1,7 +1,7 @@
 {
-  "project": "pt-study-sop",
-  "branchName": "ralph/dashboard-walkthrough-audit",
+  "name": "pt-study-sop",
   "description": "Walk through each dashboard tab and modal, map UI-to-data connections, identify gaps, and assess test readiness.",
+  "branchName": "ralph/dashboard-walkthrough-audit",
   "userStories": [
     {
       "id": "US-001",
@@ -16,8 +16,9 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-002",
@@ -30,8 +31,9 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-003",
@@ -45,8 +47,12 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "",
+      "completionNotes": "Completed by agent"
     }
-  ]
+  ],
+  "metadata": {
+    "updatedAt": "2026-01-16T11:52:46.722Z"
+  }
 }

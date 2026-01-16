@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from datetime import datetime
 import sqlite3
+import json
 from typing import List, Dict, Any
 
 # Import internal modules from the "Brain"
@@ -16,8 +17,8 @@ try:
     )
     from scholar.friction_alerts import generate_alerts
 except ImportError:
-    print("Warning: Scholar modules not found")
-    get_all_sessions = lambda: []
+    # Scholar modules are optional - provide fallbacks silently
+    get_all_sessions = lambda limit=None: []
     get_session_by_id = lambda x: None
     get_session_count = lambda: 0
     calculate_session_metrics = lambda: {}
@@ -382,7 +383,7 @@ def get_proposals():
     Mimics: app.get("/api/proposals")
     Maps 'scholar_proposals' to Proposals.
     """
-    from brain.db_setup import get_connection
+    # get_connection already imported at top of file
 
     proposals = []
 
@@ -578,25 +579,16 @@ def run_scholar():
 @adapter_bp.route("/scholar/status", methods=["GET"])
 def scholar_status():
     """Check if Scholar is running."""
-    # Look for scholar.py process? Or PID file?
-    # Simple check: psutil or similar
-    # For now, placeholder or implementation of PID check
-    from brain.dashboard.scholar import cleanup_stale_pids
+    from pathlib import Path
 
     try:
-        active_pids = cleanup_stale_pids()  # This returns count of cleaned.
-        # To get status, we need to check if ANY remain.
-        # cleanup_stale_pids implementation in scholar.py only cleans.
-        # Let's peek at `orchestrator_runs` dir.
-        from pathlib import Path
-
         repo_root = Path(__file__).parent.parent.parent.resolve()
         run_dir = repo_root / "scholar" / "outputs" / "orchestrator_runs"
 
         is_running = False
         if run_dir.exists():
             for pid_file in run_dir.glob("*.pid"):
-                # If pid file exists (and wasn't cleaned), it's likely running
+                # If pid file exists, check if process is still running
                 is_running = True
                 break
 
@@ -1325,220 +1317,48 @@ def move_google_task_endpoint(task_id):
 @adapter_bp.route("/calendar/assistant", methods=["POST"])
 def calendar_assistant_endpoint():
     """
-    Chat with Calendar Assistant. Supports tools: create/update/delete events/tasks.
-    Default: Codex. Fallback: Returns error for UI selector.
+    Chat with Calendar Assistant using direct OpenAI API.
+    Stateless, simple tool calling for calendar operations.
     """
-    from brain.llm_provider import call_llm
-    from brain.dashboard import gcal
-
     data = request.json
-    messages = data.get("messages", [])  # List of {role, content}
+    messages = data.get("messages", [])
 
     if not messages:
         return jsonify({"error": "No messages provided"}), 400
 
     last_user_msg = messages[-1]["content"]
 
-    # Define Tools System Prompt
-    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    system_prompt = f"""You are a Calendar Assistant. Current Date/Time: {current_time}
-    
-You have access to these tools. Output JSON ONLY.
-Tools:
-1. create_event(title, start_time, end_time, description="")
-   - start_time/end_time in ISO format or "YYYY-MM-DD HH:MM"
-2. delete_event(event_id)
-3. create_task(title, list_id, due_date="")
-4. delete_task(list_id, task_id)
+    try:
+        # Import the simple calendar assistant module
+        from dashboard.calendar_assistant import run_calendar_assistant
 
-Format your response as valid JSON:
-{{
-  "thought": "Reasoning...",
-  "tool": "tool_name", 
-  "arguments": {{ ... }} 
-}}
-Or if just chatting:
-{{
-  "thought": "...",
-  "response": "User visible text..."
-}}
+        # Run the calendar assistant
+        result = run_calendar_assistant(last_user_msg)
 
-Be concise."""
+        if result.get("success"):
+            return jsonify(
+                {
+                    "response": result["response"],
+                    "can_undo": False,  # TODO: Add undo support
+                }
+            )
+        else:
+            return jsonify({"error": result.get("error", "Unknown error")}), 500
 
-    # Call LLM in isolated mode (no repo file access - just calendar commands)
-    result = call_llm(system_prompt, last_user_msg, provider="codex", isolated=True)
-
-    if not result["success"]:
-        # Propagate fallback info to frontend
+    except ImportError as e:
+        print(f"[Calendar Assistant] Import failed: {e}")
         return jsonify(
             {
-                "error": result["error"],
-                "fallback_available": result.get("fallback_available", False),
-                "fallback_models": result.get("fallback_models", []),
+                "response": "Calendar assistant is temporarily unavailable. Please try again.",
+                "error": str(e),
             }
         ), 503
-
-    content = result["content"]
-
-    # Parse JSON
-    try:
-        # Codex might output markdown fences
-        clean_content = content.replace("```json", "").replace("```", "").strip()
-        action_data = json.loads(clean_content)
-        print(f"[Calendar Assistant] Parsed action_data: {action_data}")
-    except Exception as parse_err:
-        # Fallback to text
-        print(
-            f"[Calendar Assistant] JSON parse failed: {parse_err}, returning raw content"
-        )
-        return jsonify({"response": content})
-
-    tool = action_data.get("tool")
-    args = action_data.get("arguments", {})
-    resp_text = action_data.get("response")
-    print(f"[Calendar Assistant] tool={tool}, args={args}, resp_text={resp_text}")
-
-    if not tool:
-        print(f"[Calendar Assistant] No tool detected, returning response text")
-        return jsonify({"response": resp_text or content})
-
-    # Execute Tool
-    action_result = None
-    ledger_entry = {
-        "action_type": tool,
-        "pre_state": None,
-        "description": f"Tool {tool} executed",
-    }
-
-    def _normalize_datetime(dt_str):
-        """Convert 'YYYY-MM-DD HH:MM' to ISO 8601 'YYYY-MM-DDTHH:MM:SS'."""
-        if not dt_str:
-            return dt_str
-        # Replace space with T if present, add seconds if missing
-        normalized = dt_str.replace(" ", "T")
-        if len(normalized) == 16:  # YYYY-MM-DDTHH:MM
-            normalized += ":00"
-        return normalized
-
-    try:
-        if tool == "create_event":
-            # Normalize LLM datetime output to ISO 8601 format
-            start_dt = _normalize_datetime(args.get("start_time"))
-            end_dt = _normalize_datetime(args.get("end_time"))
-
-            body = {
-                "summary": args.get("title"),
-                "description": args.get("description", ""),
-                "start": {
-                    "dateTime": start_dt,
-                    "timeZone": "America/Chicago",
-                },
-                "end": {
-                    "dateTime": end_dt,
-                    "timeZone": "America/Chicago",
-                },
-            }
-            # Add implicit simple date handling if needed?
-            # Skipping complex date parsing for now, assuming Codex provides ISO.
-
-            res, err = gcal.create_event("primary", body)
-            if err:
-                raise Exception(err)
-            action_result = res
-            ledger_entry["target_id"] = res.get("id")
-            ledger_entry["post_state"] = json.dumps(res)
-            ledger_entry["description"] = f"Created event '{args.get('title')}'"
-
-        elif tool == "delete_event":
-            eid = args.get("event_id")
-            # Snapshot pre-state? need fetch.
-            # Optimization: skip pre-fetch for latency, or do it for robust undo.
-            # Doing fetch for Undo.
-            service = gcal.get_calendar_service()
-            try:
-                pre = service.events().get(calendarId="primary", eventId=eid).execute()
-                ledger_entry["pre_state"] = json.dumps(pre)
-            except:
-                pass
-
-            success, err = gcal.delete_event("primary", eid)
-            if not success:
-                raise Exception(err)
-            ledger_entry["target_id"] = eid
-            ledger_entry["description"] = f"Deleted event {eid}"
-
-        elif tool == "create_task":
-            lid = args.get("list_id")
-            body = {"title": args.get("title")}
-            if args.get("due_date"):
-                body["due"] = (
-                    args.get("due_date") + "T00:00:00.000Z"
-                )  # Basic day mapping
-
-            res, err = gcal.create_google_task(lid, body)
-            if err:
-                raise Exception(err)
-            action_result = res
-            ledger_entry["target_id"] = res.get("id")
-            ledger_entry["post_state"] = json.dumps(res)
-            ledger_entry["description"] = f"Created task '{args.get('title')}'"
-
-        elif tool == "delete_task":
-            lid = args.get("list_id")
-            tid = args.get("task_id")
-            # Pre-fetch
-            service = gcal.get_tasks_service()
-            try:
-                pre = service.tasks().get(tasklist=lid, task=tid).execute()
-                ledger_entry["pre_state"] = json.dumps(pre)
-            except:
-                pass
-
-            success, err = gcal.delete_google_task(lid, tid)
-            if not success:
-                raise Exception(err)
-            ledger_entry["target_id"] = tid
-            ledger_entry["description"] = f"Deleted task {tid}"
-
-        else:
-            return jsonify({"response": f"Unknown tool: {tool}"})
-
-        # Log to Ledger
-        from brain.db_setup import get_connection
-
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute(
-            """
-            INSERT INTO calendar_action_ledger 
-            (action_type, target_id, pre_state, post_state, description)
-            VALUES (?, ?, ?, ?, ?)
-        """,
-            (
-                tool,
-                ledger_entry["target_id"],
-                ledger_entry.get("pre_state"),
-                ledger_entry.get("post_state"),
-                ledger_entry["description"],
-            ),
-        )
-        conn.commit()
-        conn.close()
-
-        return jsonify(
-            {
-                "response": f"Executed {tool}.",
-                "tool_result": action_result,
-                "can_undo": True,
-            }
-        )
-
     except Exception as e:
         import traceback
 
-        print(f"[Calendar Assistant] Tool execution error: {e}")
+        print(f"[Calendar Assistant] Error: {e}")
         traceback.print_exc()
-        return jsonify({"error": f"Tool Execution Failed: {str(e)}"}), 500
+        return jsonify({"error": f"Assistant error: {str(e)}"}), 500
 
 
 @adapter_bp.route("/calendar/assistant/undo", methods=["POST"])

@@ -1,20 +1,29 @@
 Goal (incl. success criteria):
-- Fix `Run_Brain_All.bat` so the PT Study Brain dashboard starts and stays open without the `main.tsx` MIME type error.
+- Reconstruct a page-by-page spec for the PT Study Brain dashboard so Replit can rebuild Dashboard, Brain, Calendar, Tutor, and Scholar pages with the needed UI/API hooks; success = concise per-page feature list with canonical refs.
+- (Paused) Fix PT Study Brain dashboard styling to match arcade theme from `C:/Users/treyt/OneDrive/Desktop/Arcade-RetroDesign`.
 Constraints/Assumptions:
-- Follow repo AGENTS.md; keep edits minimal and additive; avoid secrets.
-- Ask before destructive actions.
+- Repo was restored from an older snapshot; some React source/support files may be missing (UNCONFIRMED until verified).
+- Canonical behavior reference is `docs/dashboard_audit.md`.
+- Prefer minimal viable workflow: log sessions → ingest → resume → calendar/events/tasks; Tutor/Scholar can be partial.
 Key decisions:
-- Update `Run_Brain_All.bat` to rewrite `brain/static/react/index.html` to latest built JS asset.
+- Synthesize the canonical audit (`docs/dashboard_audit.md` sections) with the current React pages (`brain/static/react/src/pages/*.tsx`) and API routes (`brain/dashboard/routes.py`, `brain/dashboard/api_adapter.py`) to list what each tab must render + the endpoints/payloads it consumes.
 State:
   - Done:
-    - Updated `Run_Brain_All.bat` to rewrite `brain/static/react/index.html` with latest `index-*.js`.
+    - Collated per-page feature lists for Dashboard, Brain, Calendar, Tutor, and Scholar along with the required data sources/endpoints.
+    - Confirmed shared schema expectations via `brain/static/react/shared/schema.ts`.
   - Now:
-    - Diagnose why the dashboard window closes immediately.
+    - Deliver this spec and await your next instruction (e.g., styling or deeper implementation).
   - Next:
-    - Capture error output from the batch run and adjust script or dependencies.
+    - Resume the paused arcade-styling task when requested.
 Open questions (UNCONFIRMED if needed):
-- What error message appears when the window closes? (screenshot or text)
+- Is Replit hosting the Flask backend, or will it only render the frontend and call your local server?
 Working set (files/ids/commands):
-- `C:/Users/treyt/OneDrive/Desktop/pt-study-sop/Run_Brain_All.bat`
-- `C:/Users/treyt/OneDrive/Desktop/pt-study-sop/brain/static/react/index.html`
-- `C:/Users/treyt/OneDrive/Desktop/pt-study-sop/brain/dashboard/app.py`
+- `docs/dashboard_audit.md`
+- `brain/static/react/src/pages/dashboard.tsx`
+- `brain/static/react/src/pages/brain.tsx`
+- `brain/static/react/src/pages/calendar.tsx`
+- `brain/static/react/src/pages/tutor.tsx`
+- `brain/static/react/src/pages/scholar.tsx`
+- `brain/dashboard/routes.py`
+- `brain/dashboard/api_adapter.py`
+- `brain/static/react/shared/schema.ts`

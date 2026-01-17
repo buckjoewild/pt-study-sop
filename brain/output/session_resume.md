@@ -1,8 +1,8 @@
 # Session Resume
-Generated: 2026-01-16 09:16
+Generated: 2026-01-17 02:37
 
 ## Readiness Score
-**67/100** (4 topics, 4 sessions in 30 days)
+**0/100** (No recent sessions)
 
 ## Drift + SOP Usage (last 30d)
 - Prompt Drift flagged: 0
@@ -12,29 +12,80 @@ Generated: 2026-01-16 09:16
 - Common Core Learning Modules: n/a
 
 ## Recent Sessions
-- **Week 1 Neuroscience – Glial Cells and Demyelination (MS & GBS)** (2026-01-12, 4d ago)
+- **Normal vs Commonly Abnormal Aging** (2025-12-11, 37d ago)
   - Mode: Core | Understanding: 5/5 | Confidence: 4/5
-- **Glial Cells – Astrocyte, Microglia, Ependymal** (2026-01-12, 4d ago)
-  - Mode: Core | Understanding: 5/5 | Confidence: 4/5
-- **Myelin & Glial Cells** (2026-01-11, 5d ago)
+  - Region: N/A
+  - Landmarks: N/A
+- **Comprehensive Anatomy exam prep (Dr. Ko)** (2025-12-10, 38d ago)
   - Mode: Core | Understanding: 4/5 | Confidence: 4/5
-- **Neuroscience Introduction – The Neuron** (2026-01-10, 6d ago)
+  - Region: Gluteal region; posterior/anterior/medial thigh; lower leg; foot (layers 1–4); head & neck (cranial base, Circle of Willis, dural sinuses)
+  - Landmarks: Greater trochanter attachment map; ischial tuberosity attachment map; femoral tr...
+- **Face Encoding — Week 11 Facial Expression Muscles** (2025-12-08, 40d ago)
   - Mode: Core | Understanding: 4/5 | Confidence: 4/5
+  - Region: Face — expression musculature
+  - Landmarks: NA
+- **Lower Limb Anatomy - Module 10** (2025-12-08, 40d ago)
+  - Mode: Core | Understanding: 3/5 | Confidence: 3/5
+  - Region: Thigh, Leg, Foot
+  - Landmarks: ASIS, AIIS, greater trochanter, lesser trochanter, linea aspera, pectineal line,...
+- **Anatomy - Gluteal Region & Posterior Thigh (wrap sprint + lab)** (2025-12-05, 43d ago)
+  - Mode: Sprint | Understanding: 3/5 | Confidence: 3/5
+  - Region: Gluteal region, posterior thigh, popliteal fossa
+  - Landmarks: popliteal fossa borders; BF tendon lateral edge; semimembranosus bed; semitendin...
 
 ## Topic Coverage
-- **Glial Cells – Astrocyte, Microglia, Ependymal**: 1 sessions, last 4d ago [FRESH]
+- **Normal vs Commonly Abnormal Aging**: 1 sessions, last 37d ago [STALE]
   - Avg Understanding: 5.0/5 | Avg Confidence: 4.0/5
-- **Week 1 Neuroscience – Glial Cells and Demyelination (MS & GBS)**: 1 sessions, last 4d ago [FRESH]
+- **Comprehensive Anatomy exam prep (Dr. Ko)**: 1 sessions, last 38d ago [STALE]
+  - Avg Understanding: 4.0/5 | Avg Confidence: 4.0/5
+- **Face Encoding — Week 11 Facial Expression Muscles**: 1 sessions, last 40d ago [STALE]
+  - Avg Understanding: 4.0/5 | Avg Confidence: 4.0/5
+- **Lower Limb Anatomy - Module 10**: 1 sessions, last 40d ago [STALE]
+  - Avg Understanding: 3.0/5 | Avg Confidence: 3.0/5
+- **Anatomy - Gluteal Region & Posterior Thigh (bones + deep gluteal muscles)**: 1 sessions, last 43d ago [STALE]
   - Avg Understanding: 5.0/5 | Avg Confidence: 4.0/5
-- **Myelin & Glial Cells**: 1 sessions, last 5d ago [FRESH]
+- **Anatomy - Gluteal Region & Posterior Thigh (deep gluteals + nerves)**: 1 sessions, last 43d ago [STALE]
+  - Avg Understanding: n/a/5 | Avg Confidence: n/a/5
+- **Anatomy - Gluteal Region & Posterior Thigh (wrap sprint + lab)**: 1 sessions, last 43d ago [STALE]
+  - Avg Understanding: 3.0/5 | Avg Confidence: 3.0/5
+- **Pelvis & Gluteal Region**: 1 sessions, last 345d ago [STALE]
   - Avg Understanding: 4.0/5 | Avg Confidence: 4.0/5
-- **Neuroscience Introduction – The Neuron**: 1 sessions, last 6d ago [FRESH]
-  - Avg Understanding: 4.0/5 | Avg Confidence: 4.0/5
+
+## Anatomy Coverage
+- **N/A**: 1 sessions, last 37d ago
+  - Landmarks: N/A
+  - Muscles: N/A
+- **Gluteal region; posterior/anterior/medial thigh; lower leg; foot (layers 1–4); head & neck (cranial base, Circle of Willis, dural sinuses)**: 1 sessions, last 38d ago
+  - Landmarks: Greater trochanter attachment map; ischial tuberosity attachment map; femoral triangle borders; adductor canal borders; plantar surface layers; skull base foramina
+  - Muscles: AbH, lumbricals, Gluteus maximus/medius/minimus; hamstrings; obturators; piriformis; quadratus femoris; foot layer muscles (FDB, AbDM, QP
+- **Face — expression musculature**: 1 sessions, last 40d ago
+  - Landmarks: NA
+  - Muscles: NA
+- **Thigh, Leg, Foot**: 1 sessions, last 40d ago
+  - Landmarks: pectineal line, lesser trochanter, adductor tubercle, ASIS, medial/lateral condyles
+  - Muscles: all plantar layer muscles, gastroc, FDL, soleus, EDL
+- **Gluteal region and posterior thigh**: 2 sessions, last 43d ago
+  - Landmarks: Not recorded, ischial tuberosity; ischial spine; greater trochanter; pelvic map flag shape
+  - Muscles: quadratus femoris; piriformis; superior gemellus (review); obturator internus tendon (context), piriformis; superior gemellus; obturator internus tendon; inferior gemellus
+- **Gluteal region, posterior thigh, popliteal fossa**: 1 sessions, last 43d ago
+  - Landmarks: popliteal fossa borders; BF tendon lateral edge; semimembranosus bed; semitendinosus rope; pes anserinus
+  - Muscles: semimembranosus; semitendinosus; biceps femoris long head; biceps femoris short head; adductor magnus
+- **Pelvis & gluteal region**: 1 sessions, last 345d ago
+  - Landmarks: sacrospinous ligament; sacrotuberous ligament; greater & lesser sciatic foramina boundaries
+  - Muscles: piriformis; obturator internus; superior gemellus; inferior gemellus
 
 ## Areas Needing Attention
-No weak areas identified. Keep it up!
+- **Anatomy - Gluteal Region & Posterior Thigh (wrap sprint + lab)**: Understanding 3.0/5, Confidence 3.0/5 (last: 43d ago)
+- **Lower Limb Anatomy - Module 10**: Understanding 3.0/5, Confidence 3.0/5 (last: 40d ago)
 
 ## Recommended Focus
+**Due for review:**
+- Normal vs Commonly Abnormal Aging (last studied 37d ago)
+- Comprehensive Anatomy exam prep (Dr. Ko) (last studied 38d ago)
+- Face Encoding — Week 11 Facial Expression Muscles (last studied 40d ago)
+**Needs strengthening:**
+- Anatomy - Gluteal Region & Posterior Thigh (wrap sprint + lab) (confidence: 3.0/5)
+- Lower Limb Anatomy - Module 10 (confidence: 3.0/5)
 
 ---
 *Paste this at the start of your session for context.*

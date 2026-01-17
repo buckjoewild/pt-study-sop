@@ -1,24 +1,20 @@
 Goal (incl. success criteria):
-- Implement Brain intake pipeline: paste tutor notes into intake, use LLM to sort outputs (Anki, Obsidian, mastery, class, time spent, what worked/didn’t, tutor fixes).
-- Success = intake UI wired + backend endpoint to process intake + stored outputs ready for Anki/Obsidian/mastery views.
+- Fix `Run_Brain_All.bat` so the PT Study Brain dashboard starts and stays open without the `main.tsx` MIME type error.
 Constraints/Assumptions:
-- Follow repo AGENTS.md; avoid secrets; keep edits scoped/additive.
-- LLM provider/config not yet confirmed.
+- Follow repo AGENTS.md; keep edits minimal and additive; avoid secrets.
+- Ask before destructive actions.
 Key decisions:
-- Start with Brain intake flow and data shape alignment (Step 1).
+- Update `Run_Brain_All.bat` to rewrite `brain/static/react/index.html` to latest built JS asset.
 State:
   - Done:
-    - Identified dashboard surfaces and gaps; roadmap in `docs/roadmap/dashboard_surface_gap_plan.md`.
+    - Updated `Run_Brain_All.bat` to rewrite `brain/static/react/index.html` with latest `index-*.js`.
   - Now:
-    - Inspect current Brain/Tutor intake and session data shape.
+    - Diagnose why the dashboard window closes immediately.
   - Next:
-    - Design intake payload + storage, then implement UI + API.
+    - Capture error output from the batch run and adjust script or dependencies.
 Open questions (UNCONFIRMED if needed):
-- Which LLM provider/config should run the intake (OpenAI/OpenRouter/local)?
-- Where should outputs be stored (DB tables, files under `scholar/outputs`, or both)?
-- Desired output schema for Anki/Obsidian/mastery (fields + formats)?
+- What error message appears when the window closes? (screenshot or text)
 Working set (files/ids/commands):
-- `brain/static/react/src/pages/brain.tsx`
-- `brain/static/react/src/pages/tutor.tsx`
-- `brain/dashboard/api_adapter.py`
-- `brain/dashboard/routes.py`
+- `C:/Users/treyt/OneDrive/Desktop/pt-study-sop/Run_Brain_All.bat`
+- `C:/Users/treyt/OneDrive/Desktop/pt-study-sop/brain/static/react/index.html`
+- `C:/Users/treyt/OneDrive/Desktop/pt-study-sop/brain/dashboard/app.py`

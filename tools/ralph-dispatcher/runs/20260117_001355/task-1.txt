@@ -1,0 +1,1 @@
+Create `DISPATCHER_TEST.txt` in the workspace containing a single line `dispatcher ok`.

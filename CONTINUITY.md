@@ -255,3 +255,14 @@ Update 2026-01-19 (Dashboard Audit Fix):
   - `Arcade-RetroDesignNEW/.../pages/scholar.tsx`
   - `Arcade-RetroDesignNEW/.../pages/tutor.tsx`
   - `brain/static/dist/`
+Update 2026-01-18:
+- Goal: Reorganize SOP into canonical src/runtime structure, integrate new pedagogy, and generate runtime bundles.
+- Done:
+  - Created `sop/src/` canonical tree (modules, frameworks, engines, workload, templates, evidence).
+  - Merged M0-M6, frameworks, and engines; added 3+2 schedule, sandwich method, 1-3-7-21 spacing, exit ticket, and metrics.
+  - Added logging schema v9.2 (Tracker + Enhanced JSON) and templates (exit ticket, retrospective timetable, weekly plan/review, metrics).
+  - Added runtime rules, custom instructions, runtime prompt, deployment checklist, and manifest.
+  - Implemented `sop/tools/build_runtime_bundle.py` and generated bundles in `sop/runtime/knowledge_upload/`.
+  - Archived legacy and old runtime content under `sop/archive/` and added stubs at old paths.
+- Now: Report migration map and validate any external references that still point to old paths.
+- Next: Optional link linting or log validation tooling expansion if needed.

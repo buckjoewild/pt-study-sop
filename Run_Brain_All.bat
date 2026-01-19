@@ -7,6 +7,9 @@ cd /d "%~dp0"
 rem Configure Study RAG drop-folder (used by Tutor -> Study sync)
 set "PT_STUDY_RAG_DIR=C:\Users\treyt\OneDrive\Desktop\PT School"
 
+rem Configure API Keys (override system environment)
+set "OPENROUTER_API_KEY=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"
+
 rem Resolve Python (prefer python, fallback to py -3)
 set "PYEXE="
 set "PYEXE_ARGS="

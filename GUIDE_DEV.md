@@ -1,0 +1,43 @@
+# PT Study System — Developer Guide
+
+## Overview
+This guide covers how to run the stack, update docs, and extend the system safely.
+
+## Stack
+- Backend: Python + Flask (Brain/Dashboard)
+- DB: SQLite (`brain/data/pt_study.db`)
+- Frontend: React build served from `brain/static/dist/`
+- Knowledge base: Obsidian vault under `projects/treys-agent/context/`
+
+## Run Locally
+1. Install Python deps: `pip install -r requirements.txt`
+2. Launch dashboard: `python brain/dashboard_web.py`
+3. Tutor runs via `projects/treys-agent/ask.bat`
+
+## Configuration
+- Calendar/Tasks: `brain/data/api_config.json`
+- OAuth tokens: `brain/data/gcal_token.json`
+- System rules: `sop/src/` (canonical)
+
+## Contracts (Do Not Drift)
+- WRAP schema: `docs/contracts/wrap_schema.md`
+- IDs: `docs/contracts/ids.md`
+- Metrics + issues: `docs/contracts/metrics_issues.md`
+- Card drafts: `docs/contracts/card_draft_schema.md`
+- Obsidian write semantics: `docs/contracts/obsidian_write_semantics.md`
+
+## Data Flow (Developer Summary)
+- Tutor WRAP logs → `brain/session_logs/`
+- Brain ingestion → `brain/data/pt_study.db`
+- Dashboard reads metrics via API
+- Scholar reads DB + SOP, writes to `scholar/outputs/`
+
+## Testing
+- Targeted: `python -m pytest brain/tests`
+- Release check: `python scripts/release_check.py`
+
+## Docs Discipline
+- User Guide: `GUIDE_USER.md`
+- Developer Guide: `GUIDE_DEV.md`
+- Architecture Spec: `GUIDE_ARCHITECTURE.md`
+- Index: `DOCS_INDEX.md`

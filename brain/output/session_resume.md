@@ -1,8 +1,8 @@
 # Session Resume
-Generated: 2026-01-19 00:08
+Generated: 2026-01-19 15:04
 
 ## Readiness Score
-**0/100** (No recent sessions)
+**4/100** (1 topics, 1 sessions in 30 days)
 
 ## Drift + SOP Usage (last 30d)
 - Prompt Drift flagged: 0
@@ -12,10 +12,12 @@ Generated: 2026-01-19 00:08
 - Common Core Learning Modules: n/a
 
 ## Recent Sessions
-No sessions logged yet.
+- **Evidence Based Practice** (2026-01-19, 0d ago)
+  - Mode: study | Understanding: n/a/5 | Confidence: n/a/5
 
 ## Topic Coverage
-No topics covered yet.
+- **Evidence Based Practice**: 1 sessions, last 0d ago [FRESH]
+  - Avg Understanding: n/a/5 | Avg Confidence: n/a/5
 
 ## Areas Needing Attention
 No weak areas identified. Keep it up!

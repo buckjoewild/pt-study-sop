@@ -198,33 +198,6 @@ Update 2026-01-19:
 - Goal: Add Tasks list and Academic Deadlines tracker to the Dashboard page.
 - Done:
   - Added `academic_deadlines` table to SQLite database (api_adapter.py).
-Update 2026-01-19:
-- Goal: Audit caching/version mismatches and stabilize API key loading.
-- Done:
-  - Added `.env` loader in `brain/config.py` and bumped VERSION to 9.2.
-  - Updated `brain/ingest_session.py` schema_version to 9.2 and clarified v9.2 parsing.
-  - Updated `brain/dashboard/utils.py` to merge defaults and env fallbacks for API config.
-  - Removed hardcoded OpenRouter key in `brain/llm_provider.py` (now uses env).
-  - Updated `brain/dashboard/api_adapter.py` to read `OBSIDIAN_API_KEY` from env.
-  - Guarded `openai` import in `brain/dashboard/calendar_assistant.py`.
-- Now: Provide audit report and remaining mismatch/hang risks.
-- Next: Decide on docs alignment (v9.1 vs v9.2), UI build source-of-truth, and dependency pinning.
-- Working set:
-  - `brain/config.py`
-  - `brain/ingest_session.py`
-  - `brain/dashboard/utils.py`
-  - `brain/llm_provider.py`
-  - `brain/dashboard/api_adapter.py`
-  - `brain/dashboard/calendar_assistant.py`
-  - `brain/dashboard/routes.py`
-Update 2026-01-19:
-- Goal: Add pinned Python dependency manifest for backend/integrations.
-- Done:
-  - Added `requirements.txt` with pinned versions for Flask, requests, OpenAI, Google APIs, dotenv, and optional Selenium tooling.
-- Now: Confirm dependency pinning scope is correct for your workflows.
-- Next: If you want slimmer installs, split optional deps into a separate file.
-- Working set:
-  - `requirements.txt`
   - Added full CRUD + toggle endpoints for `/api/academic-deadlines`.
   - Added `academicDeadlines` API client with types to `api.ts`.
   - Updated `dashboard.tsx`:
@@ -323,50 +296,39 @@ Update 2026-01-19:
 - Next: Begin Brain milestone B1 (WRAP intake + bucket taxonomy execution).
 
 Update 2026-01-19:
-- Goal: Align Brain schema/ingest with SOP v9.3 logging.
+- Goal: Create root docs index, separated guides, and contracts + acceptance tests.
 - Done:
-  - Updated `brain/db_setup.py` to v9.3 schema defaults and added v9.3 columns (calibration_gap, rsr_percent, cognitive_load, transfer_check, buckets, confusables_interleaved, exit_ticket_* fields, retrospective_status, tracker_json, enhanced_json).
-  - Extended `brain/ingest_session.py` to parse v9.3 JSON logs, map tracker/enhanced fields, store raw JSON, and keep v9.2 markdown support (schema_version now 9.3).
-  - Bumped `brain/config.py`, `brain/README.md`, and dashboard ingest comment to v9.3.
-- Now: Database can be migrated to v9.3 via `python brain/db_setup.py`; ingest supports JSON logs.
-- Next: Optional v9.3 UI/API entry alignment and tests if desired.
-
+  - Added root doc index `DOCS_INDEX.md`.
+  - Added separated guides: `GUIDE_USER.md`, `GUIDE_DEV.md`, `GUIDE_ARCHITECTURE.md`.
+  - Added contracts: `docs/contracts/INDEX.md`, `ids.md`, `wrap_schema.md`, `metrics_issues.md`, `card_draft_schema.md`, `obsidian_write_semantics.md`.
+  - Added golden paths + incomplete-data scenarios under `docs/tests/`.
+  - Updated `CLAUDE.md` with documentation map.
+- Now: Confirm docs locations and update README to point to `DOCS_INDEX.md` if desired.
+- Next: Add OAuth scope guidance and cold-start config to user/dev guides.
 
 Update 2026-01-19:
-- Goal: Wire LLM plain-text intake to v9.3 session logging.
+- Goal: Remove duplicate `pt-study-sop*` workspace copies on Desktop.
 - Done:
-  - Added raw_input handling to session inserts.
-  - Updated /api/brain/chat to build tracker/enhanced JSON from LLM output and insert sessions, returning session status metadata.
-  - Card drafts now link to the new session id when available.
-- Now: Plain-text LLM intake logs sessions and stores raw input.
-- Next: If you want the UI to drive /api/brain/chat directly, wire a frontend control to that endpoint.
-
+  - Deleted `pt-study-sop-worktrees`.
+  - Verified `pt-study-sop-remote-restore` and `pt-study-sop-locks` were already absent.
+- Now: Continue duplicate audit folder-by-folder inside `pt-study-sop`.
+- Next: None noted.
 
 Update 2026-01-19:
-- Goal: Professionalize LLM intake and v9.3 logging path without UI changes.
+- Goal: Consolidate CLAUDE/AGENTS/commands/subagents into one canonical location and link all tools to it.
 - Done:
-  - Added direct JSON intake support in /api/brain/chat (tracker/enhanced or JSON blocks).
-  - Skips session logging for question-only responses; logs raw_input and source_path for real sessions.
-  - Added v9.3 JSON parsing tests for ingestion helpers.
-  - Documented /api/brain/chat usage in brain/README.md.
-  - Expanded .claude/permissions.json to allow db migration and test commands.
-- Now: Ready to run migrations and full test checks.
-- Next: Run db_setup, pytest, and release_check; manual dashboard smoke test.
-
-
-Update 2026-01-19:
-- Goal: Make Run_Brain_All.bat usable in non-interactive runs and align with dist build.
-- Done:
-  - db_setup.py now skips the v9.1 migration prompt on EOF/non-interactive input (optional auto-migrate via PT_BRAIN_AUTO_MIGRATE).
-  - Run_Brain_All.bat now checks brain/static/dist assets and avoids missing dashboard_rebuild build steps.
-- Now: Smoke test runs end-to-end; minor timeout warning remains in non-interactive mode.
-- Next: Optionally replace timeout with a non-interactive sleep to avoid the warning.
+  - Created canonical `ai-config/` under `pt-study-sop` with unified `AGENTS.md` and `CLAUDE.md`.
+  - Moved `.claude` commands, subagents, permissions, and settings into `ai-config/` (recreated after accidental removal).
+  - Replaced `pt-study-sop/.claude` with a junction to `ai-config`.
+  - Linked `Desktop/.claude` to the same `ai-config`.
+  - Hardlinked `AGENTS.md` and `CLAUDE.md` in repo root to the canonical files (Desktop `AGENTS.md` hardlinked too).
+- Now: Ensure Obsidian sees `PT School Semester 2\\treys-agent` (already junctioned) and decide if `ai-config` should also appear inside the vault.
+- Next: Optionally add an Obsidian-visible junction (e.g., `PT School Semester 2\\Dev_Projects\\ai-config`) if desired.
 
 Update 2026-01-19:
-- Goal: Align runtime bundle to v9.3 and ensure core SOP files are present.
+- Goal: Reduce clutter/duplicates in `brain` assets and archived dashboards.
 - Done:
-  - Updated sop/runtime/knowledge_upload/* version headers from v9.2 to v9.3.
-  - Updated sop/runtime/runtime_prompt.md to v9.3.
-  - Refreshed gpt_bundle_v9.3 with all knowledge upload files (00-05), runtime prompt, prompts, instructions, and runtime references.
-- Now: Runtime bundle matches v9.3 references; no v9.2 labels remain in runtime bundle files.
-- Next: None.
+  - Deduped `brain/static` images by hardlinking duplicates to canonical icons (kept filenames intact).
+  - Removed archived dashboard `node_modules` under `archive/dashboards/{brain_static_react,dashboard_rebuild}/`.
+- Now: Continue duplicate sweep (Arcade-RetroDesign pending hash scan due to size/locked local.db).
+- Next: Decide whether to remove/build-ignore remaining archive assets and tackle Arcade-RetroDesign duplicates.

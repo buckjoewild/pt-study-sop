@@ -90,7 +90,7 @@ os.makedirs(STUDY_RAG_PATH, exist_ok=True)
 
 def insert_session_data(data):
     """
-    Validate and insert using the v9.1 ingest pipeline.
+    Validate and insert using the v9.3 ingest pipeline.
     Returns (ok: bool, message: str).
     """
     is_valid, error = validate_session_data(data)

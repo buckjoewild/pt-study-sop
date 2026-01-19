@@ -7,6 +7,10 @@ import tempfile
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union
 
+# Load .env into environment (no-op if not present)
+from config import load_env
+load_env()
+
 # Configuration
 DEFAULT_TIMEOUT_SECONDS = 60
 OPENAI_API_TIMEOUT = 30
@@ -33,8 +37,8 @@ def find_codex_cli() -> Optional[str]:
     return None
 
 
-# OpenRouter API key (hardcoded for convenience)
-OPENROUTER_API_KEY = "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"
+# OpenRouter API key (from env or .env)
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 
 
 def _call_openrouter_api(

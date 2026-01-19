@@ -1,4 +1,4 @@
-# PT Study Brain v9.2 (Dev)
+# PT Study Brain v9.3 (Dev)
 
 Session tracking and analytics system for the PT Study SOP.
 
@@ -32,6 +32,18 @@ python ingest_session.py session_logs/2025-12-05_topic.md
 ```powershell
 python generate_resume.py
 # Paste output into GPT for context
+```
+
+### LLM Intake (optional)
+
+Send plain text or v9.3 JSON directly to the Brain intake endpoint. This logs a session, stores the raw input, and drafts cards when present.
+
+```powershell
+# Plain text
+curl -X POST http://127.0.0.1:5000/api/brain/chat -H "Content-Type: application/json" -d "{\"message\":\"Studied hip joint anatomy for 30 minutes...\"}"
+
+# Direct JSON (tracker + enhanced)
+curl -X POST http://127.0.0.1:5000/api/brain/chat -H "Content-Type: application/json" -d "{\"tracker\":{...},\"enhanced\":{...}}"
 ```
 
 ### Launch Dashboard
@@ -86,7 +98,11 @@ brain/
 
 ---
 
-## Session Log Fields (v9.1)
+## Session Log Fields (v9.3)
+
+Notes:
+- v9.3 JSON logs (Tracker + Enhanced) are supported.
+- v9.2 markdown logs remain supported for backward compatibility.
 
 ### Required
 
@@ -176,9 +192,9 @@ python rag_notes.py ingest session_logs/my_note.md --course-id 1 --topic-tags "a
 python rag_notes.py search "gluteal region landmarks" --limit 5
 ```
 
-## Database Schema (v9.1 + planning/RAG extensions)
+## Database Schema (v9.3 + planning/RAG extensions)
 
-Core session logging uses the v9.1 `sessions` table. Key fields include:
+Core session logging uses the v9.3 `sessions` table. Key fields include:
 
 - `target_exam` - Exam/block being studied for
 - `source_lock` - Materials used in session
@@ -195,7 +211,7 @@ Core session logging uses the v9.1 `sessions` table. Key fields include:
 - `weak_anchors` - Anchors needing cards in WRAP
 - `anchors_mastery` - Mastery counts for locked anchors (0-3)
 
-Planning and RAG tables are **additive** and do not change the v9.1 session schema:
+Planning and RAG tables are **additive** and do not change the core session schema:
 
 - `courses` - high-level course metadata (name, code, term, instructor, weekly time budget).
 - `course_events` - syllabus events (lectures, readings, quizzes, exams, assignments) with dates, due dates, weight, and raw syllabus text.
@@ -269,6 +285,7 @@ The dashboard exposes REST API endpoints:
 | `/api/syllabus/events` | GET | List course events with coverage analytics |
 | `/api/calendar/data` | GET | Get calendar data (events, sessions, planned) |
 | `/api/calendar/plan_session` | POST | Create planned spaced repetition session |
+| `/api/brain/chat` | POST | LLM intake: parse raw text or v9.3 JSON into a session and card drafts |
 | `/api/gcal/status` | GET | Google Calendar auth status |
 | `/api/gcal/calendars` | GET | List Google calendars + selection |
 | `/api/gcal/config` | GET/POST | Read/update calendar sync settings |

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
 Ingest session log markdown files into the PT Study Brain database.
-Parses v9.1 template format.
+Parses v9.3 JSON logs and v9.2 markdown templates (backward compatible).
 """
 
 import sqlite3
 import os
 import re
 import sys
+import json
 from pathlib import Path
 from datetime import datetime
 
@@ -72,6 +73,173 @@ def parse_markdown_session(filepath):
 
     return data
 
+V93_SCHEMA_VERSION = "9.3"
+
+def _coerce_int(value, default=None):
+    if value is None or value == "":
+        return default
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return default
+
+def _extract_json_blocks(content: str) -> list[str]:
+    blocks = []
+    for match in re.finditer(r"```json\s*(\{.*?\})\s*```", content, re.DOTALL | re.IGNORECASE):
+        blocks.append(match.group(1))
+    return blocks
+
+def _classify_json_payload(payload: dict) -> str:
+    enhanced_keys = {
+        "source_lock",
+        "plan_of_attack",
+        "frameworks_used",
+        "buckets",
+        "confusables_interleaved",
+        "anki_cards",
+        "glossary",
+        "exit_ticket_blurt",
+        "exit_ticket_muddiest",
+        "exit_ticket_next_action",
+        "retrospective_status",
+        "next_session",
+    }
+    if any(key in payload for key in enhanced_keys):
+        return "enhanced"
+    return "tracker"
+
+def _map_json_payload_to_session(payload: dict) -> dict:
+    data: dict = {}
+
+    session_date = payload.get("date") or payload.get("session_date")
+    if session_date:
+        data["session_date"] = session_date
+
+    topic = payload.get("topic") or payload.get("main_topic") or payload.get("subject")
+    if topic:
+        data["main_topic"] = topic
+        data["topic"] = topic
+
+    mode = payload.get("mode") or payload.get("study_mode")
+    if mode:
+        data["study_mode"] = str(mode).title()
+
+    duration_val = (
+        payload.get("duration_min")
+        or payload.get("duration")
+        or payload.get("duration_minutes")
+        or payload.get("time_spent_minutes")
+    )
+    duration_minutes = _coerce_int(duration_val, 0)
+    data["duration_minutes"] = duration_minutes
+    data["time_spent_minutes"] = duration_minutes
+
+    data["understanding_level"] = _coerce_int(
+        payload.get("understanding") or payload.get("understanding_level")
+    )
+    data["retention_confidence"] = _coerce_int(
+        payload.get("retention") or payload.get("retention_confidence")
+    )
+    data["system_performance"] = _coerce_int(payload.get("system_performance"))
+
+    data["calibration_gap"] = _coerce_int(payload.get("calibration_gap"))
+    data["rsr_percent"] = _coerce_int(payload.get("rsr_percent"))
+    data["cognitive_load"] = payload.get("cognitive_load", "")
+    data["transfer_check"] = payload.get("transfer_check", "")
+
+    data["source_lock"] = payload.get("source_lock", "")
+    data["plan_of_attack"] = payload.get("plan_of_attack", "")
+    data["frameworks_used"] = payload.get("frameworks_used", "")
+    data["buckets"] = payload.get("buckets", "")
+    data["confusables_interleaved"] = payload.get("confusables_interleaved", "")
+
+    anchors = payload.get("anchors") or payload.get("anchors_locked")
+    if anchors is not None:
+        data["anchors_locked"] = anchors
+
+    data["what_worked"] = payload.get("what_worked", "")
+    data["what_needs_fixing"] = payload.get("what_needs_fixing", "")
+
+    notes = payload.get("notes") or payload.get("notes_insights")
+    if notes is not None:
+        data["notes_insights"] = notes
+
+    anki_cards = payload.get("anki_cards") or payload.get("anki_cards_text")
+    if anki_cards is not None:
+        data["anki_cards_text"] = anki_cards
+    if payload.get("anki_cards_count") is not None:
+        data["anki_cards_count"] = _coerce_int(payload.get("anki_cards_count"), 0)
+    elif isinstance(anki_cards, str) and anki_cards.strip():
+        data["anki_cards_count"] = len([c for c in re.split(r"[;\n]", anki_cards) if c.strip()])
+
+    glossary = payload.get("glossary") or payload.get("glossary_entries")
+    if glossary is not None:
+        data["glossary_entries"] = glossary
+
+    data["exit_ticket_blurt"] = payload.get("exit_ticket_blurt")
+    data["exit_ticket_muddiest"] = payload.get("exit_ticket_muddiest")
+    data["exit_ticket_next_action"] = payload.get("exit_ticket_next_action")
+    data["retrospective_status"] = payload.get("retrospective_status")
+
+    if payload.get("spaced_reviews") is not None:
+        data["spaced_reviews"] = payload.get("spaced_reviews")
+
+    next_session = payload.get("next_session") or payload.get("next_session_plan")
+    if next_session is not None:
+        data["next_session_plan"] = next_session
+
+    return data
+
+def _parse_json_payloads(content: str):
+    payloads: list[dict] = []
+    blocks = _extract_json_blocks(content)
+
+    if blocks:
+        for block in blocks:
+            try:
+                parsed = json.loads(block)
+                if isinstance(parsed, dict):
+                    payloads.append(parsed)
+            except json.JSONDecodeError:
+                continue
+    else:
+        stripped = content.strip()
+        if stripped.startswith("{") and stripped.endswith("}"):
+            try:
+                parsed = json.loads(stripped)
+                if isinstance(parsed, dict):
+                    if "tracker" in parsed or "enhanced" in parsed:
+                        tracker = parsed.get("tracker")
+                        enhanced = parsed.get("enhanced")
+                        if isinstance(tracker, dict):
+                            payloads.append(tracker)
+                        if isinstance(enhanced, dict):
+                            payloads.append(enhanced)
+                    else:
+                        payloads.append(parsed)
+            except json.JSONDecodeError:
+                payloads = []
+
+    if not payloads:
+        return None, None, None
+
+    tracker_payload = None
+    enhanced_payload = None
+    for payload in payloads:
+        kind = _classify_json_payload(payload)
+        if kind == "enhanced":
+            enhanced_payload = payload
+        else:
+            tracker_payload = payload
+
+    merged = {}
+    if tracker_payload:
+        merged.update(tracker_payload)
+    if enhanced_payload:
+        merged.update(enhanced_payload)
+
+    return merged, tracker_payload, enhanced_payload
+
 def parse_session_log(filepath):
     """
     Parse a session log markdown file and extract all fields.
@@ -80,6 +248,18 @@ def parse_session_log(filepath):
     with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
     
+    json_payload, tracker_payload, enhanced_payload = _parse_json_payloads(content)
+    if json_payload:
+        data = _map_json_payload_to_session(json_payload)
+        if data.get("session_date") and (data.get("main_topic") or data.get("topic")):
+            data["created_at"] = datetime.now().isoformat()
+            data["schema_version"] = str(json_payload.get("schema_version") or V93_SCHEMA_VERSION)
+            if tracker_payload is not None:
+                data["tracker_json"] = json.dumps(tracker_payload, ensure_ascii=True)
+            if enhanced_payload is not None:
+                data["enhanced_json"] = json.dumps(enhanced_payload, ensure_ascii=True)
+            return data
+
     data = {}
     
     # Helper function to extract value after a label
@@ -251,7 +431,7 @@ def parse_session_log(filepath):
     
     # Metadata
     data['created_at'] = datetime.now().isoformat()
-    data['schema_version'] = '9.1'
+    data['schema_version'] = V93_SCHEMA_VERSION
     
     return data
 
@@ -414,11 +594,15 @@ def insert_session(data):
             'anchors_locked', 'weak_anchors', 'anchors_mastery',
             'what_worked', 'what_needs_fixing', 'gaps_identified', 'notes_insights',
             'next_topic', 'next_focus', 'next_materials',
-            'created_at', 'schema_version', 'source_path',
+            'created_at', 'schema_version', 'source_path', 'raw_input',
             # WRAP v9.2 fields
             'anki_cards_text', 'glossary_entries', 'wrap_watchlist', 'clinical_links',
             'next_session_plan', 'spaced_reviews', 'runtime_notes',
-            'errors_conceptual', 'errors_discrimination', 'errors_recall'
+            'errors_conceptual', 'errors_discrimination', 'errors_recall',
+            # Logging Schema v9.3 fields
+            'calibration_gap', 'rsr_percent', 'cognitive_load', 'transfer_check',
+            'buckets', 'confusables_interleaved', 'exit_ticket_blurt', 'exit_ticket_muddiest',
+            'exit_ticket_next_action', 'retrospective_status', 'tracker_json', 'enhanced_json'
         ]
         placeholders = ", ".join(["?"] * len(columns))
         values = (
@@ -466,8 +650,9 @@ def insert_session(data):
             data.get('next_focus', ''),
             data.get('next_materials', ''),
             data.get('created_at'),
-            data.get('schema_version', '9.2'),
+            data.get('schema_version', V93_SCHEMA_VERSION),
             data.get('source_path', ''),
+            data.get('raw_input'),
             # WRAP v9.2 fields
             data.get('anki_cards_text'),
             data.get('glossary_entries'),
@@ -478,7 +663,20 @@ def insert_session(data):
             data.get('runtime_notes'),
             data.get('errors_conceptual'),
             data.get('errors_discrimination'),
-            data.get('errors_recall')
+            data.get('errors_recall'),
+            # Logging Schema v9.3 fields
+            data.get('calibration_gap'),
+            data.get('rsr_percent'),
+            data.get('cognitive_load', ''),
+            data.get('transfer_check', ''),
+            data.get('buckets', ''),
+            data.get('confusables_interleaved', ''),
+            data.get('exit_ticket_blurt'),
+            data.get('exit_ticket_muddiest'),
+            data.get('exit_ticket_next_action'),
+            data.get('retrospective_status'),
+            data.get('tracker_json'),
+            data.get('enhanced_json')
         )
         cursor.execute(f'''INSERT INTO sessions ({", ".join(columns)}) VALUES ({placeholders})''', values)
         

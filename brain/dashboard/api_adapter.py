@@ -2,17 +2,22 @@ from flask import Blueprint, jsonify, request
 from datetime import datetime, timedelta
 import sqlite3
 import json
+import os
 import requests
 from typing import List, Dict, Any
 
 # Import internal modules from the "Brain"
 from db_setup import get_connection
+from config import load_env
 
 # ==============================================================================
 # OBSIDIAN LOCAL REST API CONFIG
 # ==============================================================================
 OBSIDIAN_API_URL = "http://127.0.0.1:27123"
-OBSIDIAN_API_KEY = "0be342fdbef2604bad20cb088e1aded26d5d5cde822849c6e3709fe646374eeb"
+
+# Load .env so OBSIDIAN_API_KEY is available if set there
+load_env()
+OBSIDIAN_API_KEY = os.environ.get("OBSIDIAN_API_KEY", "")
 
 def obsidian_health_check() -> dict:
     """Check if Obsidian Local REST API is running."""
@@ -1501,10 +1506,23 @@ def calendar_assistant_endpoint():
         result = run_calendar_assistant(last_user_msg)
 
         if result.get("success"):
+            can_undo = False
+            try:
+                conn = get_connection()
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT id FROM calendar_action_ledger ORDER BY id DESC LIMIT 1"
+                )
+                row = cur.fetchone()
+                conn.close()
+                can_undo = bool(row)
+            except Exception:
+                can_undo = False
+
             return jsonify(
                 {
                     "response": result["response"],
-                    "can_undo": False,  # TODO: Add undo support
+                    "can_undo": can_undo,
                 }
             )
         else:
@@ -2362,11 +2380,8 @@ def brain_chat():
     from datetime import datetime
     
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         message = data.get("message", "")
-        
-        if not message.strip():
-            return jsonify({"response": "Please provide study session data to process.", "isStub": False})
 
         # Import LLM provider using absolute path
         import sys
@@ -2375,8 +2390,58 @@ def brain_chat():
             sys.path.insert(0, brain_dir)
         
         from llm_provider import call_llm
-        
-        system_prompt = """You are a study session analyzer for a PT (Physical Therapy) student. 
+        from ingest_session import (
+            insert_session,
+            validate_session_data,
+            _map_json_payload_to_session,
+            _parse_json_payloads,
+            _classify_json_payload,
+            V93_SCHEMA_VERSION,
+        )
+
+        direct_payload = None
+        direct_tracker = None
+        direct_enhanced = None
+
+        if isinstance(data.get("tracker"), dict) or isinstance(data.get("enhanced"), dict):
+            direct_tracker = data.get("tracker") if isinstance(data.get("tracker"), dict) else None
+            direct_enhanced = data.get("enhanced") if isinstance(data.get("enhanced"), dict) else None
+            direct_payload = {}
+            if direct_tracker:
+                direct_payload.update(direct_tracker)
+            if direct_enhanced:
+                direct_payload.update(direct_enhanced)
+        elif isinstance(data.get("payload"), dict):
+            direct_payload = data.get("payload")
+
+        if direct_payload is None and isinstance(message, str) and message.strip():
+            merged_payload, tracker_payload, enhanced_payload = _parse_json_payloads(message)
+            if merged_payload:
+                direct_payload = merged_payload
+                direct_tracker = tracker_payload
+                direct_enhanced = enhanced_payload
+
+        use_direct_payload = direct_payload is not None
+
+        if not use_direct_payload and (not isinstance(message, str) or not message.strip()):
+            return jsonify({"response": "Please provide study session data to process.", "isStub": False})
+
+        if use_direct_payload and direct_tracker is None and direct_enhanced is None and isinstance(direct_payload, dict):
+            if _classify_json_payload(direct_payload) == "enhanced":
+                direct_enhanced = direct_payload
+            else:
+                direct_tracker = direct_payload
+
+        parsed_data = None
+        if use_direct_payload:
+            topic_hint = direct_payload.get("topic") if isinstance(direct_payload, dict) else None
+            parsed_data = {
+                "summary": "Direct JSON intake",
+                "course": topic_hint or "General",
+                "anki_cards": [],
+            }
+        else:
+            system_prompt = """You are a study session analyzer for a PT (Physical Therapy) student. 
 Your job is to parse raw study notes and organize them into structured data.
 
 ALWAYS respond with valid JSON in this exact format:
@@ -2413,64 +2478,242 @@ If the input is a question rather than study data, respond with:
 }
 """
 
-        # Call LLM via OpenRouter
-        result = call_llm(
-            system_prompt=system_prompt,
-            user_prompt=f"Process this study session data:\n\n{message}",
-            provider="openrouter",
-            model="google/gemini-2.0-flash-001",
-            timeout=45
-        )
+            # Call LLM via OpenRouter
+            result = call_llm(
+                system_prompt=system_prompt,
+                user_prompt=f"Process this study session data:\n\n{message}",
+                provider="openrouter",
+                model="google/gemini-2.0-flash-001",
+                timeout=45
+            )
+            
+            if not result.get("success"):
+                return jsonify({
+                    "response": f"LLM error: {result.get('error', 'Unknown error')}",
+                    "isStub": True
+                })
+            
+            # Parse LLM response
+            llm_content = result.get("content", "")
+            
+            # Try to extract JSON from response
+            try:
+                # Try direct JSON parse
+                parsed_data = json.loads(llm_content)
+            except json.JSONDecodeError:
+                # Try to find JSON in the response
+                json_match = re.search(r'\{[\s\S]*\}', llm_content)
+                if json_match:
+                    try:
+                        parsed_data = json.loads(json_match.group())
+                    except:
+                        parsed_data = None
+            
+            if not parsed_data:
+                return jsonify({
+                    "response": llm_content,
+                    "isStub": False,
+                    "parsed": False
+                })
         
-        if not result.get("success"):
-            return jsonify({
-                "response": f"LLM error: {result.get('error', 'Unknown error')}",
-                "isStub": True
-            })
-        
-        # Parse LLM response
-        llm_content = result.get("content", "")
-        
-        # Try to extract JSON from response
-        parsed_data = None
-        try:
-            # Try direct JSON parse
-            parsed_data = json.loads(llm_content)
-        except json.JSONDecodeError:
-            # Try to find JSON in the response
-            json_match = re.search(r'\{[\s\S]*\}', llm_content)
-            if json_match:
-                try:
-                    parsed_data = json.loads(json_match.group())
-                except:
-                    pass
-        
-        if not parsed_data:
-            return jsonify({
-                "response": llm_content,
-                "isStub": False,
-                "parsed": False
-            })
-        
+        def _as_list(value):
+            if isinstance(value, list):
+                return [str(v).strip() for v in value if str(v).strip()]
+            if isinstance(value, str) and value.strip():
+                return [value.strip()]
+            return []
+
+        def _join_items(items):
+            return "; ".join(items) if items else ""
+
+        def _normalize_payload(payload):
+            normalized = {}
+            for key, value in payload.items():
+                if isinstance(value, list):
+                    normalized[key] = _join_items(_as_list(value))
+                elif value is None:
+                    normalized[key] = ""
+                else:
+                    normalized[key] = value
+            return normalized
+
+        def _merge_defaults(payload, defaults):
+            merged = dict(defaults)
+            for key, value in payload.items():
+                if value not in (None, ""):
+                    merged[key] = value
+            return merged
+
+        now = datetime.now()
+        session_date = now.strftime("%Y-%m-%d")
+        session_time = now.strftime("%H:%M:%S")
+
+        summary = parsed_data.get("summary", "")
+        course = parsed_data.get("course", "General")
+        concepts = _as_list(parsed_data.get("concepts"))
+        strengths = _as_list(parsed_data.get("strengths"))
+        weaknesses = _as_list(parsed_data.get("weaknesses"))
+        what_went_well = _as_list(parsed_data.get("what_went_well"))
+        what_didnt_work = _as_list(parsed_data.get("what_didnt_work"))
+        notes = parsed_data.get("notes", "")
+
+        topic = course if course and course.lower() != "general" else (concepts[0] if concepts else "General")
+        study_mode = "Core"
+
+        duration_minutes = 0
+        duration_match = re.search(r"(\\d+)\\s*(min|mins|minutes|hr|hrs|hours)", message, re.IGNORECASE)
+        if duration_match:
+            raw_val = int(duration_match.group(1))
+            unit = duration_match.group(2).lower()
+            duration_minutes = raw_val * 60 if unit.startswith("h") else raw_val
+
+        what_worked = _join_items(strengths + what_went_well)
+        what_needs_fixing = _join_items(weaknesses + what_didnt_work)
+        notes_parts = [p for p in [summary, notes] if isinstance(p, str) and p.strip()]
+        notes_value = _join_items(notes_parts)
+
+        anki_cards = parsed_data.get("anki_cards", [])
+        anki_card_texts = []
+        for card in anki_cards:
+            front = str(card.get("front", "")).strip() if isinstance(card, dict) else ""
+            back = str(card.get("back", "")).strip() if isinstance(card, dict) else ""
+            if front and back:
+                anki_card_texts.append(f"{front} :: {back}")
+            elif front:
+                anki_card_texts.append(front)
+
+        tracker_defaults = {
+            "schema_version": V93_SCHEMA_VERSION,
+            "date": session_date,
+            "topic": topic,
+            "mode": study_mode,
+            "duration_min": duration_minutes,
+            "understanding": "N/A",
+            "retention": "N/A",
+            "calibration_gap": "N/A",
+            "rsr_percent": "N/A",
+            "cognitive_load": "N/A",
+            "transfer_check": "N/A",
+            "anchors": "N/A",
+            "what_worked": what_worked or "N/A",
+            "what_needs_fixing": what_needs_fixing or "N/A",
+            "notes": notes_value or "N/A",
+        }
+
+        enhanced_defaults = {
+            "schema_version": V93_SCHEMA_VERSION,
+            "date": session_date,
+            "topic": topic,
+            "mode": study_mode,
+            "duration_min": duration_minutes,
+            "understanding": "N/A",
+            "retention": "N/A",
+            "calibration_gap": "N/A",
+            "rsr_percent": "N/A",
+            "cognitive_load": "N/A",
+            "transfer_check": "N/A",
+            "source_lock": "N/A",
+            "plan_of_attack": "N/A",
+            "frameworks_used": "N/A",
+            "buckets": "N/A",
+            "confusables_interleaved": "N/A",
+            "anchors": "N/A",
+            "anki_cards": _join_items([str(card.get("front", "")).strip() for card in anki_cards if isinstance(card, dict)]) or "N/A",
+            "glossary": _join_items(concepts) or "N/A",
+            "exit_ticket_blurt": "N/A",
+            "exit_ticket_muddiest": "N/A",
+            "exit_ticket_next_action": "N/A",
+            "retrospective_status": "N/A",
+            "spaced_reviews": "N/A",
+            "what_worked": what_worked or "N/A",
+            "what_needs_fixing": what_needs_fixing or "N/A",
+            "next_session": "N/A",
+            "notes": notes_value or "N/A",
+        }
+
+        tracker_payload = direct_tracker if use_direct_payload else parsed_data.get("tracker", {})
+        enhanced_payload = direct_enhanced if use_direct_payload else parsed_data.get("enhanced", {})
+        tracker_payload = _merge_defaults(_normalize_payload(tracker_payload if isinstance(tracker_payload, dict) else {}), tracker_defaults)
+        enhanced_payload = _merge_defaults(_normalize_payload(enhanced_payload if isinstance(enhanced_payload, dict) else {}), enhanced_defaults)
+
+        merged_payload = {}
+        merged_payload.update(tracker_payload)
+        merged_payload.update(enhanced_payload)
+
+        session_data = _map_json_payload_to_session(merged_payload)
+        session_data.setdefault("session_date", session_date)
+        session_data.setdefault("session_time", session_time)
+        session_data.setdefault("study_mode", study_mode)
+        session_data.setdefault("main_topic", topic)
+        session_data.setdefault("topic", topic)
+        session_data.setdefault("duration_minutes", duration_minutes)
+        session_data.setdefault("time_spent_minutes", duration_minutes)
+        session_data.setdefault("subtopics", _join_items(concepts))
+        session_data.setdefault("what_worked", what_worked)
+        session_data.setdefault("what_needs_fixing", what_needs_fixing)
+        session_data.setdefault("notes_insights", notes_value)
+        session_data.setdefault("anki_cards_text", _join_items(anki_card_texts) or None)
+        session_data.setdefault("anki_cards_count", len(anki_card_texts))
+        session_data["tracker_json"] = json.dumps(tracker_payload, ensure_ascii=True)
+        session_data["enhanced_json"] = json.dumps(enhanced_payload, ensure_ascii=True)
+        raw_input_value = message
+        if not (isinstance(message, str) and message.strip()) and use_direct_payload:
+            raw_input_value = json.dumps(direct_payload, ensure_ascii=True)
+        session_data["raw_input"] = raw_input_value
+        session_data["created_at"] = now.isoformat()
+        session_data["schema_version"] = V93_SCHEMA_VERSION
+        session_data.setdefault("source_path", "api/brain/chat")
+
+        session_saved = False
+        session_id = None
+        session_error = None
+        session_signals = any([
+            anki_cards,
+            parsed_data.get("concepts"),
+            parsed_data.get("strengths"),
+            parsed_data.get("weaknesses"),
+            parsed_data.get("what_went_well"),
+            parsed_data.get("what_didnt_work"),
+            parsed_data.get("notes"),
+        ])
+        skip_session_logging = (not use_direct_payload) and parsed_data.get("response") and not session_signals
+
+        if skip_session_logging:
+            session_error = "Skipped logging (question response)."
+        else:
+            try:
+                is_valid, error = validate_session_data(session_data)
+                if is_valid:
+                    success, msg = insert_session(session_data)
+                    session_saved = success
+                    if success:
+                        match = re.search(r"ID:\\s*(\\d+)", msg or "")
+                        if match:
+                            session_id = int(match.group(1))
+                    else:
+                        session_error = msg
+                else:
+                    session_error = error
+            except Exception as e:
+                session_error = str(e)
+
         # Insert Anki cards into card_drafts if present
         cards_created = 0
-        anki_cards = parsed_data.get("anki_cards", [])
-        
         if anki_cards:
             conn = get_connection()
             cur = conn.cursor()
-            
-            session_id = f"chat_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+            session_ref = str(session_id) if session_id else f"chat_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             course = parsed_data.get("course", "General")
-            
+
             for card in anki_cards:
-                if card.get("front") and card.get("back"):
+                if isinstance(card, dict) and card.get("front") and card.get("back"):
                     cur.execute("""
                         INSERT INTO card_drafts 
                         (session_id, course_id, topic_id, deck_name, card_type, front, back, tags, source_citation, status, created_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, (
-                        session_id,
+                        session_ref,
                         None,  # course_id
                         None,  # topic_id
                         f"PT::{course}",
@@ -2483,7 +2726,7 @@ If the input is a question rather than study data, respond with:
                         datetime.now().isoformat()
                     ))
                     cards_created += 1
-            
+
             conn.commit()
             conn.close()
         
@@ -2520,6 +2763,14 @@ If the input is a question rather than study data, respond with:
         if parsed_data.get("notes"):
             response_parts.append(f"\n📌 **Notes:** {parsed_data['notes']}")
         
+        if session_saved:
+            if session_id:
+                response_parts.append(f"\nSession logged (ID: {session_id}).")
+            else:
+                response_parts.append("\nSession logged.")
+        elif session_error:
+            response_parts.append(f"\nSession log failed: {session_error}")
+
         # Sync to Obsidian if requested
         obsidian_synced = False
         obsidian_error = None
@@ -2582,6 +2833,9 @@ If the input is a question rather than study data, respond with:
             "cardsCreated": cards_created,
             "obsidianSynced": obsidian_synced,
             "obsidianError": obsidian_error,
+            "sessionSaved": session_saved,
+            "sessionId": session_id,
+            "sessionError": session_error,
             "data": parsed_data
         })
         

@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """
-Database setup and schema initialization for PT Study Brain v9.2.
+Database setup and schema initialization for PT Study Brain v9.3.
 """
 
 import sqlite3
 import os
+import sys
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "data", "pt_study.db")
 
 
 def init_database():
     """
-    Initialize the SQLite database with the sessions table (v9.2 schema)
+    Initialize the SQLite database with the sessions table (v9.3 schema)
     plus additive planning/RAG tables.
     """
     # Ensure data directory exists
@@ -23,7 +24,7 @@ def init_database():
     cursor = conn.cursor()
 
     # ------------------------------------------------------------------
-    # Core sessions table (v9.2 schema)
+    # Core sessions table (v9.3 schema)
     # ------------------------------------------------------------------
     cursor.execute(
         """
@@ -93,8 +94,9 @@ def init_database():
 
             -- Metadata
             created_at TEXT NOT NULL,
-            schema_version TEXT DEFAULT '9.2',
+            schema_version TEXT DEFAULT '9.3',
             source_path TEXT,  -- Path to the source markdown file
+            raw_input TEXT,    -- Raw plain-text intake (LLM or manual)
 
             -- WRAP Enhancement v9.2 fields
             anki_cards_text TEXT,          -- Semicolon-separated card titles or key Q-A pairs
@@ -107,6 +109,20 @@ def init_database():
             errors_conceptual TEXT,        -- List of conceptual errors
             errors_discrimination TEXT,    -- List of X vs Y confusions
             errors_recall TEXT,            -- List of recall failures
+
+            -- Logging Schema v9.3 fields
+            calibration_gap INTEGER,
+            rsr_percent INTEGER,
+            cognitive_load TEXT,
+            transfer_check TEXT,
+            buckets TEXT,
+            confusables_interleaved TEXT,
+            exit_ticket_blurt TEXT,
+            exit_ticket_muddiest TEXT,
+            exit_ticket_next_action TEXT,
+            retrospective_status TEXT,
+            tracker_json TEXT,
+            enhanced_json TEXT,
 
             UNIQUE(session_date, session_time, main_topic)
         )
@@ -163,8 +179,9 @@ def init_database():
         "next_focus": "TEXT",
         "next_materials": "TEXT",
         "created_at": "TEXT NOT NULL",
-        "schema_version": "TEXT DEFAULT '9.2'",
+        "schema_version": "TEXT DEFAULT '9.3'",
         "source_path": "TEXT",
+        "raw_input": "TEXT",
         # WRAP Enhancement v9.2 fields
         "anki_cards_text": "TEXT",
         "glossary_entries": "TEXT",
@@ -176,6 +193,19 @@ def init_database():
         "errors_conceptual": "TEXT",
         "errors_discrimination": "TEXT",
         "errors_recall": "TEXT",
+        # Logging Schema v9.3 fields
+        "calibration_gap": "INTEGER",
+        "rsr_percent": "INTEGER",
+        "cognitive_load": "TEXT",
+        "transfer_check": "TEXT",
+        "buckets": "TEXT",
+        "confusables_interleaved": "TEXT",
+        "exit_ticket_blurt": "TEXT",
+        "exit_ticket_muddiest": "TEXT",
+        "exit_ticket_next_action": "TEXT",
+        "retrospective_status": "TEXT",
+        "tracker_json": "TEXT",
+        "enhanced_json": "TEXT",
     }
 
     # Add missing columns (skip id and constraints that can't be added via ALTER TABLE)
@@ -188,8 +218,8 @@ def init_database():
                     sql_type = "INTEGER DEFAULT 0"
                 else:
                     sql_type = "INTEGER"
-            elif "DEFAULT '9.2'" in col_type:
-                sql_type = "TEXT DEFAULT '9.2'"
+            elif "DEFAULT '9.3'" in col_type:
+                sql_type = "TEXT DEFAULT '9.3'"
             else:
                 sql_type = "TEXT"
 
@@ -818,7 +848,7 @@ def init_database():
     conn.close()
 
     print(f"[OK] Database initialized at: {DB_PATH}")
-    print("[OK] Schema version: 9.1 + planning/RAG extensions")
+    print("[OK] Schema version: 9.3 + planning/RAG extensions")
 
 
 def migrate_from_v8():
@@ -983,12 +1013,28 @@ if __name__ == "__main__":
         version = get_schema_version()
         print(f"[INFO] Current schema version: {version}")
 
-        if version != "9.1":
-            response = input("Migrate to v9.1 schema? (y/n): ")
-            if response.lower() == "y":
-                migrate_from_v8()
+        if version not in {"9.1", "9.2", "9.3"}:
+            if not sys.stdin or not sys.stdin.isatty():
+                auto_migrate = os.environ.get("PT_BRAIN_AUTO_MIGRATE", "").strip().lower() in {
+                    "1",
+                    "true",
+                    "yes",
+                }
+                if auto_migrate:
+                    print("[INFO] Non-interactive mode: auto-migrating to v9.1 schema.")
+                    migrate_from_v8()
+                else:
+                    print("[INFO] Non-interactive mode: skipping v9.1 migration.")
             else:
-                print("[INFO] Skipping migration")
+                try:
+                    response = input("Migrate to v9.1 schema? (y/n): ")
+                except EOFError:
+                    print("[INFO] Non-interactive mode: skipping v9.1 migration.")
+                    response = "n"
+                if response.lower() == "y":
+                    migrate_from_v8()
+                else:
+                    print("[INFO] Skipping migration")
     else:
         print("[INFO] No existing database found")
 

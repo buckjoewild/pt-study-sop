@@ -532,15 +532,26 @@ def _extract_brief_description(markdown_text: str, max_chars: int = 240) -> str:
 def sync_runtime_catalog(repo_root: str) -> dict:
     """Generate a compact Runtime catalog (systems/engines) into rag_docs.
 
-    This is intentionally brief: each item becomes a small RAG doc users can
-    toggle on/off for Runtime guidance.
+    Prefer the v9.3 runtime bundle under sop/runtime/knowledge_upload.
+    Fall back to sop/gpt-knowledge for legacy layouts.
     """
     root = Path(repo_root)
-    gk = root / "sop" / "gpt-knowledge"
-    if not gk.exists():
-        raise FileNotFoundError(f"Missing runtime canon folder: {gk}")
+    runtime_candidates = [
+        root / "sop" / "runtime" / "knowledge_upload",
+        root / "sop" / "gpt-knowledge",
+    ]
+    runtime_dir = None
+    for candidate in runtime_candidates:
+        if candidate.exists():
+            runtime_dir = candidate
+            break
 
-    md_files = sorted(gk.glob("*.md"))
+    if not runtime_dir:
+        raise FileNotFoundError(
+            "Missing runtime canon folder: expected sop/runtime/knowledge_upload or sop/gpt-knowledge"
+        )
+
+    md_files = sorted(runtime_dir.glob("*.md"))
     processed = 0
     errors: list[str] = []
 
@@ -551,12 +562,14 @@ def sync_runtime_catalog(repo_root: str) -> dict:
             desc = _extract_brief_description(text)
 
             name = f.name.lower()
-            if name.endswith("-engine.md") or "engine" in name:
+            if "engine" in name:
                 group = "Engines"
-            elif re.match(r"^m\d+-", name):
+            elif "module" in name or name.startswith("01_"):
                 group = "Modules"
-            elif name.endswith("-series.md"):
-                group = "Series"
+            elif "framework" in name or "series" in name:
+                group = "Frameworks"
+            elif "logging" in name or "template" in name:
+                group = "Logging"
             else:
                 group = "Runtime"
 
@@ -568,7 +581,11 @@ def sync_runtime_catalog(repo_root: str) -> dict:
                 topic_tags=f"runtime, {group.lower()}, sop",
                 content=content,
                 checksum=_checksum(content),
-                metadata={"source_file": str(f), "kind": "runtime_catalog"},
+                metadata={
+                    "source_file": str(f),
+                    "kind": "runtime_catalog",
+                    "runtime_root": str(runtime_dir),
+                },
                 corpus="runtime",
                 folder_path=group,
                 enabled=1,

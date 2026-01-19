@@ -1194,7 +1194,7 @@ def move_google_task(tasklist_id, task_id, previous=None, parent=None, service=N
             kwargs["parent"] = parent
         if previous:
             kwargs["previous"] = previous
-
+        result = service.tasks().move(**kwargs).execute()
         return result, None
     except Exception as e:
         return None, str(e)

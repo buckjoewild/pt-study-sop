@@ -1,12 +1,41 @@
 #!/usr/bin/env python3
 """
-Configuration settings for PT Study Brain v9.1.
+Configuration settings for PT Study Brain v9.3.
 """
 
 import os
 
 # Version
-VERSION = '9.1'
+VERSION = '9.3'
+
+# Load .env if present (lightweight, no external deps)
+def load_env():
+    """Load key=value pairs from .env into os.environ (if not already set)."""
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    loaded = {}
+    if not os.path.exists(env_path):
+        return loaded
+
+    try:
+        with open(env_path, "r", encoding="utf-8") as f:
+            for raw in f:
+                line = raw.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, val = line.split("=", 1)
+                key = key.strip()
+                val = val.strip().strip('"').strip("'")
+                if key:
+                    loaded[key] = val
+                    if key not in os.environ:
+                        os.environ[key] = val
+    except Exception:
+        pass
+
+    return loaded
+
+# Initialize environment variables from .env once at import time
+_ENV_CACHE = load_env()
 
 # Base paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

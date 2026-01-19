@@ -2,7 +2,7 @@
 import os
 import json
 from pathlib import Path
-from config import API_CONFIG_PATH
+from config import API_CONFIG_PATH, load_env
 
 ALLOWED_EXTENSIONS = {".md", ".markdown", ".txt"}
 
@@ -10,19 +10,34 @@ def allowed_file(filename: str) -> bool:
     return Path(filename).suffix.lower() in ALLOWED_EXTENSIONS
 
 def load_api_config():
-    """Load API configuration from file."""
+    """Load API configuration from file, with env fallbacks."""
+    # Ensure .env is loaded into os.environ (no-op if already loaded)
+    load_env()
+
+    config = {}
     if os.path.exists(API_CONFIG_PATH):
         try:
             with open(API_CONFIG_PATH, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                config = json.load(f) or {}
         except:
-            pass
-    return {
+            config = {}
+
+    # Defaults for LLM config
+    merged = {
         "openai_api_key": "",
         "openrouter_api_key": "",
-        "api_provider": "openrouter",  # Default to OpenRouter
-        "model": "openrouter/auto"
+        "api_provider": "openrouter",
+        "model": "openrouter/auto",
     }
+    merged.update(config)
+
+    # Env fallback (does not override explicit config values)
+    if not merged.get("openrouter_api_key"):
+        merged["openrouter_api_key"] = os.environ.get("OPENROUTER_API_KEY", "")
+    if not merged.get("openai_api_key"):
+        merged["openai_api_key"] = os.environ.get("OPENAI_API_KEY", "")
+
+    return merged
 
 def save_api_config(config):
     """Save API configuration to file."""

@@ -12,7 +12,12 @@ import json
 from datetime import datetime, timedelta
 from typing import List
 from pathlib import Path
-from openai import OpenAI
+
+try:
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
+except Exception:
+    OPENAI_AVAILABLE = False
 
 # Import Google Calendar functions
 from dashboard import gcal
@@ -53,6 +58,8 @@ def _get_client():
     api_config = _load_api_config()
     if not api_config:
         raise ValueError("No API key configured")
+    if not OPENAI_AVAILABLE:
+        raise ValueError("openai package not installed. Run: pip install openai")
 
     if api_config["provider"] == "openrouter":
         return OpenAI(
@@ -156,6 +163,14 @@ def create_event(
     res, err = gcal.create_event("primary", body)
     if err:
         return f"Error creating event: {err}"
+    if res and res.get("id"):
+        _log_calendar_action(
+            action_type="create_event",
+            target_id=res.get("id"),
+            pre_state=None,
+            post_state=res,
+            description=title,
+        )
     return f"Created '{title}' on {start_time[:10]} at {start_time[11:16]}"
 
 
@@ -239,6 +254,14 @@ def delete_event_by_title(title_query: str, date: str = "") -> str:
         success, err = gcal.delete_event("primary", eid)
         if not success:
             return f"Error deleting event: {err}"
+        if eid:
+            _log_calendar_action(
+                action_type="delete_event",
+                target_id=eid,
+                pre_state=event,
+                post_state=None,
+                description=title,
+            )
         return f"Deleted '{title}'"
 
     except Exception as e:
@@ -392,6 +415,39 @@ TOOL_MAP = {
     "delete_event_by_title": delete_event_by_title,
     "batch_delete_events": batch_delete_events,
 }
+
+
+def _log_calendar_action(
+    action_type: str,
+    target_id: str,
+    pre_state: dict | None,
+    post_state: dict | None,
+    description: str = "",
+):
+    """Write a small undo record for calendar actions (best-effort)."""
+    try:
+        from db_setup import get_connection
+
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO calendar_action_ledger (action_type, target_id, pre_state, post_state, description)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                action_type,
+                target_id or "",
+                json.dumps(pre_state) if pre_state else None,
+                json.dumps(post_state) if post_state else None,
+                description or "",
+            ),
+        )
+        conn.commit()
+        conn.close()
+    except Exception:
+        # Ledger logging is optional; fail silently
+        pass
 
 
 # =============================================================================

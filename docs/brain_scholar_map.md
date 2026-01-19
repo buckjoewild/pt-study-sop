@@ -10,9 +10,10 @@ Purpose:
 Brain overview (functional groups):
 - Core scripts: brain/__init__.py, brain/config.py, brain/db_setup.py, brain/ingest_session.py, brain/ingest_knowledge.py, brain/import_syllabus.py, brain/import_claude_schedule.py, brain/generate_resume.py, brain/rag_notes.py, brain/tutor_engine.py, brain/tutor_api_types.py, brain/llm_provider.py, brain/session_sync.py, brain/card_dedupe.py, brain/dedupe_course_events.py, brain/anki_sync.py, brain/calendar_cli.py, brain/update_backend.py, brain/clear_data.py, brain/new_session.py, brain/extract_assets.py.
 - Dashboard server: brain/dashboard/app.py, brain/dashboard/routes.py, brain/dashboard/api_adapter.py, brain/dashboard/scholar.py, brain/dashboard/calendar.py, brain/dashboard/syllabus.py, brain/dashboard/stats.py, brain/dashboard/utils.py, brain/dashboard/v3_routes.py, brain/dashboard/cli.py, brain/dashboard/README.md, brain/dashboard/__init__.py.
-- Web entrypoint: brain/dashboard_web.py (Flask app, serves React build from brain/static/dist or brain/static/react).
+- Web entrypoint: brain/dashboard_web.py (Flask app, serves React build from brain/static/dist).
 - Data and logs: brain/data/ (SQLite DB + backups), brain/session_logs/ (telemetry), brain/output/ (resume outputs).
-- Templates/static: brain/templates/, brain/static/css/, brain/static/js/, brain/static/images/, brain/static/react/ (React source + build assets).
+- Templates/static: brain/templates/, brain/static/css/, brain/static/js/, brain/static/images/, brain/static/dist/ (canonical UI build).
+- NOTE: Archived dashboards live under archive/dashboards/ (brain_static_react, dashboard_rebuild).
 - Tests: brain/tests/ (pytest).
 
 Scholar overview (functional groups):
@@ -30,7 +31,7 @@ Integration map (Brain <-> Scholar <-> Dashboard):
   - /api/scholar endpoints in brain/dashboard/routes.py (build_scholar_stats, digest, insights, ralph summary, proposal sheet, digest CRUD, implementation bundle, api-key).
   - /api/scholar/* endpoints in brain/dashboard/api_adapter.py (run, status, logs, api-key placeholder), plus /api/proposals CRUD backed by scholar_proposals table.
 - UI wiring:
-  - React Scholar page brain/static/react/src/pages/scholar.tsx calls /api/scholar/run, /api/scholar/status, /api/scholar/digest and /api/proposals.*.
+  - Archived React source: archive/dashboards/brain_static_react/src/pages/scholar.tsx calls /api/scholar/run, /api/scholar/status, /api/scholar/digest and /api/proposals.*.
   - Dashboard page uses /api/proposals and /api/sessions stats; does not call /api/scholar or /api/scholar/insights.
 
 Integration gaps or risks (code-level):

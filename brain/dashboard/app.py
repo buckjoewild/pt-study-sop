@@ -5,6 +5,7 @@ from dashboard.v3_routes import dashboard_v3_bp, dashboard_v3_api_bp
 from config import DATA_DIR, SESSION_LOGS_DIR
 import os
 import time
+from pathlib import Path
 
 
 def create_app():
@@ -28,8 +29,11 @@ def create_app():
 
     app.register_blueprint(adapter_bp)  # /api/* routes - must be first
     app.register_blueprint(dashboard_bp)
-    app.register_blueprint(dashboard_v3_bp)
-    app.register_blueprint(dashboard_v3_api_bp)
+    # Register v3 routes only if the v3 bundle exists (archived bundles are not active)
+    v3_root = Path(__file__).resolve().parents[2] / "dashboard_rebuild" / "code"
+    if v3_root.exists():
+        app.register_blueprint(dashboard_v3_bp)
+        app.register_blueprint(dashboard_v3_api_bp)
 
     # Serve React App (catch-all for non-API routes)
     @app.route("/", defaults={"path": ""})
@@ -45,14 +49,7 @@ def create_app():
             if os.path.exists(static_candidate):
                 return send_from_directory(app.static_folder or "", path)
 
-            # Serve React build assets from /static/react
-            react_candidate = os.path.join(app.static_folder or "", "react", path)
-            if os.path.exists(react_candidate):
-                return send_from_directory(
-                    os.path.join(app.static_folder or "", "react"), path
-                )
-
-            # Serve Vite dist assets from /static/dist
+            # Serve Vite dist assets from /static/dist (canonical dashboard build)
             dist_candidate = os.path.join(app.static_folder or "", "dist", path)
             if os.path.exists(dist_candidate):
                 return send_from_directory(
@@ -65,9 +62,7 @@ def create_app():
                 os.path.join(app.static_folder or "", "dist"), "index.html"
             )
 
-        return send_from_directory(
-            os.path.join(app.static_folder or "", "react"), "index.html"
-        )
+        return "Dashboard build not found", 404
 
     # Hot reload disabled to prevent dev reload loops
 

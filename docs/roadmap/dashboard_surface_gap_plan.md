@@ -12,7 +12,7 @@ Compare the React dashboard rebuild to the legacy HTML/JS dashboard, identify mi
 
 ## Scope
 **In**
-- React UI under `brain/static/react/src/pages` and `brain/static/react/src/components/layout.tsx`.
+- Archived React UI under `archive/dashboards/brain_static_react/src/pages` and `archive/dashboards/brain_static_react/src/components/layout.tsx`.
 - Legacy dashboard UI under `brain/templates/dashboard.html` and `brain/static/js/dashboard.js`.
 - Backend API surface under `brain/dashboard/api_adapter.py` and `brain/dashboard/routes.py`.
 
@@ -21,9 +21,9 @@ Compare the React dashboard rebuild to the legacy HTML/JS dashboard, identify mi
 - External service validation (Google, Anki, Blackboard) beyond wiring checks.
 
 ## Sources (Evidence)
-- React pages: `brain/static/react/src/pages/dashboard.tsx`, `brain/static/react/src/pages/brain.tsx`, `brain/static/react/src/pages/calendar.tsx`, `brain/static/react/src/pages/scholar.tsx`, `brain/static/react/src/pages/tutor.tsx`.
-- React shell + notes: `brain/static/react/src/components/layout.tsx`.
-- React API client: `brain/static/react/src/lib/api.ts`.
+- Archived React pages: `archive/dashboards/brain_static_react/src/pages/dashboard.tsx`, `archive/dashboards/brain_static_react/src/pages/brain.tsx`, `archive/dashboards/brain_static_react/src/pages/calendar.tsx`, `archive/dashboards/brain_static_react/src/pages/scholar.tsx`, `archive/dashboards/brain_static_react/src/pages/tutor.tsx`.
+- Archived React shell + notes: `archive/dashboards/brain_static_react/src/components/layout.tsx`.
+- Archived React API client: `archive/dashboards/brain_static_react/src/lib/api.ts`.
 - Legacy UI: `brain/templates/dashboard.html`, `brain/static/js/dashboard.js`.
 - Backend adapters: `brain/dashboard/api_adapter.py`, `brain/dashboard/routes.py`.
 - Existing audit: `docs/dashboard_audit.md`.
@@ -101,11 +101,11 @@ Compare the React dashboard rebuild to the legacy HTML/JS dashboard, identify mi
 - React missing Sync Inbox tab entirely; legacy uses `/api/sync/*` and `/api/scraper/run`.
 
 ### Data Model Mismatch
-- React uses shared schema (`brain/static/react/shared/schema.ts`) with `sessions.duration` string and `sessions.mode` text, while adapter returns `durationMinutes` and omits `mode`.
+- React uses shared schema (`archive/dashboards/brain_static_react/shared/schema.ts`) with `sessions.duration` string and `sessions.mode` text, while adapter returns `durationMinutes` and omits `mode`.
 
 ## Roadmap (Phased)
 ### Phase 0: Canonical UI + Wiring Baseline
-- Confirm canonical frontend: `brain/static/react` vs `dashboard_rebuild` duplication.
+- Canonical frontend is `brain/static/dist` (Flask serves dist first).
 - Document React route map and add Sync Inbox route placeholder.
 
 ### Phase 1: Core Wiring Parity
@@ -135,5 +135,5 @@ Compare the React dashboard rebuild to the legacy HTML/JS dashboard, identify mi
 
 ## Risks / Unknowns
 - External integrations (Google, Anki, Blackboard) need credentialed testing.
-- `dashboard_rebuild` vs `brain/static/react` duplication could cause drift; confirm canonical UI.
+- Archived dashboards are stored under `archive/dashboards/` and can be restored if needed.
 - Legacy-only modals may still be required for parity; inventory in `docs/dashboard_audit.md`.

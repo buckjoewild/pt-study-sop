@@ -10,7 +10,19 @@
       "Bash(find:*)",
       "Bash(sqlite3:*)",
       "Bash(.md$ \")",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(if exist \"node_modules\\\\.vite\" rmdir /s /q \"node_modules\\\\.vite\")",
+      "Bash(npm run build:*)",
+      "Bash(dir:*)",
+      "Bash(xcopy:*)",
+      "Bash(npm run dev:*)",
+      "Bash(Get-Process -Name node -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object Id, ProcessName, StartTime)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(npm start)",
+      "mcp__filesystem__directory_tree"
     ]
   }
 }

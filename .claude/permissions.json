@@ -1,4 +1,23 @@
 {
-  "allow_execution": ["git status", "ls"],
+  "allow_execution": [
+    "git status",
+    "ls",
+    "Get-ChildItem",
+    "Get-Content",
+    "Select-String",
+    "rg",
+    "rg --files",
+    "node -v",
+    "npm -v",
+    "python --version",
+    "python brain/db_setup.py",
+    "python -m pytest brain/tests",
+    "python scripts/release_check.py",
+    "pip --version",
+    "C:\\Users\\treyt\\OneDrive\\Desktop\\pt-study-sop\\Run_Brain_All.bat",
+    "pip list",
+    "pip show",
+    "bun -v"
+  ],
   "require_confirmation": ["git push", "del"]
 }

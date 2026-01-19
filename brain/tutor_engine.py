@@ -314,7 +314,31 @@ def load_runtime_catalog_context(max_chars: int = 6000) -> str:
     conn.close()
 
     if not rows:
-        return ""
+        # Attempt a one-time sync from the runtime bundle (v9.3) and retry
+        try:
+            from rag_notes import sync_runtime_catalog
+
+            repo_root = Path(__file__).resolve().parent.parent
+            sync_runtime_catalog(str(repo_root))
+            conn = sqlite3.connect(DB_PATH)
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT source_path, folder_path, content
+                FROM rag_docs
+                WHERE COALESCE(corpus, 'runtime') = 'runtime'
+                  AND COALESCE(enabled, 1) = 1
+                  AND source_path LIKE 'runtime://%'
+                ORDER BY COALESCE(folder_path, ''), source_path
+                """
+            )
+            rows = cur.fetchall()
+            conn.close()
+        except Exception:
+            return ""
+        if not rows:
+            return ""
 
     parts: list[str] = []
     total = 0

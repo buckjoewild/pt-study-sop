@@ -31,6 +31,12 @@ Build a personal study OS that captures every session, turns it into metrics and
   - Brain writes those highlights into Obsidian on top of existing session notes.
 - Brain also produces Anki drafts and metrics in parallel.
 
+## Dashboard build (single source of truth)
+- Locked source repo (save point): `C:\Users\treyt\OneDrive\Desktop\pt-study-sop\archive\unused\Arcade-RetroDesign`.
+- Production bundle served by Flask: `brain/static/dist` (copied from `archive\unused\Arcade-RetroDesign\dist\public`).
+- Backups of older builds live in `archive/unused/dist_backup_*` and are **not** used by `Run_Brain_All.bat`.
+- If the UI looks wrong, rebuild from the locked repo and copy `dist/public` into `brain/static/dist` (do not mix assets from other dashboards).
+
 ## First Session Without Notes (Source-Lock Rule)
 - M0 Planning requires target, sources, plan, and a pre-test before teaching.
 - If no sources are provided, Tutor marks output as **unverified** and keeps claims cautious.

@@ -346,3 +346,7 @@ Update 2026-01-19:
   - Moved `Arcade-RetroDesign` and `Arcade-RetroDesign__moved1` into `archive/unused/`.
 - Now: Root workspace contains only active projects and required archives.
 - Next: If confirmed unused long-term, add `archive/unused/` to .gitignore to keep scans cleaner.
+- 2026-01-20: Set canonical dashboard assets to brain/static/dist (copied from archive/dashboards/brain_static_react). Archived previous dist at archive/unused/dist_arcade_20260120. Documented canonical path in README files. Fixed Run_Brain_All.bat OPENROUTER_API_KEY quote.
+- 2026-01-20: Rebuilt Arcade-RetroDesign and replaced brain/static/dist with Arcade-RetroDesign dist/public. Updated README files to lock this repo as the canonical dashboard source.
+- 2026-01-20: Locked dashboard to archive/unused/Arcade-RetroDesign (save-point repo) and synced brain/static/dist from its dist/public. Updated README files to reference the locked source.
+- 2026-01-20: Archived unused dashboard folders into archive/unused/_old. Removed hard-coded OpenRouter key from Run_Brain_All.bat, ai-config/settings.local.json, and projects/treys-agent/src/agents/base.py (now reads OPENROUTER_API_KEY from env).

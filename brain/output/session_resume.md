@@ -1,8 +1,8 @@
 # Session Resume
-Generated: 2026-01-19 15:04
+Generated: 2026-01-19 19:06
 
 ## Readiness Score
-**4/100** (1 topics, 1 sessions in 30 days)
+**8/100** (2 topics, 2 sessions in 30 days)
 
 ## Drift + SOP Usage (last 30d)
 - Prompt Drift flagged: 0
@@ -12,11 +12,15 @@ Generated: 2026-01-19 15:04
 - Common Core Learning Modules: n/a
 
 ## Recent Sessions
+- **General** (2026-01-19, 0d ago)
+  - Mode: Core | Understanding: n/a/5 | Confidence: n/a/5
 - **Evidence Based Practice** (2026-01-19, 0d ago)
   - Mode: study | Understanding: n/a/5 | Confidence: n/a/5
 
 ## Topic Coverage
 - **Evidence Based Practice**: 1 sessions, last 0d ago [FRESH]
+  - Avg Understanding: n/a/5 | Avg Confidence: n/a/5
+- **General**: 1 sessions, last 0d ago [FRESH]
   - Avg Understanding: n/a/5 | Avg Confidence: n/a/5
 
 ## Areas Needing Attention

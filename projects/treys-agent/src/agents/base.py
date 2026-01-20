@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -8,8 +9,8 @@ import requests
 class Agent:
     def __init__(self, name: str) -> None:
         self.name = name
-        # HARD-CODED API KEY (User provided)
-        self.api_key = "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"
+        # Read from environment to avoid committing secrets
+        self.api_key = os.environ.get("OPENROUTER_API_KEY", "")
 
         self.repo_root = Path(__file__).resolve().parents[4]
         self.tutor_path = self.repo_root / "projects" / "treys-agent" / "TUTOR.md"

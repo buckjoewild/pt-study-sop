@@ -115,7 +115,16 @@ def react_pages():
 
 
 def serve_react_app():
-    """Serve the legacy Flask dashboard as the single canonical UI."""
+    """Serve the React build if present; otherwise fall back to legacy Flask."""
+    import os
+    from flask import send_from_directory, current_app
+
+    static_folder = current_app.static_folder or ""
+    dist_index = os.path.join(static_folder, "dist", "index.html")
+
+    if os.path.exists(dist_index):
+        return send_from_directory(os.path.join(static_folder, "dist"), "index.html")
+
     return render_template("dashboard.html")
 
 

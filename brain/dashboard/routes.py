@@ -115,17 +115,7 @@ def react_pages():
 
 
 def serve_react_app():
-    """Helper to serve the React app."""
-    import os
-    from flask import send_from_directory, current_app
-    
-    static_folder = current_app.static_folder or ""
-    dist_index = os.path.join(static_folder, "dist", "index.html")
-    
-    if os.path.exists(dist_index):
-        return send_from_directory(os.path.join(static_folder, "dist"), "index.html")
-    
-    # Fallback to old dashboard if new one doesn't exist
+    """Serve the legacy Flask dashboard as the single canonical UI."""
     return render_template("dashboard.html")
 
 

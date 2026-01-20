@@ -66,9 +66,50 @@ def obsidian_list_files(folder: str = "") -> dict:
             timeout=10
         )
         if resp.status_code == 200:
-            data = resp.json()
-            return {"success": True, "files": data.get("files", [])}
-        return {"success": False, "error": f"Status {resp.status_code}"}
+            try:
+                data = resp.json()
+            except Exception:
+                return {"success": False, "error": "Non-JSON response from Obsidian"}
+
+            files = []
+            folders = []
+
+            if isinstance(data, list):
+                files = data
+            elif isinstance(data, dict):
+                if "files" in data:
+                    files = data.get("files") or []
+                elif "data" in data:
+                    files = data.get("data") or []
+                else:
+                    # Some APIs return a path->metadata mapping
+                    files = list(data.keys())
+
+                folders = data.get("folders") or data.get("dirs") or []
+            else:
+                files = []
+
+            def normalize_item(item):
+                if isinstance(item, dict) and "path" in item:
+                    return item.get("path")
+                return item
+
+            normalized = []
+            for item in files:
+                path = normalize_item(item)
+                if path:
+                    normalized.append(path)
+
+            for item in folders:
+                path = normalize_item(item)
+                if path:
+                    if not path.endswith("/"):
+                        path = f"{path}/"
+                    normalized.append(path)
+
+            return {"success": True, "files": normalized}
+
+        return {"success": False, "error": f"Status {resp.status_code}: {resp.text}"}
     except Exception as e:
         return {"success": False, "error": str(e)}
 

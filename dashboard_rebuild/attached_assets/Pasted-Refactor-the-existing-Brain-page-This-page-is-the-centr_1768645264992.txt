@@ -1,0 +1,168 @@
+Refactor the existing Brain page.
+This page is the central data ingestion and analytics layer.
+It is read-only and contains no study or planning controls.
+
+PURPOSE
+
+Ingest all study-session outputs (WRAP)
+
+Organize data into evidence-based learning metrics
+
+Serve as the single source of truth
+
+Power Dashboard, Eval, and Scholar pages
+
+Act as the integration hub for Obsidian and Anki
+
+DATA INGESTION (REQUIRED)
+
+Ingest only data produced at session end (WRAP):
+
+Course
+
+Date
+
+Minutes studied
+
+Study mode
+
+Confusions
+
+Weak anchors
+
+Concepts touched
+
+Cards drafted
+
+Session issues (interruptions, source-lock failures, workflow problems)
+
+Brain must not invent data.
+All metrics must be traceable to WRAP fields.
+
+PAGE SECTIONS
+1. Session Evidence Table
+
+One row per study session
+
+Displays all raw WRAP fields
+
+Read-only
+
+2. Derived Metrics
+
+Compute and display:
+
+Sessions per course
+
+Total minutes per course
+
+Time-on-task trends
+
+Study mode distribution
+
+Concept revisit frequency
+
+Repeated confusions / weak anchors
+
+High-effort, low-yield sessions
+
+3. Obsidian Integration Panel
+
+Display or stub:
+
+Notes created per session
+
+Notes edited
+
+Concepts linked
+
+Orphan notes
+
+No note editing on this page.
+
+4. Anki Integration Panel
+
+Display or stub:
+
+Cards created per session
+
+Total cards per course
+
+Review load (if available)
+
+Lapses (if available)
+
+No card editing on this page.
+
+5. Issues & Failures Log
+
+Aggregate and display:
+
+Recurrent confusions
+
+Repeated weak anchors
+
+Workflow or tutor issues
+
+Source-lock failures
+
+Group by frequency and course.
+
+LLM INTERFACE (REQUIRED)
+
+Include a dedicated chat window on the Brain page
+
+Allow the user to:
+
+Type/paste raw session data, notes, or WRAP outputs
+
+Ask the LLM to organize, tag, or summarize data
+
+Include a file intake / upload component
+
+Accept saved session files, logs, or exports
+
+On upload, pass file contents to the LLM for parsing
+
+LLM output is annotations only (tags, categories, summaries)
+
+LLM must:
+
+Never modify stored data
+
+Never make decisions
+
+Never trigger behavior changes
+
+CRITICAL CONSTRAINT
+
+Every Brain metric must map directly to a WRAP field or a derivation of WRAP fields.
+If a metric cannot be captured at session end, exclude it.
+
+EXCLUDE
+
+Dashboard controls
+
+Study UI
+
+Planning or scheduling
+
+Scholar recommendations
+
+System settings
+
+DELIVERABLE
+
+Clean, refactored Brain page
+
+LLM chat + file upload interface
+
+Clear separation of:
+
+Raw session data
+
+Derived metrics
+
+LLM annotations
+
+Inline comments explaining WRAP → Brain mapping

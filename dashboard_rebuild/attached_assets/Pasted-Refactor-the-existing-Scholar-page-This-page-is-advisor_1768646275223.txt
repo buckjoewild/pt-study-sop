@@ -1,0 +1,201 @@
+Refactor the existing Scholar page.
+This page is advisory and analytical only. It must never directly change system behavior or data.
+
+PURPOSE
+
+The Scholar page:
+
+Interprets Brain data
+
+Audits the Tutor system
+
+Identifies learning and system failures
+
+Researches unanswered questions
+
+Proposes evidence-based improvements
+
+Keeps the user in the loop for unresolved decisions
+
+DATA SOURCES (READ-ONLY)
+
+Brain metrics and session evidence
+
+Tutor transcripts (post-session only)
+
+Tutor WRAP outputs
+
+No live Tutor access
+
+No direct database writes
+
+PAGE SECTIONS
+1. Scholar Summary
+
+Plain-language interpretation of recent study data
+
+What appears to be working
+
+What appears to be failing
+
+Confidence level of interpretations
+
+2. Tutor Audit
+
+Audit Tutor behavior by asking and tracking questions such as:
+
+Was the Tutor source-aligned?
+
+Was cognitive load appropriate?
+
+Were confusions resolved or deferred?
+
+Did Tutor explanations correlate with learning outcomes?
+
+Display:
+
+Recurrent Tutor-related issues
+
+Frequency by course or study mode
+
+3. Question Resolution Pipeline
+
+For each identified issue or uncertainty:
+
+Generate the question
+
+Attempt to answer using Brain data
+
+If insufficient, research learning science
+
+If still unresolved, escalate to the user
+
+4. Open Questions (User Input Required)
+
+List unanswered questions requiring human input
+
+Each question must include:
+
+Why it matters
+
+What data was insufficient
+
+What research was attempted
+
+This is the only section where Scholar asks the user questions.
+
+5. Evidence & Research Context
+
+Summaries of relevant learning-science findings
+
+Clearly separate:
+
+Observed data
+
+Research interpretation
+
+Cite sources where possible
+
+6. Improvement Proposals
+
+Generate proposals to improve:
+
+Tutor behavior
+
+Study methods
+
+Session structure
+
+WRAP schema
+
+System workflows
+
+Each proposal includes:
+
+Target area
+
+Rationale
+
+Supporting data or research
+
+Confidence level
+
+Risk level
+
+Statuses:
+
+Proposed
+
+Approved
+
+Rejected
+
+Implemented
+
+No auto-implementation.
+
+7. Proposal History (Read-Only)
+
+Log of all past proposals
+
+Decisions and dates
+
+Notes on outcomes where available
+
+LLM ROLE
+
+Use an LLM to:
+
+Interpret Brain data
+
+Audit Tutor outputs
+
+Generate and refine questions
+
+Conduct targeted research
+
+Draft improvement proposals
+
+The LLM must:
+
+Never modify Brain data
+
+Never change Tutor behavior directly
+
+Never write to the database
+
+Never override user decisions
+
+EXPLICIT EXCLUSIONS
+
+Dashboards or analytics charts
+
+Session logging
+
+Study controls
+
+Planning or scheduling
+
+System or infrastructure settings
+
+API key management
+
+DELIVERABLE
+
+Refactored Scholar page UI
+
+Clear separation of:
+
+Observations
+
+Research interpretation
+
+Open questions
+
+Improvement proposals
+
+Inline comments explaining:
+
+Brain → Scholar data flow
+
+Tutor audit boundaries

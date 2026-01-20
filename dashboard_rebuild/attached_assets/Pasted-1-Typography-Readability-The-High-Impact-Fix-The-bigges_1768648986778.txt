@@ -1,0 +1,50 @@
+1. Typography & Readability (The High-Impact Fix)
+The biggest issue currently is the pixelated font used for everything. While it looks cool in headers, it is difficult to read when small, causing eye strain.
+
+Font Pairing: Keep the pixel font (like "Press Start 2P") for the Headers (e.g., "JANUARY 2026", "TREY'S STUDY SYSTEM") and the Day Names (SUN, MON).
+
+Body Text Switch: Switch to a Monospace font (like JetBrains Mono, Roboto Mono, or Fira Code) for the actual calendar events and lists.
+
+Why? Monospace fonts preserve the "hacker/terminal" vibe but are designed for legibility at small sizes.
+
+Line Height: Increase the line height (vertical spacing) slightly on the event items to stop them from looking crushed together.
+
+2. Color & Contrast Management
+The stark Red (#FF0000) on Black (#000000) is classic, but it causes "chromatic aberration" (a vibrating effect) on modern screens, making it tiring to look at for long periods.
+
+Soften the Red: Shift the red slightly towards a Tomato or Crimson color (e.g., #FF4444 or #D32F2F) for text. It will still look red but will be easier on the eyes.
+
+Background Depth: Instead of pure black (#000000), try a very dark grey (#121212) for the calendar cell backgrounds. This reduces the harsh contrast.
+
+Categorical Color Coding: Currently, all events are white text.
+
+Suggestion: Use the left border of the event text or a small dot to indicate the category (e.g., Green for "New Job," Blue for "PHYT" classes, Yellow for "Personal").
+
+Keep the colors desaturated so they don't clash with the red theme.
+
+3. Visual Hierarchy & Spacing
+The calendar grid feels very "tight," and the borders are quite thick.
+
+Thinner Grid Lines: Reduce the thickness of the calendar grid borders to 1px and make them a dark grey (e.g., #333333) rather than red or white. This lets the content define the grid rather than the lines.
+
+Active State: The "Today" highlight (currently a red box) is good, but consider using a hollow red glow (box-shadow) or just highlighting the date number, rather than filling the whole header.
+
+Padding: Add 4px or 8px of padding inside the calendar cells so the text doesn't touch the borders.
+
+4. UI Polish & "The Vibe"
+Scrollbars: The standard white browser scrollbar on the right (and inside the sidebar) breaks the immersion.
+
+Fix: Use CSS to style the scrollbar. Make the track dark grey and the "thumb" (the moving part) red to match the UI.
+
+Event Overflow: Looking at the 4th, 5th, and 6th, you have +4, +12, +10. This suggests information overload.
+
+Fix: Instead of just a number, consider a hover effect or a "Day View" modal that pops up when you click a busy day.
+
+Button Consistency: The "CREATE EVENT" button is a solid red block. To make it pop more, give it a slight hover animation (e.g., pixel shift or color inversion) to make the UI feel "alive."
+
+5. The Sidebar Layout
+The right sidebar is a bit cluttered compared to the main calendar.
+
+Mini Calendar: It looks great, but ensure the current day (17) is highlighted distinctly (perhaps a red circle or square).
+
+Google Status: The "Google Connected / Disconnect" box takes up a lot of prime real estate. This could be moved to a settings menu or made into a much smaller status indicator (like a small green LED dot) to save space for Tasks or To-Dos.

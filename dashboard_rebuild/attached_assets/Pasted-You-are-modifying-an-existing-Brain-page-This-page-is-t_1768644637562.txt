@@ -1,0 +1,181 @@
+You are modifying an existing Brain page.
+This page is the central data ingestion, analytics, and evidence layer of a study system.
+
+Do not add dashboard behavior, study controls, or planning features.
+
+PURPOSE OF THE BRAIN PAGE
+
+The Brain page is the single source of truth for all study data.
+It ingests session outputs, Obsidian signals, and Anki signals, then organizes them into evidence-based learning metrics.
+
+This page feeds:
+
+Dashboard (decisions)
+
+Eval system
+
+Scholar analysis
+
+CORE RESPONSIBILITIES
+1. Session Data Ingestion
+
+Ingest all data produced at the end of each study session (WRAP output), including:
+
+Course
+
+Date
+
+Duration (minutes)
+
+Study mode
+
+Confusions
+
+Weak anchors
+
+Concepts touched
+
+Cards drafted
+
+Session issues (workflow, source-lock, interruptions)
+
+Brain must not invent data.
+All metrics must be derived from WRAP fields.
+
+2. Metrics Engine (Evidence-Based)
+
+Compute and store:
+
+Sessions per course
+
+Minutes per course
+
+Time-on-task trends
+
+Study mode distribution
+
+Frequency of concept revisits
+
+Repeated confusions / weak anchors
+
+High-effort, low-yield sessions
+
+Metrics must be:
+
+Transparent
+
+Traceable back to sessions
+
+Read-only from the UI
+
+3. Obsidian Integration Panel
+
+Display (or stub if not yet connected):
+
+Notes created per session
+
+Notes edited per session
+
+Concepts linked
+
+Orphan notes (unlinked)
+
+No note editing from this page.
+
+4. Anki Integration Panel
+
+Display (or stub if not yet connected):
+
+Cards created per session
+
+Total cards per course
+
+Review load (if available)
+
+Lapses (if available)
+
+No card editing from this page.
+
+5. Issues & Failures Log
+
+Aggregate and display:
+
+Repeated confusions
+
+Recurrent weak anchors
+
+Workflow problems
+
+Tutor or source-lock failures
+
+Issues must be:
+
+Auto-tagged where possible
+
+Grouped by frequency and course
+
+6. LLM Assistance (Organization Only)
+
+Wire in an LLM to:
+
+Parse free-text WRAP fields
+
+Categorize issues (conceptual / procedural / system)
+
+Auto-tag sessions and concepts
+
+Surface anomalies and patterns
+
+LLM must:
+
+Never modify data
+
+Never make decisions
+
+Never trigger behavior changes directly
+
+CRITICAL DESIGN CONSTRAINT
+
+All Brain metrics must map directly to Tutor WRAP fields.
+
+If a metric cannot be:
+
+Captured at session end, or
+
+Cleanly derived from WRAP
+
+Then it must not appear on the Brain page.
+
+Treat the Brain metrics list as a schema contract for WRAP.
+
+EXPLICITLY EXCLUDE
+
+Live studying
+
+Planning or scheduling
+
+Dashboard controls
+
+Scholar recommendations
+
+System settings
+
+DELIVERABLE
+
+Refactored Brain page UI
+
+Clear separation of:
+
+Raw session data
+
+Derived metrics
+
+External integrations
+
+Inline comments explaining:
+
+Metric derivations
+
+WRAP → Brain mapping
+
+LLM role boundaries

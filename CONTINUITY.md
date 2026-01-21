@@ -453,3 +453,6 @@ Update 2026-01-20:
 
 ## 2026-01-20 09:09:40
 - Added git add/commit/push permissions for backup commit.
+
+## 2026-01-20 21:53:00
+- Added winget permissions (winget/list/search/install) to allow dependency installs.

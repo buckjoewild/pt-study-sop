@@ -166,7 +166,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </Button>
               </SheetTrigger>
               <SheetContent
-                className="bg-black border-l-4 border-primary w-[300px] sm:w-[400px] shadow-2xl overflow-y-auto"
+                className="bg-black border-l-4 border-primary w-[300px] sm:w-[400px] shadow-2xl overflow-y-auto z-[100001]"
+                style={{ zIndex: 100001 }}
               >
                 <SheetTitle className="font-arcade text-primary mb-4">QUICK_NOTES</SheetTitle>
                 <SheetDescription className="sr-only">Quick notes panel</SheetDescription>

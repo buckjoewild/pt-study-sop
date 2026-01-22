@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@source "./**/*.{ts,tsx,js,jsx,html}";
+@source "../../shared/**/*.{ts,tsx,js,jsx,html}";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -88,6 +90,10 @@
 }
 
 @layer utilities {
+  .inline-flex {
+    display: inline-flex;
+  }
+
   .text-glow {
     text-shadow: 0 0 10px var(--color-primary), 0 0 20px var(--color-primary);
   }
@@ -111,11 +117,11 @@
   }
 
   /* Notes sheet positioning */
-  .top-16 {
+  .notes-offset-top {
     top: 4rem !important;
   }
 
-  .h-\[calc\(100vh-4rem\)\] {
+  .notes-offset-height {
     height: calc(100vh - 4rem) !important;
   }
 }

@@ -5,7 +5,16 @@ rem One-click: sync logs -> regenerate resume -> start dashboard -> open browser
 cd /d "%~dp0"
 
 rem Configure Study RAG drop-folder (used by Tutor -> Study sync)
-set "PT_STUDY_RAG_DIR=C:\Users\treyt\OneDrive\Desktop\PT School"
+set "ONEDRIVE_RAG=C:\Users\treyt\OneDrive\Desktop\PT School"
+set "LOCAL_RAG=%~dp0PT School"
+if exist "%ONEDRIVE_RAG%" (
+    set "PT_STUDY_RAG_DIR=%ONEDRIVE_RAG%"
+) else if exist "%LOCAL_RAG%" (
+    set "PT_STUDY_RAG_DIR=%LOCAL_RAG%"
+) else (
+    set "PT_STUDY_RAG_DIR=%ONEDRIVE_RAG%"
+    echo [WARN] PT Study RAG folder not found at %ONEDRIVE_RAG% or %LOCAL_RAG%.
+)
 
 rem Configure API Keys via brain\.env (loaded by brain\config.py)
 

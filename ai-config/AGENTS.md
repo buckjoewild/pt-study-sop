@@ -16,6 +16,9 @@ You must read and obey `CLAUDE.md` immediately (same folder). It contains core r
 - Ask before destructive or irreversible actions (delete, overwrite, submit, purchase).
 - Run project-required checks or clearly state when they are skipped.
 
+## ExecPlans
+When writing complex features or significant refactors, use an ExecPlan (as described in `.agent/PLANS.md`) from design to implementation.
+
 ## When to ask (and how)
 - If a task needs a specific target (repo/path, environment, or output location) and it is not explicit, ask.
 - If requirements/preferences are missing and would change the implementation, ask.

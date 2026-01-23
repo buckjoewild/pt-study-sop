@@ -45,10 +45,15 @@ export function CalendarAssistant({ isOpen, onClose }: CalendarAssistantProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const queryClient = useQueryClient();
 
-    const { data: googleStatus, isLoading: isGoogleStatusLoading } = useQuery({
+    const {
+        data: googleStatus,
+        isLoading: isGoogleStatusLoading,
+        refetch: refetchGoogleStatus,
+    } = useQuery({
         queryKey: ["google-status"],
         queryFn: api.google.getStatus,
         retry: 1,
+        enabled: isOpen,
     });
 
     const connectGoogleMutation = useMutation({
@@ -59,12 +64,20 @@ export function CalendarAssistant({ isOpen, onClose }: CalendarAssistantProps) {
     });
 
 
+    // Refresh Google status when assistant opens
+    useEffect(() => {
+        if (isOpen) {
+            refetchGoogleStatus();
+        }
+    }, [isOpen, refetchGoogleStatus]);
+
     // Scroll to bottom
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [messages, isOpen]);
+
 
     const chatMutation = useMutation({
         mutationFn: async (message: string) => {
@@ -112,10 +125,8 @@ export function CalendarAssistant({ isOpen, onClose }: CalendarAssistantProps) {
                         <CardTitle className="text-sm font-arcade tracking-wider text-primary">AI_ASSISTANT</CardTitle>
                         <div className="flex items-center gap-2">
                             <CardDescription className="text-[10px] text-muted-foreground font-terminal">Brain API (Integration Pending)</CardDescription>
-                            {!isGoogleStatusLoading && (
-                                <span className={googleStatus?.connected ? "text-[9px] font-arcade text-green-400" : "text-[9px] font-arcade text-yellow-400"}>
-                                    {googleStatus?.connected ? "CONNECTED" : "NOT CONNECTED"}
-                                </span>
+                            {!isGoogleStatusLoading && googleStatus?.connected && (
+                                <span className="text-[9px] font-arcade text-green-400">CONNECTED</span>
                             )}
                         </div>
                     </div>
@@ -139,7 +150,7 @@ export function CalendarAssistant({ isOpen, onClose }: CalendarAssistantProps) {
                                 disabled={connectGoogleMutation.isPending}
                             >
                                 <Link className="w-3 h-3 mr-1" />
-                                {connectGoogleMutation.isPending ? "CONNECTING..." : "CONNECT GOOGLE"}
+                                {connectGoogleMutation.isPending ? "CONNECTING..." : "CONNECT GOOGLE CALENDAR"}
                             </Button>
                         </div>
                     )}

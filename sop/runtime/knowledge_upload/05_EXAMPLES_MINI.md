@@ -1,5 +1,5 @@
 # Runtime Bundle: 05_EXAMPLES_MINI.md
-Version: v9.3
+Version: v9.2
 Scope: Mini examples
 This is runtime; canonical source is:
 - src\examples_mini.md

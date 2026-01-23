@@ -1,5 +1,5 @@
 # Runtime Bundle: 03_ENGINES.md
-Version: v9.3
+Version: v9.2
 Scope: Engines (Anatomy + Concept)
 This is runtime; canonical source is:
 - src\engines\anatomy-engine.md

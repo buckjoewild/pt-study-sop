@@ -1,5 +1,5 @@
 # Runtime Bundle: 00_INDEX_AND_RULES.md
-Version: v9.3
+Version: v9.2
 Scope: Runtime rules and bundle map
 This is runtime; canonical source is:
 - src\runtime_rules.md

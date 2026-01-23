@@ -1,5 +1,5 @@
 # Runtime Bundle: 01_MODULES_M0-M6.md
-Version: v9.3
+Version: v9.2
 Scope: Execution flow (M0-M6)
 This is runtime; canonical source is:
 - src\modules\M0-planning.md

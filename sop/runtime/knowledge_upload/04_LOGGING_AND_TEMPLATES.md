@@ -1,5 +1,5 @@
 # Runtime Bundle: 04_LOGGING_AND_TEMPLATES.md
-Version: v9.3
+Version: v9.2
 Scope: Logging schema and templates
 This is runtime; canonical source is:
 - logging_schema_v9.3.md
@@ -11,6 +11,7 @@ This is runtime; canonical source is:
 - src\templates\post_lecture_elaboration_prompts.md
 - src\templates\intake_template.md
 - src\templates\session_log_template.md
+- src\templates\progress_tracker_template.md
 
 ---
 
@@ -299,3 +300,26 @@ JSON is the canonical log format. Use this summary only if you need a human-read
 
 ## Next Session
 -
+
+
+## Source: src\templates\progress_tracker_template.md
+
+# Progress Tracker Template
+
+## Status legend
+- Not started
+- In progress
+- Needs review
+- Solid
+
+## Tracker Table
+```
+| Module | Topic / LO | Status | Last date | Next action | Next review | Source-lock | Notes |
+| ------ | ---------- | ------ | --------- | ----------- | ----------- | ----------- | ----- |
+| M3     | LO 2.1: Shoulder stabilizers | In progress | YYYY-MM-DD | Drill rotator cuff actions | YYYY-MM-DD | Slides 12-18 | Missed supraspinatus action |
+```
+
+## Update cadence
+- Update during Wrap (M6)
+- Use the exit ticket to set "Next action"
+- Set next review dates (1-3-7-21 default)

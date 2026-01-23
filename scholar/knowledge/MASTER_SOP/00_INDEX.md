@@ -12,7 +12,7 @@
 | 02 | MODULES_M0-M6.md | 389 | Detailed session phase protocols |
 | 03 | SUPPLEMENTAL.md | 784 | Troubleshooting, research notes, methods, legacy concepts |
 | 04 | CONCEPTS_LIBRARY.md | 858 | Learning principles organized by concept (encoding, retrieval, metacognition, etc.) |
-| 05 | MATERIAL_INGESTION.md | TBD | How to prepare material for study |
+| 05 | MATERIAL_INGESTION.md | TBD | Material ingestion protocol (pre-study, tutor-ready packet) |
 | 06 | SESSION_START.md | TBD | Quick-start checklist when lost |
 | 07 | PROGRESS_TRACKING.md | TBD | Track where you are so you don't restart |
 
@@ -60,19 +60,19 @@ Learning principles organized so you can study, research, and expand them:
 - **Part 6: Session Design** — Planning, fading, wrap/consolidation, mode selection
 - **Part 7: Evidence Summary** — What's well-cited vs heuristic
 
-### 05 - MATERIAL INGESTION (TO BUILD)
+### 05 - MATERIAL INGESTION
 - How to go from raw content to ready-to-study material
 - What to extract from LOs, slides, videos, textbook
 - NotebookLM workflow
 - Time limits
 
-### 05 - SESSION START (TO BUILD)
+### 06 - SESSION START
 - Dead simple checklist when you sit down lost
 - Find where you left off
 - Pick target
 - Go
 
-### 06 - PROGRESS TRACKING (TO BUILD)
+### 07 - PROGRESS TRACKING
 - Track modules/LOs/status
 - Never lose your place
 

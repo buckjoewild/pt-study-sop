@@ -63,6 +63,7 @@ BUNDLES = [
             "templates/post_lecture_elaboration_prompts.md",
             "templates/intake_template.md",
             "templates/session_log_template.md",
+            "templates/progress_tracker_template.md",
         ],
     ),
     (

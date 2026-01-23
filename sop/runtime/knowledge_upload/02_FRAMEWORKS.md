@@ -1,5 +1,5 @@
 # Runtime Bundle: 02_FRAMEWORKS.md
-Version: v9.3
+Version: v9.2
 Scope: Frameworks (H/M/Y/Levels + PEIRRO + KWIK)
 This is runtime; canonical source is:
 - src\frameworks\H-series.md

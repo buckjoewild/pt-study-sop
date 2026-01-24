@@ -50,6 +50,16 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/sessions/last-context", async (req, res) => {
+    try {
+      const courseId = req.query.courseId ? parseInt(req.query.courseId as string) : undefined;
+      const context = await storage.getLastSessionContext(courseId);
+      res.json(context);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch last session context" });
+    }
+  });
+
   app.get("/api/sessions/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -608,17 +618,6 @@ export async function registerRoutes(
       res.status(201).json(loSession);
     } catch (error) {
       res.status(400).json({ error: "Invalid lo session data" });
-    }
-  });
-
-  // ===== SESSION CONTEXT =====
-  app.get("/api/sessions/last-context", async (req, res) => {
-    try {
-      const courseId = req.query.courseId ? parseInt(req.query.courseId as string) : undefined;
-      const context = await storage.getLastSessionContext(courseId);
-      res.json(context);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch last session context" });
     }
   });
 

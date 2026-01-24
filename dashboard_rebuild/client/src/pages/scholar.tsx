@@ -437,13 +437,13 @@ export default function Scholar() {
                       {tutorAuditItems.map((item, i) => (
                         <div key={i} className="p-3 bg-black/40 border border-secondary/50">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="font-terminal text-sm">{item.issue}</span>
+                            <span className="font-terminal text-sm">{item.issue ?? "Unknown issue"}</span>
                             <Badge variant="outline" className="rounded-none text-[9px] border-primary text-primary">
-                              x{item.frequency}
+                              x{item.frequency ?? 0}
                             </Badge>
                           </div>
                           <div className="flex gap-1 flex-wrap">
-                            {item.courses.map((course, j) => (
+                            {(item.courses || []).map((course: string, j: number) => (
                               <Badge key={j} variant="secondary" className="rounded-none text-[8px]">
                                 {course}
                               </Badge>
@@ -599,13 +599,13 @@ export default function Scholar() {
                       <div className="space-y-4">
                         {researchFindings.map((finding, i) => (
                           <div key={i} className="p-3 bg-black/40 border border-secondary/50">
-                            <div className="font-arcade text-xs text-primary mb-2">{finding.topic}</div>
-                            <p className="font-terminal text-xs mb-2">{finding.summary}</p>
+                            <div className="font-arcade text-xs text-primary mb-2">{finding.topic ?? finding.title}</div>
+                            <p className="font-terminal text-xs mb-2">{finding.summary ?? finding.content}</p>
                             <div className="flex justify-between text-[10px] text-muted-foreground">
                               <span>Source: {finding.source}</span>
                             </div>
                             <div className="mt-2 pt-2 border-t border-secondary/30">
-                              <span className="text-[10px] text-primary">Relevance: {finding.relevance}</span>
+                              <span className="text-[10px] text-primary">Relevance: {finding.relevance ?? "n/a"}</span>
                             </div>
                           </div>
                         ))}

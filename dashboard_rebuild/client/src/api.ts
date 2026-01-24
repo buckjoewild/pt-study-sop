@@ -416,6 +416,9 @@ export interface ScholarFinding {
   title: string;
   source: string;
   content: string;
+  topic?: string;
+  summary?: string;
+  relevance?: string;
 }
 
 export interface TutorAuditItem {
@@ -425,6 +428,9 @@ export interface TutorAuditItem {
   userMessages: number;
   assistantMessages: number;
   status: string;
+  issue?: string;
+  frequency?: number;
+  courses?: string[];
 }
 
 export interface InsertAcademicDeadline {
@@ -433,6 +439,13 @@ export interface InsertAcademicDeadline {
   type: 'assignment' | 'quiz' | 'exam' | 'project';
   dueDate: string;
   notes?: string;
+}
+
+export interface AcademicDeadline extends InsertAcademicDeadline {
+  id: number;
+  completed?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // Anki types

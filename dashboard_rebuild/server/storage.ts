@@ -19,6 +19,38 @@ import { asc, sql } from "drizzle-orm";
 import { db } from "./db";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
 
+export type BrainMetrics = {
+  sessionsPerCourse: { course: string; count: number; minutes: number }[];
+  modeDistribution: { mode: string; count: number; minutes: number }[];
+  recentConfusions: { text: string; count: number; course: string }[];
+  recentWeakAnchors: { text: string; count: number; course: string }[];
+  conceptFrequency: { concept: string; count: number }[];
+  issuesLog: { issue: string; count: number; course: string }[];
+  totalMinutes: number;
+  totalSessions: number;
+  totalCards: number;
+};
+
+const parseJsonArray = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === "string");
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item): item is string => typeof item === "string");
+      }
+    } catch {
+      // fall through to comma split
+    }
+    return trimmed.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+};
+
 export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
@@ -89,17 +121,7 @@ export interface IStorage {
   getWeaknessQueue(): Promise<{ id: number; topic: string; reason: string | null }[]>;
 
   // Brain Analytics - Derived Metrics from WRAP fields
-  getBrainMetrics(): Promise<{
-    sessionsPerCourse: { course: string; count: number; minutes: number }[];
-    modeDistribution: { mode: string; count: number; minutes: number }[];
-    recentConfusions: { text: string; count: number; course: string }[];
-    recentWeakAnchors: { text: string; count: number; course: string }[];
-    conceptFrequency: { concept: string; count: number }[];
-    issuesLog: { issue: string; count: number; course: string }[];
-    totalMinutes: number;
-    totalSessions: number;
-    totalCards: number;
-  }>;
+  getBrainMetrics(): Promise<BrainMetrics>;
 
   // Schedule Events
   getScheduleEventsByCourse(courseId: number): Promise<ScheduleEvent[]>;
@@ -509,17 +531,7 @@ export class DatabaseStorage implements IStorage {
 
   // ===== BRAIN ANALYTICS =====
   // Derives all metrics from WRAP session fields
-  async getBrainMetrics(): Promise<{
-    sessionsPerCourse: { course: string; count: number; minutes: number }[];
-    modeDistribution: { mode: string; count: number; minutes: number }[];
-    recentConfusions: { text: string; count: number; course: string }[];
-    recentWeakAnchors: { text: string; count: number; course: string }[];
-    conceptFrequency: { concept: string; count: number }[];
-    issuesLog: { issue: string; count: number; course: string }[];
-    totalMinutes: number;
-    totalSessions: number;
-    totalCards: number;
-  }> {
+  async getBrainMetrics(): Promise<BrainMetrics> {
     const allSessions = await db.select().from(sessions).orderBy(desc(sessions.date));
     
     // Sessions per course (derived from WRAP: course field)
@@ -551,7 +563,7 @@ export class DatabaseStorage implements IStorage {
     // Aggregate confusions (derived from WRAP: confusions array)
     const confusionMap = new Map<string, { count: number; course: string }>();
     allSessions.forEach(s => {
-      (s.confusions || []).forEach(c => {
+      parseJsonArray(s.confusions).forEach(c => {
         const key = c.toLowerCase().trim();
         const existing = confusionMap.get(key);
         if (existing) {
@@ -569,7 +581,7 @@ export class DatabaseStorage implements IStorage {
     // Aggregate weak anchors (derived from WRAP: weakAnchors array)
     const weakAnchorMap = new Map<string, { count: number; course: string }>();
     allSessions.forEach(s => {
-      (s.weakAnchors || []).forEach(w => {
+      parseJsonArray(s.weakAnchors).forEach(w => {
         const key = w.toLowerCase().trim();
         const existing = weakAnchorMap.get(key);
         if (existing) {
@@ -587,7 +599,7 @@ export class DatabaseStorage implements IStorage {
     // Concept frequency (derived from WRAP: concepts array)
     const conceptMap = new Map<string, number>();
     allSessions.forEach(s => {
-      (s.concepts || []).forEach(c => {
+      parseJsonArray(s.concepts).forEach(c => {
         const key = c.toLowerCase().trim();
         conceptMap.set(key, (conceptMap.get(key) || 0) + 1);
       });
@@ -600,7 +612,7 @@ export class DatabaseStorage implements IStorage {
     // Issues log (derived from WRAP: issues array)
     const issueMap = new Map<string, { count: number; course: string }>();
     allSessions.forEach(s => {
-      (s.issues || []).forEach(i => {
+      parseJsonArray(s.issues).forEach(i => {
         const key = i.toLowerCase().trim();
         const existing = issueMap.get(key);
         if (existing) {

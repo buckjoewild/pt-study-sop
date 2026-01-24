@@ -45,15 +45,38 @@ import { api } from "@/lib/api";
 import { format, isValid } from "date-fns";
 
 // Helper to safely format dates
-const safeFormatDate = (dateStr: string | null | undefined, formatStr: string = 'MM/dd'): string => {
-  if (!dateStr) return '-';
+const safeFormatDate = (
+  dateInput: string | number | Date | null | undefined,
+  formatStr: string = "MM/dd"
+): string => {
+  if (!dateInput) return "-";
   try {
-    const date = new Date(dateStr);
-    if (!isValid(date)) return '-';
+    const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+    if (!isValid(date)) return "-";
     return format(date, formatStr);
   } catch {
-    return '-';
+    return "-";
   }
+};
+
+const parseStringArray = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === "string");
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item): item is string => typeof item === "string");
+      }
+    } catch {
+      // fall through to comma split
+    }
+    return trimmed.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
 };
 
 export default function Brain() {
@@ -185,10 +208,10 @@ export default function Brain() {
           mode: session.mode || "",
           minutes: session.minutes?.toString() || "",
           cards: session.cards?.toString() || "",
-          confusions: Array.isArray(session.confusions) ? session.confusions.join(", ") : "",
-          weakAnchors: Array.isArray(session.weakAnchors) ? session.weakAnchors.join(", ") : "",
-          concepts: Array.isArray(session.concepts) ? session.concepts.join(", ") : "",
-          issues: Array.isArray(session.issues) ? session.issues.join(", ") : "",
+          confusions: parseStringArray(session.confusions).join(", "),
+          weakAnchors: parseStringArray(session.weakAnchors).join(", "),
+          concepts: parseStringArray(session.concepts).join(", "),
+          issues: parseStringArray(session.issues).join(", "),
           notes: session.notes || ""
         });
       }
@@ -199,22 +222,18 @@ export default function Brain() {
   const handleSaveEdit = () => {
     if (editingSession === null) return;
 
+    const parseList = (value: string) =>
+      value ? value.split(",").map((item) => item.trim()).filter(Boolean) : [];
+    const toJsonOrNull = (items: string[]) => (items.length ? JSON.stringify(items) : null);
+
     const updates = {
       mode: editFormData.mode || "study",
       minutes: parseInt(editFormData.minutes) || 0,
       cards: parseInt(editFormData.cards) || 0,
-      confusions: editFormData.confusions
-        ? editFormData.confusions.split(",").map(s => s.trim()).filter(Boolean)
-        : [],
-      weakAnchors: editFormData.weakAnchors
-        ? editFormData.weakAnchors.split(",").map(s => s.trim()).filter(Boolean)
-        : [],
-      concepts: editFormData.concepts
-        ? editFormData.concepts.split(",").map(s => s.trim()).filter(Boolean)
-        : [],
-      issues: editFormData.issues
-        ? editFormData.issues.split(",").map(s => s.trim()).filter(Boolean)
-        : [],
+      confusions: toJsonOrNull(parseList(editFormData.confusions)),
+      weakAnchors: toJsonOrNull(parseList(editFormData.weakAnchors)),
+      concepts: toJsonOrNull(parseList(editFormData.concepts)),
+      issues: toJsonOrNull(parseList(editFormData.issues)),
       notes: editFormData.notes || null
     };
 
@@ -462,7 +481,7 @@ export default function Brain() {
                                 <TableCell>{session.minutes || 0}</TableCell>
                                 <TableCell>{session.cards || 0}</TableCell>
                                 <TableCell className="max-w-[150px] truncate text-xs text-muted-foreground">
-                                  {(session.confusions || []).join(", ") || "-"}
+                                  {parseStringArray(session.confusions).join(", ") || "-"}
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex gap-1">

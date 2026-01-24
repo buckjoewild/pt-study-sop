@@ -324,16 +324,23 @@ export const api = {
       totalSessions: number;
       totalCards: number;
     }>("/brain/metrics"),
-    chat: (message: string, syncToObsidian: boolean = false) => request<{ 
+    chat: (message: string, syncToObsidian: boolean = false, mode: string = "all") => request<{ 
       response: string; 
       isStub: boolean; 
       parsed?: boolean;
+      wrapProcessed?: boolean;
       cardsCreated?: number;
       obsidianSynced?: boolean;
       obsidianError?: string;
+      obsidianPath?: string;
+      issuesLogged?: number;
+      sessionSaved?: boolean;
+      sessionId?: number | null;
+      wrapSessionId?: string | null;
+      sessionError?: string | null;
     }>("/brain/chat", {
       method: "POST",
-      body: JSON.stringify({ message, syncToObsidian }),
+      body: JSON.stringify({ message, syncToObsidian, mode }),
     }),
     ingest: (content: string, filename?: string) => request<{ message: string; parsed: boolean; isStub: boolean }>("/brain/ingest", {
       method: "POST",

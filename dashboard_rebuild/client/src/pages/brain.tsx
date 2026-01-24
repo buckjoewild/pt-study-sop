@@ -83,11 +83,22 @@ export default function Brain() {
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [wrapSummary, setWrapSummary] = useState<{
+    cardsCreated: number;
+    issuesLogged: number;
+    obsidianSynced: boolean;
+    obsidianPath?: string;
+    sessionId?: number | null;
+    wrapSessionId?: string | null;
+  } | null>(null);
   const [selectedSessions, setSelectedSessions] = useState<Set<number>>(new Set());
   const [editingSession, setEditingSession] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [sessionsToDelete, setSessionsToDelete] = useState<number[]>([]);
   const [syncToObsidian, setSyncToObsidian] = useState(false);
+  
+  // Brain chat mode selector
+  const [brainChatMode, setBrainChatMode] = useState<"all" | "obsidian" | "anki" | "metrics">("all");
 
   // Filter state for session evidence table
   const [dateFilter, setDateFilter] = useState<string>("");
@@ -331,11 +342,22 @@ export default function Brain() {
     if (!chatInput.trim()) return;
     const message = chatInput;
     setChatInput("");
+    setWrapSummary(null);
     setChatMessages(prev => [...prev, { role: "user", content: message }]);
     setIsProcessing(true);
     try {
-      const result = await api.brain.chat(message, syncToObsidian);
+      const result = await api.brain.chat(message, syncToObsidian, brainChatMode);
       setChatMessages(prev => [...prev, { role: "assistant", content: result.response }]);
+      if (result.wrapProcessed) {
+        setWrapSummary({
+          cardsCreated: result.cardsCreated || 0,
+          issuesLogged: result.issuesLogged || 0,
+          obsidianSynced: Boolean(result.obsidianSynced),
+          obsidianPath: result.obsidianPath,
+          sessionId: result.sessionId ?? null,
+          wrapSessionId: result.wrapSessionId ?? null,
+        });
+      }
       // Refresh data if cards were created
       if (result.cardsCreated && result.cardsCreated > 0) {
         queryClient.invalidateQueries({ queryKey: ["anki"] });
@@ -344,6 +366,17 @@ export default function Brain() {
       setChatMessages(prev => [...prev, { role: "assistant", content: "Error processing request. Please try again." }]);
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handlePasteWrap = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text && text.trim()) {
+        setChatInput(text);
+      }
+    } catch {
+      setChatMessages(prev => [...prev, { role: "assistant", content: "Clipboard access failed. Paste manually." }]);
     }
   };
 
@@ -974,7 +1007,72 @@ export default function Brain() {
                     <div ref={chatEndRef} />
                   </div>
                 </ScrollArea>
+                {wrapSummary && (
+                  <div className="border-t border-secondary/50 p-3 bg-black/40">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px]">WRAP</Badge>
+                        <span className="font-terminal text-xs text-muted-foreground">
+                          Session {wrapSummary.wrapSessionId || wrapSummary.sessionId || "logged"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px]">
+                          Cards: {wrapSummary.cardsCreated}
+                        </Badge>
+                        <Badge variant="outline" className="text-[10px]">
+                          Issues: {wrapSummary.issuesLogged}
+                        </Badge>
+                        <Badge variant="outline" className="text-[10px]">
+                          Notes: {wrapSummary.obsidianSynced ? "Merged" : "Pending"}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="font-terminal text-xs"
+                        onClick={() => queryClient.invalidateQueries({ queryKey: ["anki"] })}
+                      >
+                        Refresh Anki Drafts
+                      </Button>
+                      {wrapSummary.obsidianPath && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="font-terminal text-xs"
+                          onClick={() => navigator.clipboard.writeText(wrapSummary.obsidianPath || "")}
+                        >
+                          Copy Obsidian Path
+                        </Button>
+                      )}
+                    </div>
+                    {wrapSummary.obsidianPath && (
+                      <div className="mt-2 font-terminal text-[11px] text-muted-foreground">
+                        Obsidian: {wrapSummary.obsidianPath}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="border-t border-primary/50 p-3">
+                  {/* Mode Selector */}
+                  <div className="flex gap-2 mb-2">
+                    <span className="font-terminal text-xs text-muted-foreground self-center">MODE:</span>
+                    {(["all", "obsidian", "anki", "metrics"] as const).map((mode) => (
+                      <Button
+                        key={mode}
+                        variant={brainChatMode === mode ? "default" : "outline"}
+                        size="sm"
+                        className={`rounded-none font-arcade text-[10px] h-7 px-2 ${
+                          brainChatMode === mode ? "bg-primary text-black" : "border-secondary"
+                        }`}
+                        onClick={() => setBrainChatMode(mode)}
+                      >
+                        {mode.toUpperCase()}
+                      </Button>
+                    ))}
+                  </div>
                   <div className="flex gap-2 items-center">
                     <input
                       type="file"
@@ -992,6 +1090,15 @@ export default function Brain() {
                       title="Attach file"
                     >
                       <Paperclip className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-none h-10 w-10 shrink-0"
+                      onClick={handlePasteWrap}
+                      title="Paste WRAP"
+                    >
+                      <FileText className="w-4 h-4" />
                     </Button>
                     <Input
                       value={chatInput}

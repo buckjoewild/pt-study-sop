@@ -259,13 +259,13 @@ def serialize_session_row(row):
     if not issues_val:
         issues_val = row["what_needs_fixing"] if "what_needs_fixing" in row.keys() else None
 
+    duration_minutes = row["duration_minutes"] if "duration_minutes" in row.keys() else None
     minutes = row["time_spent_minutes"] if "time_spent_minutes" in row.keys() else None
-    if minutes in (None, ""):
-        minutes = row["duration_minutes"] if "duration_minutes" in row.keys() else None
+    if minutes in (None, "") or (minutes == 0 and duration_minutes not in (None, "", 0)):
+        minutes = duration_minutes
     minutes = minutes or 0
 
-    duration_minutes = row["duration_minutes"] if "duration_minutes" in row.keys() else None
-    if duration_minutes in (None, ""):
+    if duration_minutes in (None, "") or duration_minutes == 0:
         duration_minutes = minutes
 
     return {
@@ -3237,7 +3237,12 @@ def complete_wheel_session():
         data = request.get_json()
         course_id = data.get("courseId")
         minutes = data.get("minutes", 0)
-        mode = data.get("mode", "study")
+        try:
+            minutes = int(minutes)
+        except (TypeError, ValueError):
+            minutes = 0
+        mode = data.get("mode") or "Core"
+        mode = str(mode).title()
 
         conn = get_connection()
         cur = conn.cursor()
@@ -3256,13 +3261,24 @@ def complete_wheel_session():
 
         # Create session record
         cur.execute("""
-            INSERT INTO sessions (session_date, session_time, main_topic, study_mode, duration_minutes, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO sessions (
+                session_date,
+                session_time,
+                main_topic,
+                topic,
+                study_mode,
+                time_spent_minutes,
+                duration_minutes,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            datetime.now().strftime("%Y-%m-%d"), 
-            datetime.now().strftime("%H:%M"), 
-            course_name, 
-            mode, 
+            datetime.now().strftime("%Y-%m-%d"),
+            datetime.now().strftime("%H:%M"),
+            course_name,
+            course_name,
+            mode,
+            minutes,
             minutes,
             datetime.now().isoformat()
         ))
@@ -3692,8 +3708,9 @@ def get_brain_metrics():
         for row in rows:
             course = row["main_topic"] or row["topic"] or "General"
             minutes = row["time_spent_minutes"]
-            if minutes in (None, ""):
-                minutes = row["duration_minutes"]
+            duration = row["duration_minutes"]
+            if minutes in (None, "") or (minutes == 0 and duration not in (None, "", 0)):
+                minutes = duration
             minutes = minutes or 0
             total_minutes += minutes
             total_cards += row["anki_cards_count"] or 0
@@ -3825,6 +3842,7 @@ def brain_chat():
     try:
         data = request.get_json() or {}
         message = data.get("message", "")
+        mode = data.get("mode", "all")  # all, obsidian, anki, metrics
 
         # Import LLM provider using absolute path
         import sys
@@ -3841,10 +3859,211 @@ def brain_chat():
             _classify_json_payload,
             V93_SCHEMA_VERSION,
         )
+        from wrap_parser import (
+            is_wrap_format,
+            parse_wrap,
+            extract_obsidian_notes,
+        )
+        from obsidian_merge import merge_sections
 
         direct_payload = None
         direct_tracker = None
         direct_enhanced = None
+
+        has_direct_payload = isinstance(data.get("payload"), dict) or isinstance(data.get("tracker"), dict) or isinstance(data.get("enhanced"), dict)
+        if not has_direct_payload and isinstance(message, str) and message.strip() and is_wrap_format(message):
+            wrap_data = parse_wrap(message)
+            if wrap_data:
+                now = datetime.now()
+                metadata = wrap_data.get("metadata", {})
+                section_d = wrap_data.get("section_d", {}) or {}
+                merged_payload = section_d.get("merged") or {}
+                tracker_payload = section_d.get("tracker") or {}
+                enhanced_payload = section_d.get("enhanced") or {}
+
+                session_data = _map_json_payload_to_session(merged_payload)
+
+                def _safe_int(value, default=0):
+                    try:
+                        return int(float(value))
+                    except (TypeError, ValueError):
+                        return default
+
+                session_date = metadata.get("date") or merged_payload.get("date") or now.strftime("%Y-%m-%d")
+                session_time = now.strftime("%H:%M:%S")
+                topic = metadata.get("topic") or merged_payload.get("topic") or metadata.get("course") or "General"
+                study_mode = metadata.get("mode") or metadata.get("study_mode") or merged_payload.get("mode") or "Core"
+                duration_minutes = _safe_int(
+                    metadata.get("duration_min")
+                    or metadata.get("duration_minutes")
+                    or metadata.get("duration")
+                    or merged_payload.get("duration_min")
+                    or 0
+                )
+
+                session_data.setdefault("session_date", session_date)
+                session_data.setdefault("session_time", session_time)
+                session_data.setdefault("study_mode", str(study_mode).title())
+                session_data.setdefault("main_topic", topic)
+                session_data.setdefault("topic", topic)
+                session_data.setdefault("duration_minutes", duration_minutes)
+                session_data.setdefault("time_spent_minutes", duration_minutes)
+                session_data.setdefault("source_lock", metadata.get("source_lock") or metadata.get("source_lock_active") or session_data.get("source_lock", ""))
+                session_data.setdefault("notes_insights", (wrap_data.get("section_a") or {}).get("raw", ""))
+
+                spaced_schedule = wrap_data.get("section_c") or {}
+                if spaced_schedule:
+                    spaced_parts = [f"{key}={value}" for key, value in spaced_schedule.items()]
+                    session_data["spaced_reviews"] = "; ".join(spaced_parts)
+
+                cards = wrap_data.get("section_b") or []
+                card_texts = []
+                for card in cards:
+                    front = str(card.get("front", "")).strip() if isinstance(card, dict) else ""
+                    back = str(card.get("back", "")).strip() if isinstance(card, dict) else ""
+                    if front and back:
+                        card_texts.append(f"{front} :: {back}")
+                    elif front:
+                        card_texts.append(front)
+                if card_texts:
+                    session_data["anki_cards_text"] = "; ".join(card_texts)
+                session_data["anki_cards_count"] = len(card_texts)
+
+                if tracker_payload:
+                    session_data["tracker_json"] = json.dumps(tracker_payload, ensure_ascii=True)
+                if enhanced_payload:
+                    session_data["enhanced_json"] = json.dumps(enhanced_payload, ensure_ascii=True)
+
+                session_data["raw_input"] = message
+                session_data["created_at"] = now.isoformat()
+                session_data["schema_version"] = V93_SCHEMA_VERSION
+                session_data.setdefault("source_path", "api/brain/chat:wrap")
+
+                session_saved = False
+                session_id = None
+                session_error = None
+                try:
+                    is_valid, error = validate_session_data(session_data)
+                    if is_valid:
+                        success, msg = insert_session(session_data)
+                        session_saved = success
+                        if success:
+                            match = re.search(r"ID:\\s*(\\d+)", msg or "")
+                            if match:
+                                session_id = int(match.group(1))
+                        else:
+                            session_error = msg
+                    else:
+                        session_error = error
+                except Exception as e:
+                    session_error = str(e)
+
+                wrap_session_id = metadata.get("session_id") or (str(session_id) if session_id else None)
+
+                cards_created = 0
+                if cards:
+                    conn = get_connection()
+                    cur = conn.cursor()
+                    course = metadata.get("course") or topic or "General"
+                    session_ref = wrap_session_id or f"wrap_{now.strftime('%Y%m%d_%H%M%S')}"
+                    for card in cards:
+                        if isinstance(card, dict) and card.get("front") and card.get("back"):
+                            cur.execute("""
+                                INSERT INTO card_drafts 
+                                (session_id, course_id, topic_id, deck_name, card_type, front, back, tags, source_citation, status, created_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """, (
+                                session_ref,
+                                None,
+                                None,
+                                f"PT::{course}",
+                                "basic",
+                                card.get("front", ""),
+                                card.get("back", ""),
+                                card.get("tags", ""),
+                                card.get("source") or metadata.get("source_lock"),
+                                "pending",
+                                now.isoformat()
+                            ))
+                            cards_created += 1
+                    conn.commit()
+                    conn.close()
+
+                obsidian_synced = False
+                obsidian_error = None
+                obsidian_path = None
+                notes = extract_obsidian_notes(wrap_data)
+                if notes:
+                    wrap_date = metadata.get("date") or session_date
+                    route_course = metadata.get("course") or (topic if topic and topic.lower() != "general" else None)
+                    if not route_course:
+                        wheel_course = get_current_course_name()
+                        if wheel_course:
+                            route_course = wheel_course
+                    course_folder = get_course_obsidian_folder(route_course) if route_course else None
+                    obsidian_path = f"{course_folder}/Session-{wrap_date}.md" if course_folder else f"Inbox/Study-Log-{wrap_date}.md"
+
+                    existing_resp = obsidian_get_file(obsidian_path)
+                    existing_content = existing_resp.get("content", "") if existing_resp.get("success") else ""
+                    merged_content = merge_sections(existing_content, notes, session_id=wrap_session_id)
+                    save_result = obsidian_save_file(obsidian_path, merged_content)
+                    if save_result.get("success"):
+                        obsidian_synced = True
+                    else:
+                        obsidian_error = save_result.get("error")
+
+                issues_logged = 0
+                tutor_issues = wrap_data.get("tutor_issues") or []
+                if tutor_issues:
+                    conn = get_connection()
+                    cur = conn.cursor()
+                    for issue in tutor_issues:
+                        if not isinstance(issue, dict):
+                            continue
+                        cur.execute("""
+                            INSERT INTO tutor_issues
+                            (session_id, issue_type, description, severity, resolved, created_at)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        """, (
+                            wrap_session_id,
+                            issue.get("issue_type"),
+                            issue.get("description"),
+                            issue.get("severity"),
+                            0,
+                            now.isoformat()
+                        ))
+                        issues_logged += 1
+                    conn.commit()
+                    conn.close()
+
+                response_parts = [
+                    "WRAP ingestion complete.",
+                    f"Cards drafted: {cards_created}",
+                    f"Notes merged: {'Yes' if obsidian_synced else 'No'}",
+                    f"Tutor issues logged: {issues_logged}",
+                ]
+                if obsidian_path and obsidian_synced:
+                    response_parts.append(f"Obsidian note: {obsidian_path}")
+                if session_saved and session_id:
+                    response_parts.append(f"Session logged (ID: {session_id}).")
+                elif session_error:
+                    response_parts.append(f"Session log failed: {session_error}")
+
+                return jsonify({
+                    "response": "\n".join(response_parts),
+                    "isStub": False,
+                    "parsed": True,
+                    "wrapProcessed": True,
+                    "cardsCreated": cards_created,
+                    "obsidianSynced": obsidian_synced,
+                    "obsidianError": obsidian_error,
+                    "obsidianPath": obsidian_path,
+                    "issuesLogged": issues_logged,
+                    "sessionSaved": session_saved,
+                    "sessionId": session_id,
+                    "wrapSessionId": wrap_session_id,
+                    "sessionError": session_error,
+                })
 
         if isinstance(data.get("tracker"), dict) or isinstance(data.get("enhanced"), dict):
             direct_tracker = data.get("tracker") if isinstance(data.get("tracker"), dict) else None
@@ -4375,6 +4594,181 @@ def brain_ingest():
             "message": f"Received content from '{filename}' ({len(content)} chars). Ingestion pending integration.",
             "parsed": False,
             "isStub": True
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@adapter_bp.route("/tutor-issues", methods=["GET"])
+def get_tutor_issues():
+    """List tutor issues with optional filters."""
+    try:
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+
+        filters = []
+        values = []
+
+        session_id = request.args.get("session_id")
+        if session_id:
+            filters.append("session_id = ?")
+            values.append(session_id)
+
+        issue_type = request.args.get("issue_type")
+        if issue_type:
+            filters.append("issue_type = ?")
+            values.append(issue_type)
+
+        severity = request.args.get("severity")
+        if severity:
+            filters.append("severity = ?")
+            values.append(severity)
+
+        resolved = request.args.get("resolved")
+        if resolved is not None:
+            resolved_val = 1 if str(resolved).lower() in {"1", "true", "yes"} else 0
+            filters.append("resolved = ?")
+            values.append(resolved_val)
+
+        query = "SELECT id, session_id, issue_type, description, severity, resolved, created_at FROM tutor_issues"
+        if filters:
+            query += " WHERE " + " AND ".join(filters)
+        query += " ORDER BY created_at DESC"
+
+        limit = request.args.get("limit")
+        if limit and str(limit).isdigit():
+            query += " LIMIT ?"
+            values.append(int(limit))
+        offset = request.args.get("offset")
+        if offset and str(offset).isdigit():
+            query += " OFFSET ?"
+            values.append(int(offset))
+
+        cur.execute(query, values)
+        rows = cur.fetchall()
+        conn.close()
+
+        return jsonify([{
+            "id": row["id"],
+            "sessionId": row["session_id"],
+            "issueType": row["issue_type"],
+            "description": row["description"],
+            "severity": row["severity"],
+            "resolved": bool(row["resolved"]),
+            "createdAt": row["created_at"],
+        } for row in rows])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@adapter_bp.route("/tutor-issues", methods=["POST"])
+def create_tutor_issue():
+    """Log new tutor issue."""
+    try:
+        data = request.get_json() or {}
+        description = data.get("description", "").strip()
+        issue_type = data.get("issue_type", "").strip()
+        severity = data.get("severity", "").strip() or "medium"
+        session_id = data.get("session_id")
+
+        if not description or not issue_type:
+            return jsonify({"error": "description and issue_type are required"}), 400
+
+        conn = get_connection()
+        cur = conn.cursor()
+        now = datetime.now().isoformat()
+        cur.execute(
+            """
+            INSERT INTO tutor_issues (session_id, issue_type, description, severity, resolved, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """,
+            (session_id, issue_type, description, severity, 0, now),
+        )
+        issue_id = cur.lastrowid
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            "id": issue_id,
+            "sessionId": session_id,
+            "issueType": issue_type,
+            "description": description,
+            "severity": severity,
+            "resolved": False,
+            "createdAt": now,
+        }), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@adapter_bp.route("/tutor-issues/<int:issue_id>", methods=["PATCH"])
+def update_tutor_issue(issue_id):
+    """Update tutor issue fields or mark resolved."""
+    try:
+        data = request.get_json() or {}
+        fields = []
+        values = []
+
+        if "description" in data:
+            fields.append("description = ?")
+            values.append(data.get("description"))
+        if "issue_type" in data:
+            fields.append("issue_type = ?")
+            values.append(data.get("issue_type"))
+        if "severity" in data:
+            fields.append("severity = ?")
+            values.append(data.get("severity"))
+        if "resolved" in data:
+            resolved_val = 1 if data.get("resolved") else 0
+            fields.append("resolved = ?")
+            values.append(resolved_val)
+
+        if not fields:
+            return jsonify({"error": "No fields to update"}), 400
+
+        values.append(issue_id)
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            f"UPDATE tutor_issues SET {', '.join(fields)} WHERE id = ?",
+            values,
+        )
+        conn.commit()
+        conn.close()
+
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@adapter_bp.route("/tutor-issues/stats", methods=["GET"])
+def get_tutor_issue_stats():
+    """Get frequency by type and severity for Scholar."""
+    try:
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+
+        cur.execute("SELECT issue_type, COUNT(*) as count FROM tutor_issues GROUP BY issue_type")
+        by_type = [{"issueType": row["issue_type"], "count": row["count"]} for row in cur.fetchall()]
+
+        cur.execute("SELECT severity, COUNT(*) as count FROM tutor_issues GROUP BY severity")
+        by_severity = [{"severity": row["severity"], "count": row["count"]} for row in cur.fetchall()]
+
+        cur.execute("SELECT resolved, COUNT(*) as count FROM tutor_issues GROUP BY resolved")
+        resolved_counts = {row["resolved"]: row["count"] for row in cur.fetchall()}
+
+        conn.close()
+
+        return jsonify({
+            "byType": by_type,
+            "bySeverity": by_severity,
+            "resolved": {
+                "resolved": resolved_counts.get(1, 0),
+                "unresolved": resolved_counts.get(0, 0),
+                "total": sum(resolved_counts.values()),
+            },
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500

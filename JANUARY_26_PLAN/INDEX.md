@@ -2,11 +2,39 @@
 
 **Date Created:** January 23, 2026
 **Target Implementation:** January 26, 2026
-**Last Updated:** January 23, 2026 (Planning session revision)
+**Last Updated:** January 24, 2026 (WRAP ingestion implementation)
 
 ---
 
 ## Documents in This Folder
+
+### GOALS.md (NEW - Consolidated Notes)
+**What it covers:**
+- 8 goals extracted from dashboard saved notes
+- Organized by priority tier (Immediate / Near-Term / Later)
+- Each goal broken into milestones with checkboxes
+- Research queue for LangChain/LangSmith
+
+**Tier 1 (Immediate):** Fix Calendar LLM, WRAP quality, Date selector + Semester 2
+**Tier 2 (Near-Term):** Class week checklist ingestion, Assignment LLM auto-populate
+**Tier 3 (Later):** LangGraph migration, LangSmith tracing, RAG upgrade
+
+---
+
+### WRAP_INGESTION_MILESTONES.md (NEW - WRAP Ingestion Roadmap)
+**What it covers:**
+- WRAP ingestion milestones (DB schema, parser, Obsidian merge, Brain Chat handler, Tutor Issues API, frontend)
+- Dependencies, execution order, and testing checklist
+
+---
+
+### WRAP_INGESTION_EXECPLAN.md (NEW - Execution Plan)
+**What it covers:**
+- Living ExecPlan for WRAP ingestion implementation
+- Progress log, decisions, surprises, and validation steps
+- Concrete commands and acceptance criteria
+
+---
 
 ### 0. UPDATED_PLAN.md (NEW - Read This First!)
 **What it covers:**

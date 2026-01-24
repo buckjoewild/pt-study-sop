@@ -633,6 +633,48 @@ def init_database():
     """
     )
 
+    # ------------------------------------------------------------------
+    # Tutor issues table (tracks Tutor output problems from WRAP ingestion)
+    # ------------------------------------------------------------------
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS tutor_issues (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT,
+            issue_type TEXT,   -- hallucination, formatting, incorrect_fact, unprompted_artifact
+            description TEXT,
+            severity TEXT,     -- low, medium, high
+            resolved INTEGER DEFAULT 0,
+            created_at TEXT
+        )
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_tutor_issues_session
+        ON tutor_issues(session_id)
+    """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_tutor_issues_type
+        ON tutor_issues(issue_type)
+    """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_tutor_issues_resolved
+        ON tutor_issues(resolved)
+    """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_tutor_issues_created
+        ON tutor_issues(created_at)
+    """
+    )
+
     # Migration: Add user_id column if missing (for existing databases)
     cursor.execute("PRAGMA table_info(tutor_turns)")
     existing_cols = {row[1] for row in cursor.fetchall()}

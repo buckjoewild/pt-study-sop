@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { IngestionTab } from "@/components/IngestionTab";
 import {
   Dialog,
   DialogContent,
@@ -378,6 +379,9 @@ export default function Brain() {
                 <TabsTrigger value="issues" className="rounded-none font-arcade text-xs data-[state=active]:bg-primary data-[state=active]:text-black">
                   ISSUES LOG
                 </TabsTrigger>
+                <TabsTrigger value="ingestion" className="rounded-none font-arcade text-xs data-[state=active]:bg-primary data-[state=active]:text-black">
+                  INGESTION
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="evidence" className="mt-4">
@@ -626,6 +630,9 @@ export default function Brain() {
                     )}
                   </CardContent>
                 </Card>
+              </TabsContent>
+              <TabsContent value="ingestion" className="mt-4">
+                <IngestionTab />
               </TabsContent>
             </Tabs>
 

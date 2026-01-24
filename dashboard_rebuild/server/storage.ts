@@ -1,6 +1,7 @@
 import {
   users, sessions, calendarEvents, tasks, proposals, chatMessages, notes,
   courses, studyWheelState, studyStreak, weaknessQueue,
+  scheduleEvents, modules, learningObjectives, loSessions,
   type User, type InsertUser,
   type Session, type InsertSession,
   type CalendarEvent, type InsertCalendarEvent,
@@ -8,7 +9,11 @@ import {
   type Proposal, type InsertProposal,
   type ChatMessage, type InsertChatMessage,
   type Note, type InsertNote,
-  type Course, type InsertCourse
+  type Course, type InsertCourse,
+  type ScheduleEvent, type InsertScheduleEvent,
+  type Module, type InsertModule,
+  type LearningObjective, type InsertLearningObjective,
+  type LoSession, type InsertLoSession
 } from "../schema";
 import { asc, sql } from "drizzle-orm";
 import { db } from "./db";
@@ -94,6 +99,42 @@ export interface IStorage {
     totalMinutes: number;
     totalSessions: number;
     totalCards: number;
+  }>;
+
+  // Schedule Events
+  getScheduleEventsByCourse(courseId: number): Promise<ScheduleEvent[]>;
+  createScheduleEvent(event: InsertScheduleEvent): Promise<ScheduleEvent>;
+  createScheduleEventsBulk(events: InsertScheduleEvent[]): Promise<ScheduleEvent[]>;
+  updateScheduleEvent(id: number, event: Partial<InsertScheduleEvent>): Promise<ScheduleEvent | undefined>;
+  deleteScheduleEvent(id: number): Promise<boolean>;
+
+  // Modules
+  getModulesByCourse(courseId: number): Promise<Module[]>;
+  getModule(id: number): Promise<Module | undefined>;
+  createModule(module: InsertModule): Promise<Module>;
+  createModulesBulk(modules: InsertModule[]): Promise<Module[]>;
+  updateModule(id: number, module: Partial<InsertModule>): Promise<Module | undefined>;
+  deleteModule(id: number): Promise<boolean>;
+
+  // Learning Objectives
+  getLearningObjectivesByCourse(courseId: number): Promise<LearningObjective[]>;
+  getLearningObjectivesByModule(moduleId: number): Promise<LearningObjective[]>;
+  getLearningObjective(id: number): Promise<LearningObjective | undefined>;
+  createLearningObjective(lo: InsertLearningObjective): Promise<LearningObjective>;
+  createLearningObjectivesBulk(los: InsertLearningObjective[]): Promise<LearningObjective[]>;
+  updateLearningObjective(id: number, lo: Partial<InsertLearningObjective>): Promise<LearningObjective | undefined>;
+  deleteLearningObjective(id: number): Promise<boolean>;
+
+  // LO Sessions
+  createLoSession(loSession: InsertLoSession): Promise<LoSession>;
+  getLoSessionsByLo(loId: number): Promise<LoSession[]>;
+  getLoSessionsBySession(sessionId: number): Promise<LoSession[]>;
+
+  // Session Context
+  getLastSessionContext(courseId?: number): Promise<{
+    lastSession: Session | null;
+    course: Course | null;
+    recentLos: LearningObjective[];
   }>;
 }
 
@@ -589,6 +630,189 @@ export class DatabaseStorage implements IStorage {
       totalSessions,
       totalCards,
     };
+  }
+
+  // ===== SCHEDULE EVENTS =====
+  async getScheduleEventsByCourse(courseId: number): Promise<ScheduleEvent[]> {
+    return await db.select().from(scheduleEvents)
+      .where(eq(scheduleEvents.courseId, courseId))
+      .orderBy(asc(scheduleEvents.dueDate));
+  }
+
+  async createScheduleEvent(event: InsertScheduleEvent): Promise<ScheduleEvent> {
+    const [newEvent] = await db.insert(scheduleEvents).values(event).returning();
+    return newEvent;
+  }
+
+  async createScheduleEventsBulk(events: InsertScheduleEvent[]): Promise<ScheduleEvent[]> {
+    if (events.length === 0) return [];
+    const newEvents = await db.insert(scheduleEvents).values(events).returning();
+    return newEvents;
+  }
+
+  async updateScheduleEvent(id: number, event: Partial<InsertScheduleEvent>): Promise<ScheduleEvent | undefined> {
+    const [updated] = await db.update(scheduleEvents)
+      .set({ ...event, updatedAt: new Date() })
+      .where(eq(scheduleEvents.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteScheduleEvent(id: number): Promise<boolean> {
+    const result = await db.delete(scheduleEvents).where(eq(scheduleEvents.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // ===== MODULES =====
+  async getModulesByCourse(courseId: number): Promise<Module[]> {
+    return await db.select().from(modules)
+      .where(eq(modules.courseId, courseId))
+      .orderBy(asc(modules.orderIndex));
+  }
+
+  async getModule(id: number): Promise<Module | undefined> {
+    const [module] = await db.select().from(modules).where(eq(modules.id, id));
+    return module || undefined;
+  }
+
+  async createModule(module: InsertModule): Promise<Module> {
+    const existingModules = await this.getModulesByCourse(module.courseId);
+    const maxOrder = existingModules.length > 0
+      ? Math.max(...existingModules.map(m => m.orderIndex))
+      : -1;
+    const [newModule] = await db.insert(modules)
+      .values({ ...module, orderIndex: maxOrder + 1 })
+      .returning();
+    return newModule;
+  }
+
+  async createModulesBulk(modulesData: InsertModule[]): Promise<Module[]> {
+    if (modulesData.length === 0) return [];
+    const withOrder = modulesData.map((m, i) => ({ ...m, orderIndex: i }));
+    const newModules = await db.insert(modules).values(withOrder).returning();
+    return newModules;
+  }
+
+  async updateModule(id: number, module: Partial<InsertModule>): Promise<Module | undefined> {
+    const [updated] = await db.update(modules)
+      .set({ ...module, updatedAt: new Date() })
+      .where(eq(modules.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteModule(id: number): Promise<boolean> {
+    const result = await db.delete(modules).where(eq(modules.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // ===== LEARNING OBJECTIVES =====
+  async getLearningObjectivesByCourse(courseId: number): Promise<LearningObjective[]> {
+    return await db.select().from(learningObjectives)
+      .where(eq(learningObjectives.courseId, courseId))
+      .orderBy(asc(learningObjectives.loCode));
+  }
+
+  async getLearningObjectivesByModule(moduleId: number): Promise<LearningObjective[]> {
+    return await db.select().from(learningObjectives)
+      .where(eq(learningObjectives.moduleId, moduleId))
+      .orderBy(asc(learningObjectives.loCode));
+  }
+
+  async getLearningObjective(id: number): Promise<LearningObjective | undefined> {
+    const [lo] = await db.select().from(learningObjectives).where(eq(learningObjectives.id, id));
+    return lo || undefined;
+  }
+
+  async createLearningObjective(lo: InsertLearningObjective): Promise<LearningObjective> {
+    const [newLo] = await db.insert(learningObjectives).values(lo).returning();
+    return newLo;
+  }
+
+  async createLearningObjectivesBulk(los: InsertLearningObjective[]): Promise<LearningObjective[]> {
+    if (los.length === 0) return [];
+    const newLos = await db.insert(learningObjectives).values(los).returning();
+    return newLos;
+  }
+
+  async updateLearningObjective(id: number, lo: Partial<InsertLearningObjective>): Promise<LearningObjective | undefined> {
+    const [updated] = await db.update(learningObjectives)
+      .set({ ...lo, updatedAt: new Date() })
+      .where(eq(learningObjectives.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteLearningObjective(id: number): Promise<boolean> {
+    const result = await db.delete(learningObjectives).where(eq(learningObjectives.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // ===== LO SESSIONS =====
+  async createLoSession(loSession: InsertLoSession): Promise<LoSession> {
+    const [newLoSession] = await db.insert(loSessions).values(loSession).returning();
+    return newLoSession;
+  }
+
+  async getLoSessionsByLo(loId: number): Promise<LoSession[]> {
+    return await db.select().from(loSessions)
+      .where(eq(loSessions.loId, loId))
+      .orderBy(desc(loSessions.createdAt));
+  }
+
+  async getLoSessionsBySession(sessionId: number): Promise<LoSession[]> {
+    return await db.select().from(loSessions)
+      .where(eq(loSessions.sessionId, sessionId));
+  }
+
+  // ===== SESSION CONTEXT =====
+  async getLastSessionContext(courseId?: number): Promise<{
+    lastSession: Session | null;
+    course: Course | null;
+    recentLos: LearningObjective[];
+  }> {
+    let lastSession: Session | null = null;
+    let course: Course | null = null;
+    let recentLos: LearningObjective[] = [];
+
+    if (courseId) {
+      const [session] = await db.select().from(sessions)
+        .where(eq(sessions.courseId, courseId))
+        .orderBy(desc(sessions.date))
+        .limit(1);
+      lastSession = session || null;
+
+      const courseData = await this.getCourse(courseId);
+      course = courseData || null;
+
+      recentLos = await db.select().from(learningObjectives)
+        .where(and(
+          eq(learningObjectives.courseId, courseId),
+          sql`${learningObjectives.status} IN ('in_progress', 'need_review')`
+        ))
+        .orderBy(desc(learningObjectives.lastSessionDate))
+        .limit(5);
+    } else {
+      const [session] = await db.select().from(sessions)
+        .orderBy(desc(sessions.date))
+        .limit(1);
+      lastSession = session || null;
+
+      if (lastSession?.courseId) {
+        const courseData = await this.getCourse(lastSession.courseId);
+        course = courseData || null;
+
+        recentLos = await db.select().from(learningObjectives)
+          .where(and(
+            eq(learningObjectives.courseId, lastSession.courseId),
+            sql`${learningObjectives.status} IN ('in_progress', 'need_review')`
+          ))
+          .orderBy(desc(learningObjectives.lastSessionDate))
+          .limit(5);
+      }
+    }
+
+    return { lastSession, course, recentLos };
   }
 }
 

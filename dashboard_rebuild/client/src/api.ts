@@ -5,7 +5,11 @@ import type {
   Proposal, InsertProposal,
   ChatMessage, InsertChatMessage,
   Note, InsertNote,
-  Course, InsertCourse
+  Course, InsertCourse,
+  ScheduleEvent, InsertScheduleEvent,
+  Module, InsertModule,
+  LearningObjective, InsertLearningObjective,
+  LoSession, InsertLoSession
 } from "@shared/schema";
 
 export interface GoogleTask {
@@ -83,6 +87,90 @@ export const api = {
     delete: (id: number) => request<void>(`/events/${id}`, {
       method: "DELETE",
     }),
+  },
+
+  scheduleEvents: {
+    getByCourse: (courseId: number) =>
+      request<ScheduleEvent[]>(`/schedule-events?courseId=${courseId}`),
+    create: (data: InsertScheduleEvent) => request<ScheduleEvent>("/schedule-events", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+    createBulk: (courseId: number, events: Omit<InsertScheduleEvent, "courseId">[]) =>
+      request<ScheduleEvent[]>("/schedule-events/bulk", {
+        method: "POST",
+        body: JSON.stringify({ courseId, events }),
+      }),
+    update: (id: number, data: Partial<InsertScheduleEvent>) => request<ScheduleEvent>(`/schedule-events/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+    delete: (id: number) => request<void>(`/schedule-events/${id}`, {
+      method: "DELETE",
+    }),
+  },
+
+  modules: {
+    getByCourse: (courseId: number) =>
+      request<Module[]>(`/modules?courseId=${courseId}`),
+    getOne: (id: number) => request<Module>(`/modules/${id}`),
+    create: (data: InsertModule) => request<Module>("/modules", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+    createBulk: (courseId: number, modules: Omit<InsertModule, "courseId">[]) =>
+      request<Module[]>("/modules/bulk", {
+        method: "POST",
+        body: JSON.stringify({ courseId, modules }),
+      }),
+    update: (id: number, data: Partial<InsertModule>) => request<Module>(`/modules/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+    delete: (id: number) => request<void>(`/modules/${id}`, {
+      method: "DELETE",
+    }),
+  },
+
+  learningObjectives: {
+    getByCourse: (courseId: number) =>
+      request<LearningObjective[]>(`/learning-objectives?courseId=${courseId}`),
+    getByModule: (moduleId: number) =>
+      request<LearningObjective[]>(`/learning-objectives?moduleId=${moduleId}`),
+    getOne: (id: number) => request<LearningObjective>(`/learning-objectives/${id}`),
+    create: (data: InsertLearningObjective) => request<LearningObjective>("/learning-objectives", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+    createBulk: (courseId: number, moduleId: number | null, los: Omit<InsertLearningObjective, "courseId" | "moduleId">[]) =>
+      request<LearningObjective[]>("/learning-objectives/bulk", {
+        method: "POST",
+        body: JSON.stringify({ courseId, moduleId, los }),
+      }),
+    update: (id: number, data: Partial<InsertLearningObjective>) => request<LearningObjective>(`/learning-objectives/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+    delete: (id: number) => request<void>(`/learning-objectives/${id}`, {
+      method: "DELETE",
+    }),
+  },
+
+  loSessions: {
+    create: (data: InsertLoSession) =>
+      request<LoSession>("/lo-sessions", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+  },
+
+  sessionContext: {
+    getLast: (courseId?: number) =>
+      request<{
+        lastSession: Session | null;
+        course: Course | null;
+        recentLos: LearningObjective[];
+      }>(courseId ? `/sessions/last-context?courseId=${courseId}` : "/sessions/last-context"),
   },
 
   tasks: {

@@ -9,7 +9,11 @@ import {
   insertProposalSchema,
   insertChatMessageSchema,
   insertNoteSchema,
-  insertCourseSchema
+  insertCourseSchema,
+  insertScheduleEventSchema,
+  insertModuleSchema,
+  insertLearningObjectiveSchema,
+  insertLoSessionSchema
 } from "../schema";
 import { getAuthUrl, handleCallback, isConnected, deleteTokens } from "./google-oauth";
 
@@ -363,6 +367,258 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete event" });
+    }
+  });
+
+  // ===== SCHEDULE EVENTS =====
+  app.get("/api/schedule-events", async (req, res) => {
+    try {
+      const courseId = req.query.courseId ? parseInt(req.query.courseId as string) : null;
+      if (!courseId) {
+        return res.status(400).json({ error: "courseId query param required" });
+      }
+      const events = await storage.getScheduleEventsByCourse(courseId);
+      res.json(events);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch schedule events" });
+    }
+  });
+
+  app.post("/api/schedule-events", async (req, res) => {
+    try {
+      const validated = insertScheduleEventSchema.parse(req.body);
+      const event = await storage.createScheduleEvent(validated);
+      res.status(201).json(event);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid schedule event data" });
+    }
+  });
+
+  app.post("/api/schedule-events/bulk", async (req, res) => {
+    try {
+      const { events, courseId } = req.body;
+      if (!Array.isArray(events) || !courseId) {
+        return res.status(400).json({ error: "events array and courseId required" });
+      }
+      const validated = events.map((event: any) =>
+        insertScheduleEventSchema.parse({ ...event, courseId })
+      );
+      const created = await storage.createScheduleEventsBulk(validated);
+      res.status(201).json(created);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid schedule events data" });
+    }
+  });
+
+  app.patch("/api/schedule-events/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validated = insertScheduleEventSchema.partial().parse(req.body);
+      const event = await storage.updateScheduleEvent(id, validated);
+      if (!event) {
+        return res.status(404).json({ error: "Schedule event not found" });
+      }
+      res.json(event);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid schedule event data" });
+    }
+  });
+
+  app.delete("/api/schedule-events/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteScheduleEvent(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Schedule event not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete schedule event" });
+    }
+  });
+
+  // ===== MODULES =====
+  app.get("/api/modules", async (req, res) => {
+    try {
+      const courseId = req.query.courseId ? parseInt(req.query.courseId as string) : null;
+      if (!courseId) {
+        return res.status(400).json({ error: "courseId query param required" });
+      }
+      const modulesList = await storage.getModulesByCourse(courseId);
+      res.json(modulesList);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch modules" });
+    }
+  });
+
+  app.get("/api/modules/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const module = await storage.getModule(id);
+      if (!module) {
+        return res.status(404).json({ error: "Module not found" });
+      }
+      res.json(module);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch module" });
+    }
+  });
+
+  app.post("/api/modules", async (req, res) => {
+    try {
+      const validated = insertModuleSchema.parse(req.body);
+      const module = await storage.createModule(validated);
+      res.status(201).json(module);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid module data" });
+    }
+  });
+
+  app.post("/api/modules/bulk", async (req, res) => {
+    try {
+      const { modules: modulesData, courseId } = req.body;
+      if (!Array.isArray(modulesData) || !courseId) {
+        return res.status(400).json({ error: "modules array and courseId required" });
+      }
+      const validated = modulesData.map((m: any) => insertModuleSchema.parse({ ...m, courseId }));
+      const created = await storage.createModulesBulk(validated);
+      res.status(201).json(created);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid modules data" });
+    }
+  });
+
+  app.patch("/api/modules/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validated = insertModuleSchema.partial().parse(req.body);
+      const module = await storage.updateModule(id, validated);
+      if (!module) {
+        return res.status(404).json({ error: "Module not found" });
+      }
+      res.json(module);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid module data" });
+    }
+  });
+
+  app.delete("/api/modules/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteModule(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Module not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete module" });
+    }
+  });
+
+  // ===== LEARNING OBJECTIVES =====
+  app.get("/api/learning-objectives", async (req, res) => {
+    try {
+      const courseId = req.query.courseId ? parseInt(req.query.courseId as string) : null;
+      const moduleId = req.query.moduleId ? parseInt(req.query.moduleId as string) : null;
+      if (courseId) {
+        const los = await storage.getLearningObjectivesByCourse(courseId);
+        return res.json(los);
+      }
+      if (moduleId) {
+        const los = await storage.getLearningObjectivesByModule(moduleId);
+        return res.json(los);
+      }
+      res.status(400).json({ error: "courseId or moduleId query param required" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch learning objectives" });
+    }
+  });
+
+  app.get("/api/learning-objectives/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const lo = await storage.getLearningObjective(id);
+      if (!lo) {
+        return res.status(404).json({ error: "Learning objective not found" });
+      }
+      res.json(lo);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch learning objective" });
+    }
+  });
+
+  app.post("/api/learning-objectives", async (req, res) => {
+    try {
+      const validated = insertLearningObjectiveSchema.parse(req.body);
+      const lo = await storage.createLearningObjective(validated);
+      res.status(201).json(lo);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid learning objective data" });
+    }
+  });
+
+  app.post("/api/learning-objectives/bulk", async (req, res) => {
+    try {
+      const { los, courseId, moduleId } = req.body;
+      if (!Array.isArray(los) || !courseId) {
+        return res.status(400).json({ error: "los array and courseId required" });
+      }
+      const validated = los.map((lo: any) =>
+        insertLearningObjectiveSchema.parse({ ...lo, courseId, moduleId: moduleId || null })
+      );
+      const created = await storage.createLearningObjectivesBulk(validated);
+      res.status(201).json(created);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid learning objectives data" });
+    }
+  });
+
+  app.patch("/api/learning-objectives/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validated = insertLearningObjectiveSchema.partial().parse(req.body);
+      const lo = await storage.updateLearningObjective(id, validated);
+      if (!lo) {
+        return res.status(404).json({ error: "Learning objective not found" });
+      }
+      res.json(lo);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid learning objective data" });
+    }
+  });
+
+  app.delete("/api/learning-objectives/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteLearningObjective(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Learning objective not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete learning objective" });
+    }
+  });
+
+  // ===== LO SESSIONS =====
+  app.post("/api/lo-sessions", async (req, res) => {
+    try {
+      const validated = insertLoSessionSchema.parse(req.body);
+      const loSession = await storage.createLoSession(validated);
+      res.status(201).json(loSession);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid lo session data" });
+    }
+  });
+
+  // ===== SESSION CONTEXT =====
+  app.get("/api/sessions/last-context", async (req, res) => {
+    try {
+      const courseId = req.query.courseId ? parseInt(req.query.courseId as string) : undefined;
+      const context = await storage.getLastSessionContext(courseId);
+      res.json(context);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch last session context" });
     }
   });
 

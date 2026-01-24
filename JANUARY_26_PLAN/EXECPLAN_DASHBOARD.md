@@ -10,7 +10,7 @@ After this change, a user can open the Dashboard and immediately see where they 
 
 ## Progress
 
-- [x] (2026-01-23 05:31 local) Reviewed DASHBOARD_IMPLEMENTATION_PLAN.md and current dashboard_rebuild server/client layout to identify touchpoints.
+- [x] (2026-01-23 05:31 local) Reviewed DASHBOARD_IMPLEMENTATION_PLAN.md and current dashboard_rebuild frontend layout to identify touchpoints.
 - [ ] (2026-01-23 05:31 local) Define final data shapes for learning objectives, session context, and source lock in this plan.
 - [ ] (2026-01-23 05:31 local) Implement schema, storage, and routes for learning objectives and last session context.
 - [ ] (2026-01-23 05:31 local) Implement UI components and integrate into Dashboard and Brain pages.
@@ -19,7 +19,7 @@ After this change, a user can open the Dashboard and immediately see where they 
 
 ## Surprises & Discoveries
 
-Observation: The implementation plan references `server/schema.ts`, but this repo uses `schema.ts` at the dashboard_rebuild root. Evidence: `schema.ts` exists at repo root and `server` imports from `../schema`.
+Observation: The implementation plan referenced `server/schema.ts`, but this repo uses `schema.ts` at the dashboard_rebuild root (the server folder was later removed). Evidence: `schema.ts` exists at repo root.
 
 Observation: Client imports `@shared/schema`, but there is no `shared/` directory. Evidence: `tsconfig.json` maps `@shared/*` to `./shared/*` and `dashboard_rebuild/shared` does not exist.
 
@@ -39,7 +39,7 @@ No outcomes yet. Update this section after each milestone to summarize what was 
 
 ## Context and Orientation
 
-The dashboard_rebuild app is a Vite + React client paired with an Express server. The server starts in `server/index.ts`, registers routes in `server/routes.ts`, and uses `server/storage.ts` for data access. Storage uses SQLite with Drizzle via `server/db.ts` and the schema defined in `schema.ts` at the repo root. The database file is referenced by `DATABASE_URL` and the repo includes `data.db`.
+The dashboard_rebuild app is a Vite + React client only. The API is served by Flask at `brain/dashboard/api_adapter.py`, and the live database is `brain/data/pt_study.db` (managed by `brain/db_setup.py`). The React build is copied to `brain/static/dist` and served by Flask on port 5000; Vite dev runs on port 3000 for UI-only work.
 
 The client lives in `client/src/`. API access is centralized in `client/src/api.ts`, which is used by pages via React Query. The main pages are `client/src/pages/dashboard.tsx`, `client/src/pages/brain.tsx`, and `client/src/pages/tutor.tsx`. Routing is defined in `client/src/App.tsx` using wouter.
 
@@ -47,7 +47,7 @@ Definitions used in this plan: Learning objective (LO) is a row that represents 
 
 ## Plan of Work
 
-Milestone 1: Data model and API foundation. Update `schema.ts` to add `learning_objectives`, `lo_sessions`, and `sessions.source_lock`. Create `shared/schema.ts` to satisfy `@shared/schema`. Extend `server/storage.ts` with CRUD for learning objectives, queries for last session context, and creation of lo_sessions records. Add REST endpoints in `server/routes.ts` for learning objectives and last session context, plus a route to create lo_sessions records. Update `client/src/api.ts` to include typed calls for these endpoints. This milestone is done when the endpoints respond with valid JSON and empty states render without errors.
+Milestone 1: Data model and API foundation. Update `schema.ts` (types only) to add `learning_objectives`, `lo_sessions`, and `sessions.source_lock`. Create `shared/schema.ts` to satisfy `@shared/schema`. Apply the actual database changes in `brain/db_setup.py` (legacy DB). Add REST endpoints in `brain/dashboard/api_adapter.py` for learning objectives, last session context, and LO session records. Update `client/src/api.ts` to include typed calls for these endpoints. This milestone is done when the endpoints respond with valid JSON and empty states render without errors.
 
 Milestone 2: UI components and page integration. Create `client/src/components/ProgressTable.tsx` for a full LO table with status editing and next action updates. Create `ProgressWidget.tsx` for per-course summary counts. Create `SessionStartCard.tsx` to show last session context and entry buttons. Create `QuickStartModal.tsx` that collects course, target LOs, mode, and source lock, then navigates to Tutor. Create `IngestionWizard.tsx` for the Brain Ingestion tab that collects sources, builds a source lock list, and routes to Tutor. Update `client/src/pages/brain.tsx` to add new Progress and Ingestion tabs. Update `client/src/pages/dashboard.tsx` to render the SessionStartCard and ProgressWidget. This milestone is done when the new UI sections render and pull data from the new endpoints without runtime errors.
 
@@ -55,23 +55,23 @@ Milestone 3: Tutor context and session logging integration. Update `client/src/p
 
 ## Concrete Steps
 
-From `C:/pt-study-sop/dashboard_rebuild`, ensure dependencies and environment are ready. Use the existing `.env` or set `DATABASE_URL` to `file:./data.db` if Drizzle requires the `file:` prefix.
+From `C:/pt-study-sop/dashboard_rebuild`, ensure frontend dependencies are ready.
 
     npm install
-
-Apply schema changes:
-
-    npm run db:push
 
 Typecheck:
 
     npm run check
 
-Run the app (single server that serves API and client on port 5000):
+Build the UI bundle:
 
-    npm run dev
+    npm run build
 
-Open `http://localhost:5000/` and verify the new UI sections render.
+From repo root, run the Flask dashboard:
+
+    Start_Dashboard.bat
+
+Open `http://localhost:5000/brain` and verify the new UI sections render.
 
 ## Validation and Acceptance
 
@@ -81,7 +81,7 @@ API checks can be performed with a browser or curl. For example, `GET /api/learn
 
 ## Idempotence and Recovery
 
-`npm run db:push` is safe to re-run, but back up `data.db` before schema changes. If a migration fails, restore `data.db` from the backup and re-run. UI-only changes are safe to re-run without data resets.
+Database changes are applied via `brain/db_setup.py` against `brain/data/pt_study.db`. Back up that file before schema changes. UI-only changes are safe to re-run without data resets.
 
 ## Artifacts and Notes
 
@@ -91,6 +91,7 @@ Capture brief evidence in this file: a short JSON example of a learning objectiv
 
 The `learning_objectives` table must include id, course_id, module, lo_code, title, status, last_session_id, last_session_date, next_action, created_at, and updated_at. The `lo_sessions` table must include lo_id, session_id, status_before, status_after, and notes. The `sessions.source_lock` column stores a JSON string representing an array of source labels.
 
-Add endpoints in `server/routes.ts` for learning objectives at `/api/learning-objectives` and `/api/learning-objectives/:id`, for last session context at `/api/sessions/last-context` with optional courseId query param, and for LO session records at `/api/lo-sessions`. Keep `client/src/api.ts` in sync with these endpoints and response shapes.
+Add endpoints in `brain/dashboard/api_adapter.py` for learning objectives at `/api/learning-objectives` and `/api/learning-objectives/:id`, for last session context at `/api/sessions/last-context` with optional courseId query param, and for LO session records at `/api/lo-sessions`. Keep `client/src/api.ts` in sync with these endpoints and response shapes.
 
 Plan change note: Initial ExecPlan created on 2026-01-23 to translate DASHBOARD_IMPLEMENTATION_PLAN.md into an executable plan.
+Plan change note: Updated 2026-01-23 to reflect the frontend-only dashboard_rebuild and Flask API/DB ownership (single server on port 5000).

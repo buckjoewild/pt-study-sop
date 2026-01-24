@@ -9,6 +9,7 @@ from typing import List, Dict, Any
 # Import internal modules from the "Brain"
 from db_setup import get_connection
 from config import load_env, COURSE_FOLDERS
+from dashboard.utils import load_api_config
 
 # ==============================================================================
 # OBSIDIAN LOCAL REST API CONFIG
@@ -234,48 +235,102 @@ adapter_bp = Blueprint("api_adapter", __name__, url_prefix="/api")
 # ==============================================================================
 
 
+def serialize_session_row(row):
+    raw_date = row["session_date"] if "session_date" in row.keys() else None
+    raw_time = row["session_time"] if "session_time" in row.keys() else None
+    if raw_date and raw_time:
+        date_str = f"{raw_date}T{raw_time}"
+    else:
+        date_str = raw_date
+
+    final_date = safe_iso_date(date_str) or datetime.now().isoformat()
+
+    confusions_val = row["confusions"] if "confusions" in row.keys() else None
+    if not confusions_val:
+        confusions_val = row["errors_conceptual"] if "errors_conceptual" in row.keys() else None
+    if not confusions_val:
+        confusions_val = row["gaps_identified"] if "gaps_identified" in row.keys() else None
+
+    concepts_val = row["concepts"] if "concepts" in row.keys() else None
+    if not concepts_val:
+        concepts_val = row["subtopics"] if "subtopics" in row.keys() else None
+
+    issues_val = row["issues"] if "issues" in row.keys() else None
+    if not issues_val:
+        issues_val = row["what_needs_fixing"] if "what_needs_fixing" in row.keys() else None
+
+    minutes = row["time_spent_minutes"] if "time_spent_minutes" in row.keys() else None
+    if minutes in (None, ""):
+        minutes = row["duration_minutes"] if "duration_minutes" in row.keys() else None
+    minutes = minutes or 0
+
+    duration_minutes = row["duration_minutes"] if "duration_minutes" in row.keys() else None
+    if duration_minutes in (None, ""):
+        duration_minutes = minutes
+
+    return {
+        "id": row["id"],
+        "date": final_date,
+        "topic": row["main_topic"] or row["topic"] or "Study Session",
+        "courseId": None,
+        "mode": row["study_mode"] or "study",
+        "duration": str(duration_minutes or 0),
+        "minutes": minutes,
+        "errors": 0,
+        "cards": row["anki_cards_count"] or 0,
+        "notes": row["notes_insights"] if "notes_insights" in row.keys() else None,
+        "confusions": confusions_val,
+        "weakAnchors": row["weak_anchors"] if "weak_anchors" in row.keys() else None,
+        "concepts": concepts_val,
+        "issues": issues_val,
+        "sourceLock": row["source_lock"] if "source_lock" in row.keys() else None,
+        "createdAt": row["created_at"] if "created_at" in row.keys() else final_date,
+    }
+
+
 @adapter_bp.route("/sessions", methods=["GET"])
 def get_sessions():
     """
     Mimics: app.get("/api/sessions")
     Returns a list of study sessions.
     """
-    raw_sessions = get_all_sessions()
+    try:
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT
+                id,
+                session_date,
+                session_time,
+                main_topic,
+                topic,
+                study_mode,
+                time_spent_minutes,
+                duration_minutes,
+                anki_cards_count,
+                notes_insights,
+                weak_anchors,
+                source_lock,
+                confusions,
+                concepts,
+                issues,
+                errors_conceptual,
+                gaps_identified,
+                subtopics,
+                what_needs_fixing,
+                created_at
+            FROM sessions
+            ORDER BY session_date DESC, session_time DESC
+        """
+        )
+        rows = cur.fetchall()
+        conn.close()
 
-    serialized = []
-    for s in raw_sessions:
-        # SessionRecord is a dataclass, convert to dict
-        s_dict = s.__dict__ if hasattr(s, "__dict__") else s
-
-        # safely get values
-        understanding = s_dict.get("understanding_level")
-        if understanding is None:
-            understanding = 0
-
-        # Robust date construction
-        raw_date = s_dict.get("session_date")
-        if raw_date and s_dict.get("session_time"):
-            date_str = f"{raw_date}T{s_dict.get('session_time')}"
-        else:
-            date_str = raw_date
-
-        final_date = safe_iso_date(date_str) or datetime.now().isoformat()
-
-        mapped = {
-            "id": s_dict.get("id"),
-            "type": "study",  # hardcoded for now or map from study_mode
-            "topic": s_dict.get("main_topic")
-            or s_dict.get("topic")
-            or "Untitled Session",
-            "date": final_date,
-            "durationMinutes": s_dict.get("duration_minutes", 0),
-            "understanding": understanding,
-            "cards": s_dict.get("anki_cards_count", 0) or 0,
-            "errors": 0,
-        }
-        serialized.append(mapped)
-
-    return jsonify(serialized)
+        return jsonify([serialize_session_row(r) for r in rows])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @adapter_bp.route("/sessions/stats", methods=["GET"])
@@ -301,12 +356,45 @@ def get_session_stats():
 
 @adapter_bp.route("/sessions/<int:session_id>", methods=["GET"])
 def get_single_session(session_id):
-    session = get_session_by_id(session_id)
-    if not session:
-        return jsonify({"error": "Session not found"}), 404
-
-    s_dict = session.__dict__ if hasattr(session, "__dict__") else session
-    return jsonify(s_dict)
+    try:
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT
+                id,
+                session_date,
+                session_time,
+                main_topic,
+                topic,
+                study_mode,
+                time_spent_minutes,
+                duration_minutes,
+                anki_cards_count,
+                notes_insights,
+                weak_anchors,
+                source_lock,
+                confusions,
+                concepts,
+                issues,
+                errors_conceptual,
+                gaps_identified,
+                subtopics,
+                what_needs_fixing,
+                created_at
+            FROM sessions
+            WHERE id = ?
+        """,
+            (session_id,),
+        )
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return jsonify({"error": "Session not found"}), 404
+        return jsonify(serialize_session_row(row))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @adapter_bp.route("/sessions", methods=["POST"])
@@ -315,9 +403,21 @@ def create_session():
     Mimics: app.post("/api/sessions")
     Creates a real session in the SQLite DB.
     """
-    data = request.json
+    data = request.json or {}
 
     topic = data.get("topic", "Untitled")
+    mode = data.get("mode") or "Core"
+    minutes = data.get("minutes")
+    if minutes is None:
+        minutes = data.get("durationMinutes") or 0
+    cards = data.get("cards") or 0
+    notes = data.get("notes")
+    confusions = normalize_list_value(data.get("confusions"))
+    weak_anchors = normalize_list_value(data.get("weakAnchors"))
+    concepts = normalize_list_value(data.get("concepts"))
+    issues = normalize_list_value(data.get("issues"))
+    source_lock = normalize_list_value(data.get("sourceLock"))
+
     date_str = datetime.now().strftime("%Y-%m-%d")
     time_str = datetime.now().strftime("%H:%M:%S")
 
@@ -329,18 +429,27 @@ def create_session():
         cursor.execute(
             """
             INSERT INTO sessions (
-                session_date, session_time, main_topic, study_mode, 
-                created_at, duration_minutes, understanding_level
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                session_date, session_time, main_topic, study_mode,
+                created_at, time_spent_minutes, duration_minutes,
+                anki_cards_count, notes_insights,
+                confusions, weak_anchors, concepts, issues, source_lock
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
             (
                 date_str,
                 time_str,
                 topic,
-                "Core",  # Default mode
+                mode,
                 datetime.now().isoformat(),
-                60,  # Default duration target
-                3,  # Default neutral understanding
+                minutes,
+                minutes,
+                cards,
+                notes,
+                confusions,
+                weak_anchors,
+                concepts,
+                issues,
+                source_lock,
             ),
         )
         conn.commit()
@@ -357,6 +466,9 @@ def create_session():
             "topic": topic,
             "date": f"{date_str}T{time_str}",
             "type": "study",
+            "mode": mode,
+            "minutes": minutes,
+            "cards": cards,
         }
     ), 201
 
@@ -364,7 +476,7 @@ def create_session():
 @adapter_bp.route("/sessions/<int:session_id>", methods=["PATCH"])
 def update_session(session_id):
     """Update session details."""
-    data = request.json
+    data = request.json or {}
     try:
         conn = get_connection()
         cur = conn.cursor()
@@ -375,12 +487,38 @@ def update_session(session_id):
         if "topic" in data:
             fields.append("main_topic = ?")
             values.append(data["topic"])
-        if "understanding" in data:
-            fields.append("understanding_level = ?")
-            values.append(data["understanding"])
+        if "mode" in data:
+            fields.append("study_mode = ?")
+            values.append(data["mode"])
+        if "minutes" in data:
+            fields.append("time_spent_minutes = ?")
+            values.append(data["minutes"])
+            fields.append("duration_minutes = ?")
+            values.append(data["minutes"])
         if "durationMinutes" in data:
             fields.append("duration_minutes = ?")
             values.append(data["durationMinutes"])
+        if "cards" in data:
+            fields.append("anki_cards_count = ?")
+            values.append(data["cards"])
+        if "notes" in data:
+            fields.append("notes_insights = ?")
+            values.append(data["notes"])
+        if "confusions" in data:
+            fields.append("confusions = ?")
+            values.append(normalize_list_value(data["confusions"]))
+        if "weakAnchors" in data:
+            fields.append("weak_anchors = ?")
+            values.append(normalize_list_value(data["weakAnchors"]))
+        if "concepts" in data:
+            fields.append("concepts = ?")
+            values.append(normalize_list_value(data["concepts"]))
+        if "issues" in data:
+            fields.append("issues = ?")
+            values.append(normalize_list_value(data["issues"]))
+        if "sourceLock" in data:
+            fields.append("source_lock = ?")
+            values.append(normalize_list_value(data["sourceLock"]))
 
         if not fields:
             return jsonify({"success": True})
@@ -390,8 +528,41 @@ def update_session(session_id):
             f"UPDATE sessions SET {', '.join(fields)} WHERE id = ?", tuple(values)
         )
         conn.commit()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT
+                id,
+                session_date,
+                session_time,
+                main_topic,
+                topic,
+                study_mode,
+                time_spent_minutes,
+                duration_minutes,
+                anki_cards_count,
+                notes_insights,
+                weak_anchors,
+                source_lock,
+                confusions,
+                concepts,
+                issues,
+                errors_conceptual,
+                gaps_identified,
+                subtopics,
+                what_needs_fixing,
+                created_at
+            FROM sessions
+            WHERE id = ?
+        """,
+            (session_id,),
+        )
+        row = cur.fetchone()
         conn.close()
-        return jsonify({"success": True})
+        if not row:
+            return jsonify({"error": "Session not found"}), 404
+        return jsonify(serialize_session_row(row))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -451,6 +622,35 @@ def safe_iso_date(date_val):
     except:
         pass
     return None
+
+
+def parse_json_array(value):
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(v) for v in value if v is not None]
+    if isinstance(value, str):
+        trimmed = value.strip()
+        if not trimmed:
+            return []
+        try:
+            parsed = json.loads(trimmed)
+            if isinstance(parsed, list):
+                return [str(v) for v in parsed if v is not None]
+        except Exception:
+            pass
+        return [v.strip() for v in trimmed.split(",") if v.strip()]
+    return [str(value)]
+
+
+def normalize_list_value(value):
+    if value is None:
+        return None
+    if isinstance(value, list):
+        return json.dumps(value)
+    if isinstance(value, str):
+        return value
+    return json.dumps([str(value)])
 
 
 @adapter_bp.route("/events", methods=["GET"])
@@ -595,6 +795,237 @@ def update_event(event_id):
         cur.execute(
             f"UPDATE course_events SET {', '.join(fields)} WHERE id = ?", tuple(values)
         )
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ==============================================================================
+# SCHEDULE EVENTS (Course Events mapping)
+# ==============================================================================
+
+
+@adapter_bp.route("/schedule-events", methods=["GET"])
+def get_schedule_events():
+    """Return schedule events for a course (mapped to course_events)."""
+    try:
+        course_id = request.args.get("courseId", type=int)
+        if not course_id:
+            return jsonify({"error": "courseId query param required"}), 400
+
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT id, course_id, type, title, due_date, date, raw_text, created_at, updated_at
+            FROM course_events
+            WHERE course_id = ?
+            ORDER BY COALESCE(due_date, date) ASC
+        """,
+            (course_id,),
+        )
+        rows = cur.fetchall()
+        conn.close()
+
+        events = []
+        for r in rows:
+            events.append({
+                "id": r[0],
+                "courseId": r[1],
+                "type": r[2],
+                "title": r[3],
+                "dueDate": r[4] or r[5],
+                "linkedModuleId": None,
+                "notes": r[6],
+                "createdAt": r[7],
+                "updatedAt": r[8] or r[7],
+            })
+
+        return jsonify(events)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@adapter_bp.route("/schedule-events", methods=["POST"])
+def create_schedule_event():
+    """Create a schedule event (mapped to course_events)."""
+    data = request.get_json() or {}
+    course_id = data.get("courseId")
+    event_type = data.get("type")
+    title = data.get("title")
+    due_date = data.get("dueDate")
+    notes = data.get("notes")
+
+    if not course_id or not event_type or not title:
+        return jsonify({"error": "courseId, type, and title are required"}), 400
+
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        now = datetime.now().isoformat()
+        cur.execute(
+            """
+            INSERT INTO course_events (
+                course_id, type, title, date, due_date, raw_text, status, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+        """,
+            (
+                course_id,
+                event_type,
+                title,
+                due_date,
+                due_date,
+                notes,
+                now,
+                now,
+            ),
+        )
+        conn.commit()
+        new_id = cur.lastrowid
+        conn.close()
+
+        return jsonify({
+            "id": new_id,
+            "courseId": course_id,
+            "type": event_type,
+            "title": title,
+            "dueDate": due_date,
+            "linkedModuleId": None,
+            "notes": notes,
+            "createdAt": now,
+            "updatedAt": now,
+        }), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@adapter_bp.route("/schedule-events/bulk", methods=["POST"])
+def bulk_create_schedule_events():
+    data = request.get_json() or {}
+    events = data.get("events", [])
+    course_id = data.get("courseId")
+    if not isinstance(events, list) or not course_id:
+        return jsonify({"error": "events array and courseId required"}), 400
+
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        now = datetime.now().isoformat()
+        created = []
+        for ev in events:
+            event_type = ev.get("type")
+            title = ev.get("title")
+            due_date = ev.get("dueDate")
+            notes = ev.get("notes")
+            if not event_type or not title:
+                continue
+            cur.execute(
+                """
+                INSERT INTO course_events (
+                    course_id, type, title, date, due_date, raw_text, status, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+            """,
+                (
+                    course_id,
+                    event_type,
+                    title,
+                    due_date,
+                    due_date,
+                    notes,
+                    now,
+                    now,
+                ),
+            )
+            created.append({
+                "id": cur.lastrowid,
+                "courseId": course_id,
+                "type": event_type,
+                "title": title,
+                "dueDate": due_date,
+                "linkedModuleId": None,
+                "notes": notes,
+                "createdAt": now,
+                "updatedAt": now,
+            })
+        conn.commit()
+        conn.close()
+        return jsonify(created), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@adapter_bp.route("/schedule-events/<int:event_id>", methods=["PATCH"])
+def update_schedule_event(event_id):
+    data = request.get_json() or {}
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+
+        fields = []
+        values = []
+        if "type" in data:
+            fields.append("type = ?")
+            values.append(data["type"])
+        if "title" in data:
+            fields.append("title = ?")
+            values.append(data["title"])
+        if "dueDate" in data:
+            fields.append("due_date = ?")
+            values.append(data["dueDate"])
+            fields.append("date = ?")
+            values.append(data["dueDate"])
+        if "notes" in data:
+            fields.append("raw_text = ?")
+            values.append(data["notes"])
+
+        if not fields:
+            return jsonify({"error": "No fields to update"}), 400
+
+        fields.append("updated_at = ?")
+        values.append(datetime.now().isoformat())
+
+        values.append(event_id)
+        cur.execute(
+            f"UPDATE course_events SET {', '.join(fields)} WHERE id = ?", values
+        )
+        conn.commit()
+
+        cur.execute(
+            """
+            SELECT id, course_id, type, title, due_date, date, raw_text, created_at, updated_at
+            FROM course_events
+            WHERE id = ?
+        """,
+            (event_id,),
+        )
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return jsonify({"error": "Schedule event not found"}), 404
+
+        return jsonify({
+            "id": row[0],
+            "courseId": row[1],
+            "type": row[2],
+            "title": row[3],
+            "dueDate": row[4] or row[5],
+            "linkedModuleId": None,
+            "notes": row[6],
+            "createdAt": row[7],
+            "updatedAt": row[8] or row[7],
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@adapter_bp.route("/schedule-events/<int:event_id>", methods=["DELETE"])
+def delete_schedule_event(event_id):
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM course_events WHERE id = ?", (event_id,))
         conn.commit()
         conn.close()
         return jsonify({"success": True})
@@ -1773,15 +2204,30 @@ def undo_calendar_action_endpoint():
 # NOTES (Quick Notes / Scratchpad)
 # ==============================================================================
 
+def _ensure_quick_notes_schema(conn):
+    """Ensure quick_notes has required columns (note_type)."""
+    try:
+        cur = conn.cursor()
+        cur.execute("PRAGMA table_info(quick_notes)")
+        cols = {row[1] for row in cur.fetchall()}
+        if "note_type" not in cols:
+            cur.execute("ALTER TABLE quick_notes ADD COLUMN note_type TEXT DEFAULT 'notes'")
+            cur.execute("UPDATE quick_notes SET note_type = COALESCE(note_type, 'notes')")
+            conn.commit()
+    except Exception:
+        # Fail silently to avoid breaking read paths; caller handles missing fields.
+        pass
+
 
 @adapter_bp.route("/notes", methods=["GET"])
 def get_notes():
     """Get all quick notes."""
     try:
         conn = get_connection()
+        _ensure_quick_notes_schema(conn)
         cur = conn.cursor()
         cur.execute(
-            "SELECT id, title, content, position, created_at, updated_at FROM quick_notes ORDER BY position ASC, created_at DESC"
+            "SELECT id, title, content, note_type, position, created_at, updated_at FROM quick_notes ORDER BY note_type, position ASC, created_at DESC"
         )
         rows = cur.fetchall()
 
@@ -1792,9 +2238,10 @@ def get_notes():
                     "id": r[0],
                     "title": r[1],
                     "content": r[2],
-                    "position": r[3],
-                    "createdAt": r[4],
-                    "updatedAt": r[5],
+                    "noteType": r[3] or "notes",
+                    "position": r[4],
+                    "createdAt": r[5],
+                    "updatedAt": r[6],
                 }
             )
 
@@ -1812,19 +2259,23 @@ def create_note():
 
     try:
         conn = get_connection()
+        _ensure_quick_notes_schema(conn)
         cur = conn.cursor()
         now = datetime.now().isoformat()
+        note_type = (data.get("noteType") or data.get("note_type") or "notes").strip().lower()
+        if not note_type:
+            note_type = "notes"
 
         # Get max position
-        cur.execute("SELECT MAX(position) FROM quick_notes")
+        cur.execute("SELECT MAX(position) FROM quick_notes WHERE note_type = ?", (note_type,))
         max_pos = cur.fetchone()[0] or 0
 
         cur.execute(
             """
-            INSERT INTO quick_notes (title, content, position, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO quick_notes (title, content, note_type, position, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
         """,
-            (data.get("title", ""), data.get("content", ""), max_pos + 1, now, now),
+            (data.get("title", ""), data.get("content", ""), note_type, max_pos + 1, now, now),
         )
 
         new_id = cur.lastrowid
@@ -1836,6 +2287,7 @@ def create_note():
                 "id": new_id,
                 "title": data.get("title", ""),
                 "content": data.get("content", ""),
+                "noteType": note_type,
                 "position": max_pos + 1,
                 "createdAt": now,
                 "updatedAt": now,
@@ -1853,6 +2305,7 @@ def update_note(note_id):
 
     try:
         conn = get_connection()
+        _ensure_quick_notes_schema(conn)
         cur = conn.cursor()
 
         fields = ["updated_at = ?"]
@@ -1864,6 +2317,9 @@ def update_note(note_id):
         if "content" in data:
             fields.append("content = ?")
             values.append(data["content"])
+        if "noteType" in data or "note_type" in data:
+            fields.append("note_type = ?")
+            values.append(data.get("noteType") or data.get("note_type"))
         if "position" in data:
             fields.append("position = ?")
             values.append(data["position"])
@@ -1901,14 +2357,25 @@ def reorder_notes():
     data = request.json
     try:
         conn = get_connection()
+        _ensure_quick_notes_schema(conn)
         cur = conn.cursor()
 
         items = data.get("notes", []) or data.get("updates", [])
+        if not items:
+            note_ids = data.get("noteIds", []) or []
+            items = [{"id": note_id, "position": idx} for idx, note_id in enumerate(note_ids)]
         for item in items:
-            cur.execute(
-                "UPDATE quick_notes SET position = ? WHERE id = ?",
-                (item["position"], item["id"]),
-            )
+            note_type = item.get("noteType") or item.get("note_type")
+            if note_type is not None:
+                cur.execute(
+                    "UPDATE quick_notes SET position = ?, note_type = ? WHERE id = ?",
+                    (item["position"], note_type, item["id"]),
+                )
+            else:
+                cur.execute(
+                    "UPDATE quick_notes SET position = ? WHERE id = ?",
+                    (item["position"], item["id"]),
+                )
 
         conn.commit()
         conn.close()
@@ -2164,6 +2631,548 @@ def delete_course(course_id):
         return "", 204
     except Exception as e:
         print(f"[DELETE] ERROR: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ==============================================================================
+# MODULES
+# ==============================================================================
+
+
+def serialize_module_row(row):
+    return {
+        "id": row["id"],
+        "courseId": row["course_id"],
+        "name": row["name"],
+        "orderIndex": row["order_index"] or 0,
+        "filesDownloaded": bool(row["files_downloaded"]),
+        "notebooklmLoaded": bool(row["notebooklm_loaded"]),
+        "sources": row["sources"],
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"] or row["created_at"],
+    }
+
+
+@adapter_bp.route("/modules", methods=["GET"])
+def get_modules():
+    course_id = request.args.get("courseId", type=int)
+    if not course_id:
+        return jsonify({"error": "courseId query param required"}), 400
+    try:
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT id, course_id, name, order_index, files_downloaded, notebooklm_loaded, sources, created_at, updated_at
+            FROM modules WHERE course_id = ?
+            ORDER BY order_index ASC
+        """,
+            (course_id,),
+        )
+        rows = cur.fetchall()
+        conn.close()
+        return jsonify([serialize_module_row(r) for r in rows])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@adapter_bp.route("/modules/<int:module_id>", methods=["GET"])
+def get_module(module_id):
+    try:
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT id, course_id, name, order_index, files_downloaded, notebooklm_loaded, sources, created_at, updated_at
+            FROM modules WHERE id = ?
+        """,
+            (module_id,),
+        )
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return jsonify({"error": "Module not found"}), 404
+        return jsonify(serialize_module_row(row))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@adapter_bp.route("/modules", methods=["POST"])
+def create_module():
+    data = request.get_json() or {}
+    course_id = data.get("courseId")
+    name = data.get("name")
+    if not course_id or not name:
+        return jsonify({"error": "courseId and name are required"}), 400
+    order_index = data.get("orderIndex")
+    files_downloaded = 1 if data.get("filesDownloaded") else 0
+    notebooklm_loaded = 1 if data.get("notebooklmLoaded") else 0
+    sources = data.get("sources")
+
+    try:
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        if order_index is None:
+            cur.execute(
+                "SELECT COALESCE(MAX(order_index), -1) FROM modules WHERE course_id = ?",
+                (course_id,),
+            )
+            order_index = (cur.fetchone()[0] or -1) + 1
+        now = datetime.now().isoformat()
+        cur.execute(
+            """
+            INSERT INTO modules (course_id, name, order_index, files_downloaded, notebooklm_loaded, sources, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+            (
+                course_id,
+                name,
+                order_index,
+                files_downloaded,
+                notebooklm_loaded,
+                sources,
+                now,
+                now,
+            ),
+        )
+        conn.commit()
+        module_id = cur.lastrowid
+        cur.execute(
+            """
+            SELECT id, course_id, name, order_index, files_downloaded, notebooklm_loaded, sources, created_at, updated_at
+            FROM modules WHERE id = ?
+        """,
+            (module_id,),
+        )
+        row = cur.fetchone()
+        conn.close()
+        return jsonify(serialize_module_row(row)), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@adapter_bp.route("/modules/bulk", methods=["POST"])
+def bulk_create_modules():
+    data = request.get_json() or {}
+    course_id = data.get("courseId")
+    modules_data = data.get("modules", [])
+    if not course_id or not isinstance(modules_data, list):
+        return jsonify({"error": "courseId and modules array required"}), 400
+
+    try:
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        now = datetime.now().isoformat()
+        created = []
+        for idx, m in enumerate(modules_data):
+            name = m.get("name")
+            if not name:
+                continue
+            files_downloaded = 1 if m.get("filesDownloaded") else 0
+            notebooklm_loaded = 1 if m.get("notebooklmLoaded") else 0
+            sources = m.get("sources")
+            order_index = m.get("orderIndex", idx)
+            cur.execute(
+                """
+                INSERT INTO modules (course_id, name, order_index, files_downloaded, notebooklm_loaded, sources, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+                (
+                    course_id,
+                    name,
+                    order_index,
+                    files_downloaded,
+                    notebooklm_loaded,
+                    sources,
+                    now,
+                    now,
+                ),
+            )
+            created.append({
+                "id": cur.lastrowid,
+                "courseId": course_id,
+                "name": name,
+                "orderIndex": order_index,
+                "filesDownloaded": bool(files_downloaded),
+                "notebooklmLoaded": bool(notebooklm_loaded),
+                "sources": sources,
+                "createdAt": now,
+                "updatedAt": now,
+            })
+        conn.commit()
+        conn.close()
+        return jsonify(created), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@adapter_bp.route("/modules/<int:module_id>", methods=["PATCH"])
+def update_module(module_id):
+    data = request.get_json() or {}
+    try:
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+
+        fields = []
+        values = []
+        if "name" in data:
+            fields.append("name = ?")
+            values.append(data["name"])
+        if "orderIndex" in data:
+            fields.append("order_index = ?")
+            values.append(data["orderIndex"])
+        if "filesDownloaded" in data:
+            fields.append("files_downloaded = ?")
+            values.append(1 if data["filesDownloaded"] else 0)
+        if "notebooklmLoaded" in data:
+            fields.append("notebooklm_loaded = ?")
+            values.append(1 if data["notebooklmLoaded"] else 0)
+        if "sources" in data:
+            fields.append("sources = ?")
+            values.append(data["sources"])
+
+        fields.append("updated_at = ?")
+        values.append(datetime.now().isoformat())
+
+        values.append(module_id)
+        cur.execute(
+            f"UPDATE modules SET {', '.join(fields)} WHERE id = ?", values
+        )
+        conn.commit()
+        cur.execute(
+            """
+            SELECT id, course_id, name, order_index, files_downloaded, notebooklm_loaded, sources, created_at, updated_at
+            FROM modules WHERE id = ?
+        """,
+            (module_id,),
+        )
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return jsonify({"error": "Module not found"}), 404
+        return jsonify(serialize_module_row(row))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@adapter_bp.route("/modules/<int:module_id>", methods=["DELETE"])
+def delete_module(module_id):
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM modules WHERE id = ?", (module_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ==============================================================================
+# LEARNING OBJECTIVES
+# ==============================================================================
+
+
+def serialize_learning_objective_row(row):
+    return {
+        "id": row["id"],
+        "courseId": row["course_id"],
+        "moduleId": row["module_id"],
+        "loCode": row["lo_code"],
+        "title": row["title"],
+        "status": row["status"],
+        "lastSessionId": row["last_session_id"],
+        "lastSessionDate": row["last_session_date"],
+        "nextAction": row["next_action"],
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"] or row["created_at"],
+    }
+
+
+@adapter_bp.route("/learning-objectives", methods=["GET"])
+def get_learning_objectives():
+    course_id = request.args.get("courseId", type=int)
+    module_id = request.args.get("moduleId", type=int)
+    if not course_id and not module_id:
+        return jsonify({"error": "courseId or moduleId query param required"}), 400
+    try:
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        if course_id:
+            cur.execute(
+                """
+                SELECT id, course_id, module_id, lo_code, title, status, last_session_id, last_session_date, next_action, created_at, updated_at
+                FROM learning_objectives WHERE course_id = ?
+                ORDER BY lo_code ASC
+            """,
+                (course_id,),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT id, course_id, module_id, lo_code, title, status, last_session_id, last_session_date, next_action, created_at, updated_at
+                FROM learning_objectives WHERE module_id = ?
+                ORDER BY lo_code ASC
+            """,
+                (module_id,),
+            )
+        rows = cur.fetchall()
+        conn.close()
+        return jsonify([serialize_learning_objective_row(r) for r in rows])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@adapter_bp.route("/learning-objectives/<int:lo_id>", methods=["GET"])
+def get_learning_objective(lo_id):
+    try:
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT id, course_id, module_id, lo_code, title, status, last_session_id, last_session_date, next_action, created_at, updated_at
+            FROM learning_objectives WHERE id = ?
+        """,
+            (lo_id,),
+        )
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return jsonify({"error": "Learning objective not found"}), 404
+        return jsonify(serialize_learning_objective_row(row))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@adapter_bp.route("/learning-objectives", methods=["POST"])
+def create_learning_objective():
+    data = request.get_json() or {}
+    course_id = data.get("courseId")
+    title = data.get("title")
+    if not course_id or not title:
+        return jsonify({"error": "courseId and title are required"}), 400
+    module_id = data.get("moduleId")
+    lo_code = data.get("loCode")
+    status = data.get("status") or "not_started"
+    next_action = data.get("nextAction")
+    last_session_id = data.get("lastSessionId")
+    last_session_date = data.get("lastSessionDate")
+
+    try:
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        now = datetime.now().isoformat()
+        cur.execute(
+            """
+            INSERT INTO learning_objectives (
+                course_id, module_id, lo_code, title, status,
+                last_session_id, last_session_date, next_action,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+            (
+                course_id,
+                module_id,
+                lo_code,
+                title,
+                status,
+                last_session_id,
+                last_session_date,
+                next_action,
+                now,
+                now,
+            ),
+        )
+        conn.commit()
+        lo_id = cur.lastrowid
+        cur.execute(
+            """
+            SELECT id, course_id, module_id, lo_code, title, status, last_session_id, last_session_date, next_action, created_at, updated_at
+            FROM learning_objectives WHERE id = ?
+        """,
+            (lo_id,),
+        )
+        row = cur.fetchone()
+        conn.close()
+        return jsonify(serialize_learning_objective_row(row)), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@adapter_bp.route("/learning-objectives/bulk", methods=["POST"])
+def bulk_create_learning_objectives():
+    data = request.get_json() or {}
+    course_id = data.get("courseId")
+    module_id = data.get("moduleId")
+    los = data.get("los", [])
+    if not course_id or not isinstance(los, list):
+        return jsonify({"error": "courseId and los array required"}), 400
+
+    try:
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        now = datetime.now().isoformat()
+        created = []
+        for lo in los:
+            title = lo.get("title")
+            if not title:
+                continue
+            lo_code = lo.get("loCode")
+            status = lo.get("status") or "not_started"
+            cur.execute(
+                """
+                INSERT INTO learning_objectives (
+                    course_id, module_id, lo_code, title, status, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+                (
+                    course_id,
+                    module_id,
+                    lo_code,
+                    title,
+                    status,
+                    now,
+                    now,
+                ),
+            )
+            created.append({
+                "id": cur.lastrowid,
+                "courseId": course_id,
+                "moduleId": module_id,
+                "loCode": lo_code,
+                "title": title,
+                "status": status,
+                "lastSessionId": None,
+                "lastSessionDate": None,
+                "nextAction": None,
+                "createdAt": now,
+                "updatedAt": now,
+            })
+        conn.commit()
+        conn.close()
+        return jsonify(created), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@adapter_bp.route("/learning-objectives/<int:lo_id>", methods=["PATCH"])
+def update_learning_objective(lo_id):
+    data = request.get_json() or {}
+    try:
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+
+        fields = []
+        values = []
+        if "loCode" in data:
+            fields.append("lo_code = ?")
+            values.append(data["loCode"])
+        if "title" in data:
+            fields.append("title = ?")
+            values.append(data["title"])
+        if "status" in data:
+            fields.append("status = ?")
+            values.append(data["status"])
+        if "moduleId" in data:
+            fields.append("module_id = ?")
+            values.append(data["moduleId"])
+        if "lastSessionId" in data:
+            fields.append("last_session_id = ?")
+            values.append(data["lastSessionId"])
+        if "lastSessionDate" in data:
+            fields.append("last_session_date = ?")
+            values.append(data["lastSessionDate"])
+        if "nextAction" in data:
+            fields.append("next_action = ?")
+            values.append(data["nextAction"])
+
+        fields.append("updated_at = ?")
+        values.append(datetime.now().isoformat())
+
+        values.append(lo_id)
+        cur.execute(
+            f"UPDATE learning_objectives SET {', '.join(fields)} WHERE id = ?", values
+        )
+        conn.commit()
+        cur.execute(
+            """
+            SELECT id, course_id, module_id, lo_code, title, status, last_session_id, last_session_date, next_action, created_at, updated_at
+            FROM learning_objectives WHERE id = ?
+        """,
+            (lo_id,),
+        )
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return jsonify({"error": "Learning objective not found"}), 404
+        return jsonify(serialize_learning_objective_row(row))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@adapter_bp.route("/learning-objectives/<int:lo_id>", methods=["DELETE"])
+def delete_learning_objective(lo_id):
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM learning_objectives WHERE id = ?", (lo_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ==============================================================================
+# LO SESSIONS
+# ==============================================================================
+
+
+@adapter_bp.route("/lo-sessions", methods=["POST"])
+def create_lo_session():
+    data = request.get_json() or {}
+    lo_id = data.get("loId")
+    session_id = data.get("sessionId")
+    if not lo_id or not session_id:
+        return jsonify({"error": "loId and sessionId are required"}), 400
+    status_before = data.get("statusBefore")
+    status_after = data.get("statusAfter")
+    notes = data.get("notes")
+
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        now = datetime.now().isoformat()
+        cur.execute(
+            """
+            INSERT INTO lo_sessions (lo_id, session_id, status_before, status_after, notes, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """,
+            (lo_id, session_id, status_before, status_after, notes, now),
+        )
+        conn.commit()
+        lo_session_id = cur.lastrowid
+        conn.close()
+        return jsonify({
+            "id": lo_session_id,
+            "loId": lo_id,
+            "sessionId": session_id,
+            "statusBefore": status_before,
+            "statusAfter": status_after,
+            "notes": notes,
+            "createdAt": now,
+        }), 201
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
@@ -2443,11 +3452,32 @@ def get_sessions_today():
     """Get sessions from today."""
     try:
         conn = get_connection()
+        conn.row_factory = sqlite3.Row
         cur = conn.cursor()
 
         today = datetime.now().strftime("%Y-%m-%d")
         cur.execute("""
-            SELECT id, session_date, main_topic, study_mode, duration_minutes, anki_cards_count
+            SELECT
+                id,
+                session_date,
+                session_time,
+                main_topic,
+                topic,
+                study_mode,
+                time_spent_minutes,
+                duration_minutes,
+                anki_cards_count,
+                notes_insights,
+                weak_anchors,
+                source_lock,
+                confusions,
+                concepts,
+                issues,
+                errors_conceptual,
+                gaps_identified,
+                subtopics,
+                what_needs_fixing,
+                created_at
             FROM sessions WHERE session_date = ?
             ORDER BY session_time DESC
         """, (today,))
@@ -2455,18 +3485,159 @@ def get_sessions_today():
         rows = cur.fetchall()
         conn.close()
 
-        sessions = []
-        for r in rows:
-            sessions.append({
-                "id": r[0],
-                "date": r[1],
-                "topic": r[2] or "Study Session",
-                "mode": r[3] or "study",
-                "minutes": r[4] or 0,
-                "cards": r[5] or 0,
-            })
+        return jsonify([serialize_session_row(r) for r in rows])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-        return jsonify(sessions)
+
+# ==============================================================================
+# SESSION CONTEXT
+# ==============================================================================
+
+
+@adapter_bp.route("/sessions/last-context", methods=["GET"])
+def get_last_session_context():
+    """Return last session + course + recent LOs for a course (optional)."""
+    course_id = request.args.get("courseId", type=int)
+    try:
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+
+        course = None
+        course_name = None
+        if course_id:
+            cur.execute(
+                """
+                SELECT id, name, active, position, total_sessions, total_minutes, created_at
+                FROM wheel_courses WHERE id = ?
+            """,
+                (course_id,),
+            )
+            course_row = cur.fetchone()
+            if course_row:
+                course = {
+                    "id": course_row["id"],
+                    "name": course_row["name"],
+                    "active": bool(course_row["active"]),
+                    "position": course_row["position"],
+                    "totalSessions": course_row["total_sessions"] or 0,
+                    "totalMinutes": course_row["total_minutes"] or 0,
+                    "createdAt": course_row["created_at"],
+                }
+                course_name = course_row["name"]
+
+        if course_name:
+            cur.execute(
+                """
+                SELECT
+                    id,
+                    session_date,
+                    session_time,
+                    main_topic,
+                    topic,
+                    study_mode,
+                    time_spent_minutes,
+                    duration_minutes,
+                    anki_cards_count,
+                    notes_insights,
+                    weak_anchors,
+                    source_lock,
+                    confusions,
+                    concepts,
+                    issues,
+                    errors_conceptual,
+                    gaps_identified,
+                    subtopics,
+                    what_needs_fixing,
+                    created_at
+                FROM sessions
+                WHERE main_topic = ? OR topic = ?
+                ORDER BY session_date DESC, session_time DESC
+                LIMIT 1
+            """,
+                (course_name, course_name),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT
+                    id,
+                    session_date,
+                    session_time,
+                    main_topic,
+                    topic,
+                    study_mode,
+                    time_spent_minutes,
+                    duration_minutes,
+                    anki_cards_count,
+                    notes_insights,
+                    weak_anchors,
+                    source_lock,
+                    confusions,
+                    concepts,
+                    issues,
+                    errors_conceptual,
+                    gaps_identified,
+                    subtopics,
+                    what_needs_fixing,
+                    created_at
+                FROM sessions
+                ORDER BY session_date DESC, session_time DESC
+                LIMIT 1
+            """
+            )
+
+        session_row = cur.fetchone()
+        last_session = serialize_session_row(session_row) if session_row else None
+
+        if not course and session_row:
+            session_course_name = session_row["main_topic"] or session_row["topic"]
+            if session_course_name:
+                cur.execute(
+                    """
+                    SELECT id, name, active, position, total_sessions, total_minutes, created_at
+                    FROM wheel_courses
+                    WHERE LOWER(name) = LOWER(?)
+                    LIMIT 1
+                """,
+                    (session_course_name,),
+                )
+                course_row = cur.fetchone()
+                if course_row:
+                    course = {
+                        "id": course_row["id"],
+                        "name": course_row["name"],
+                        "active": bool(course_row["active"]),
+                        "position": course_row["position"],
+                        "totalSessions": course_row["total_sessions"] or 0,
+                        "totalMinutes": course_row["total_minutes"] or 0,
+                        "createdAt": course_row["created_at"],
+                    }
+                    course_id = course_row["id"]
+
+        recent_los = []
+        if course_id:
+            cur.execute(
+                """
+                SELECT id, course_id, module_id, lo_code, title, status, last_session_id, last_session_date, next_action, created_at, updated_at
+                FROM learning_objectives
+                WHERE course_id = ? AND status IN ('in_progress', 'need_review')
+                ORDER BY last_session_date DESC
+                LIMIT 5
+            """,
+                (course_id,),
+            )
+            lo_rows = cur.fetchall()
+            recent_los = [serialize_learning_objective_row(r) for r in lo_rows]
+
+        conn.close()
+
+        return jsonify({
+            "lastSession": last_session,
+            "course": course,
+            "recentLos": recent_los,
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -2481,43 +3652,159 @@ def get_brain_metrics():
     """Get aggregated brain analytics metrics."""
     try:
         conn = get_connection()
+        conn.row_factory = sqlite3.Row
         cur = conn.cursor()
 
-        # Sessions per course
-        cur.execute("""
-            SELECT main_topic, COUNT(*) as cnt, SUM(duration_minutes) as mins
-            FROM sessions WHERE main_topic IS NOT NULL
-            GROUP BY main_topic ORDER BY cnt DESC LIMIT 10
-        """)
-        sessions_per_course = [{"course": r[0], "count": r[1], "minutes": r[2] or 0} for r in cur.fetchall()]
-
-        # Mode distribution
-        cur.execute("""
-            SELECT study_mode, COUNT(*) as cnt, SUM(duration_minutes) as mins
-            FROM sessions WHERE study_mode IS NOT NULL
-            GROUP BY study_mode ORDER BY cnt DESC
-        """)
-        mode_dist = [{"mode": r[0] or "study", "count": r[1], "minutes": r[2] or 0} for r in cur.fetchall()]
-
-        # Totals
-        cur.execute("SELECT COUNT(*), SUM(duration_minutes), SUM(anki_cards_count) FROM sessions")
-        totals = cur.fetchone()
-
+        cur.execute(
+            """
+            SELECT
+                session_date,
+                session_time,
+                main_topic,
+                topic,
+                study_mode,
+                time_spent_minutes,
+                duration_minutes,
+                anki_cards_count,
+                confusions,
+                weak_anchors,
+                concepts,
+                issues,
+                errors_conceptual,
+                gaps_identified,
+                subtopics,
+                what_needs_fixing
+            FROM sessions
+        """
+        )
+        rows = cur.fetchall()
         conn.close()
+
+        sessions_per_course_map = {}
+        mode_map = {}
+        confusions_map = {}
+        weak_map = {}
+        concept_map = {}
+        issues_map = {}
+        total_minutes = 0
+        total_cards = 0
+
+        for row in rows:
+            course = row["main_topic"] or row["topic"] or "General"
+            minutes = row["time_spent_minutes"]
+            if minutes in (None, ""):
+                minutes = row["duration_minutes"]
+            minutes = minutes or 0
+            total_minutes += minutes
+            total_cards += row["anki_cards_count"] or 0
+
+            # Sessions per course
+            if course not in sessions_per_course_map:
+                sessions_per_course_map[course] = {"course": course, "count": 0, "minutes": 0}
+            sessions_per_course_map[course]["count"] += 1
+            sessions_per_course_map[course]["minutes"] += minutes
+
+            # Mode distribution
+            mode = row["study_mode"] or "study"
+            if mode not in mode_map:
+                mode_map[mode] = {"mode": mode, "count": 0, "minutes": 0}
+            mode_map[mode]["count"] += 1
+            mode_map[mode]["minutes"] += minutes
+
+            # Confusions
+            confusions_val = row["confusions"] or row["errors_conceptual"] or row["gaps_identified"]
+            for item in parse_json_array(confusions_val):
+                key = item.lower().strip()
+                if not key:
+                    continue
+                if key in confusions_map:
+                    confusions_map[key]["count"] += 1
+                else:
+                    confusions_map[key] = {"text": item, "count": 1, "course": course}
+
+            # Weak anchors
+            for item in parse_json_array(row["weak_anchors"]):
+                key = item.lower().strip()
+                if not key:
+                    continue
+                if key in weak_map:
+                    weak_map[key]["count"] += 1
+                else:
+                    weak_map[key] = {"text": item, "count": 1, "course": course}
+
+            # Concepts
+            concepts_val = row["concepts"] or row["subtopics"]
+            for item in parse_json_array(concepts_val):
+                key = item.lower().strip()
+                if not key:
+                    continue
+                concept_map[key] = concept_map.get(key, 0) + 1
+
+            # Issues log
+            issues_val = row["issues"] or row["what_needs_fixing"]
+            for item in parse_json_array(issues_val):
+                key = item.lower().strip()
+                if not key:
+                    continue
+                if key in issues_map:
+                    issues_map[key]["count"] += 1
+                else:
+                    issues_map[key] = {"issue": item, "count": 1, "course": course}
+
+        sessions_per_course = sorted(
+            sessions_per_course_map.values(), key=lambda x: x["count"], reverse=True
+        )
+        mode_dist = sorted(mode_map.values(), key=lambda x: x["count"], reverse=True)
+        recent_confusions = sorted(confusions_map.values(), key=lambda x: x["count"], reverse=True)[:10]
+        recent_weak = sorted(weak_map.values(), key=lambda x: x["count"], reverse=True)[:10]
+        concept_frequency = sorted(
+            [{"concept": k, "count": v} for k, v in concept_map.items()],
+            key=lambda x: x["count"],
+            reverse=True,
+        )[:10]
+        issues_log = sorted(issues_map.values(), key=lambda x: x["count"], reverse=True)[:10]
 
         return jsonify({
             "sessionsPerCourse": sessions_per_course,
             "modeDistribution": mode_dist,
-            "recentConfusions": [],
-            "recentWeakAnchors": [],
-            "conceptFrequency": [],
-            "issuesLog": [],
-            "totalMinutes": totals[1] or 0,
-            "totalSessions": totals[0] or 0,
-            "totalCards": totals[2] or 0,
+            "recentConfusions": recent_confusions,
+            "recentWeakAnchors": recent_weak,
+            "conceptFrequency": concept_frequency,
+            "issuesLog": issues_log,
+            "totalMinutes": total_minutes,
+            "totalSessions": len(rows),
+            "totalCards": total_cards,
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@adapter_bp.route("/brain/llm-status", methods=["GET"])
+def get_llm_status():
+    """Check whether an LLM API key is configured for chat endpoints."""
+    try:
+        config = load_api_config()
+        api_provider = config.get("api_provider", "openrouter")
+        if api_provider == "openai":
+            api_key = config.get("openai_api_key", "")
+        else:
+            api_key = config.get("openrouter_api_key", "")
+        model = config.get("model", "openrouter/auto")
+        connected = bool(api_key)
+
+        return jsonify({
+            "connected": connected,
+            "model": model,
+            "status": "Connected" if connected else "Disconnected",
+            "error": None if connected else "No API key configured",
+        })
+    except Exception as e:
+        return jsonify({
+            "connected": False,
+            "model": "unknown",
+            "status": "Error",
+            "error": str(e),
+        })
 
 
 @adapter_bp.route("/brain/chat", methods=["POST"])

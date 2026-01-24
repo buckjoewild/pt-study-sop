@@ -1,8 +1,8 @@
 import { Link, useLocation } from "wouter";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LayoutDashboard, Brain, Calendar, GraduationCap, Bot, Save, Trash2, GripVertical, Pencil, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,23 +22,54 @@ const NAV_ITEMS = [
   { path: "/tutor", label: "TUTOR", icon: Bot },
 ];
 
+type NoteCategory = "notes" | "planned" | "ideas";
+
+const NOTE_CATEGORIES: { value: NoteCategory; label: string }[] = [
+  { value: "notes", label: "NOTES" },
+  { value: "planned", label: "PLANNED IMPLEMENTATIONS" },
+  { value: "ideas", label: "IDEAS" },
+];
+
+const resolveNoteType = (note: Note): NoteCategory => {
+  const raw = (note as Note & { noteType?: string }).noteType;
+  if (raw === "planned" || raw === "ideas" || raw === "notes") {
+    return raw;
+  }
+  return "notes";
+};
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const currentPath = location === "/" ? "/" : "/" + location.split("/")[1];
   const [newNote, setNewNote] = useState("");
+  const [newNoteType, setNewNoteType] = useState<NoteCategory>("notes");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingContent, setEditingContent] = useState("");
-  const [draggedId, setDraggedId] = useState<number | null>(null);
+  const [draggedNote, setDraggedNote] = useState<{ id: number; type: NoteCategory } | null>(null);
+  const [dragOverNote, setDragOverNote] = useState<{ id: number; type: NoteCategory } | null>(null);
+  const [dragOverCategory, setDragOverCategory] = useState<NoteCategory | null>(null);
   const [showTutor, setShowTutor] = useState(false);
   const queryClient = useQueryClient();
 
   // Expose tutor toggle to window for integration
   (window as any).openTutor = () => setShowTutor(true);
 
-  const { data: notes = [] } = useQuery({
+  const { data: notes = [], isLoading: notesLoading } = useQuery({
     queryKey: ["notes"],
     queryFn: api.notes.getAll,
   });
+
+  const notesByType: Record<NoteCategory, Note[]> = {
+    notes: notes.filter((note) => resolveNoteType(note) === "notes"),
+    planned: notes.filter((note) => resolveNoteType(note) === "planned"),
+    ideas: notes.filter((note) => resolveNoteType(note) === "ideas"),
+  };
+
+  const sortedNotesByType: Record<NoteCategory, Note[]> = {
+    notes: [...notesByType.notes].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
+    planned: [...notesByType.planned].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
+    ideas: [...notesByType.ideas].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
+  };
 
   const createNoteMutation = useMutation({
     mutationFn: api.notes.create,
@@ -49,8 +80,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   });
 
   const updateNoteMutation = useMutation({
-    mutationFn: ({ id, content }: { id: number; content: string }) => 
-      api.notes.update(id, { content }),
+    mutationFn: ({ id, data }: { id: number; data: Partial<Note> }) =>
+      api.notes.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notes"] });
       setEditingId(null);
@@ -66,54 +97,187 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const reorderMutation = useMutation({
     mutationFn: api.notes.reorder,
+    onMutate: async (updates: { id: number; position: number; noteType?: NoteCategory }[]) => {
+      await queryClient.cancelQueries({ queryKey: ["notes"] });
+      const previous = queryClient.getQueryData<Note[]>(["notes"]);
+      if (!previous) return { previous };
+
+      const updateMap = new Map(
+        updates.map((item) => [item.id, { position: item.position, noteType: item.noteType }])
+      );
+      const next = previous.map((note) => {
+        if (!updateMap.has(note.id)) return note;
+        const update = updateMap.get(note.id);
+        return {
+          ...note,
+          position: update?.position ?? note.position,
+          noteType: update?.noteType ?? (note as Note & { noteType?: string }).noteType,
+        };
+      });
+
+      const typeOrder: Record<NoteCategory, number> = { notes: 0, planned: 1, ideas: 2 };
+      const resolvedType = (note: Note) => resolveNoteType(note);
+      next.sort((a, b) => {
+        const typeDiff = typeOrder[resolvedType(a)] - typeOrder[resolvedType(b)];
+        if (typeDiff !== 0) return typeDiff;
+        const posDiff = (a.position ?? 0) - (b.position ?? 0);
+        if (posDiff !== 0) return posDiff;
+        return (a.createdAt ?? 0) > (b.createdAt ?? 0) ? 1 : -1;
+      });
+
+      queryClient.setQueryData(["notes"], next);
+      return { previous };
+    },
+    onError: (_err, _updates, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["notes"], context.previous);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notes"] });
     },
   });
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (notesLoading || createNoteMutation.isPending) return;
+
+    const plannedSeeds = [
+      "Scholar update: migrate multi-agent orchestration to LangGraph (local-first).",
+      "LangChain: upgrade RAG to embeddings + retriever (later).",
+      "LangSmith: add tracing/evals for Scholar quality (later).",
+    ];
+
+    const existing = new Set(
+      notes.map((note) => (note.content || "").trim().toLowerCase())
+    );
+    const missing = plannedSeeds.filter(
+      (content) => !existing.has(content.toLowerCase())
+    );
+    if (!missing.length) return;
+
+    missing.forEach((content, idx) => {
+      createNoteMutation.mutate({
+        content,
+        position: notesByType.planned.length + idx,
+        noteType: "planned",
+      });
+    });
+  }, [notes, notesLoading, createNoteMutation, notesByType.planned.length]);
+
   const handleSaveNote = () => {
     if (newNote.trim()) {
-      createNoteMutation.mutate({ content: newNote.trim(), position: notes.length });
+      createNoteMutation.mutate({
+        content: newNote.trim(),
+        position: notesByType[newNoteType].length,
+        noteType: newNoteType,
+      });
     }
   };
 
-  const [dragOverId, setDragOverId] = useState<number | null>(null);
-
-  const handleDragStart = (e: React.DragEvent, id: number) => {
-    setDraggedId(id);
+  const handleDragStart = (e: React.DragEvent, id: number, type: NoteCategory) => {
+    setDraggedNote({ id, type });
+    try {
+      e.dataTransfer.setData("text/plain", String(id));
+    } catch {
+      // noop: some browsers restrict dataTransfer in certain contexts
+    }
     e.dataTransfer.effectAllowed = "move";
   };
 
-  const handleDragOver = (e: React.DragEvent, targetId: number) => {
+  const handleDragOver = (e: React.DragEvent, targetId: number, targetType: NoteCategory) => {
     e.preventDefault();
-    if (draggedId !== null && draggedId !== targetId) {
-      setDragOverId(targetId);
+    e.dataTransfer.dropEffect = "move";
+    if (draggedNote !== null && draggedNote.id !== targetId) {
+      setDragOverNote({ id: targetId, type: targetType });
     }
   };
 
-  const handleDrop = (e: React.DragEvent, targetId: number) => {
+  const handleDropCore = (targetType: NoteCategory, targetId?: number | null) => {
+    if (!draggedNote) return;
+
+    const sourceType = draggedNote.type;
+    const sourceNotes = [...sortedNotesByType[sourceType]];
+    const draggedIndex = sourceNotes.findIndex((n) => n.id === draggedNote.id);
+    if (draggedIndex === -1) return;
+
+    const [draggedItem] = sourceNotes.splice(draggedIndex, 1);
+    const targetNotes =
+      sourceType === targetType ? sourceNotes : [...sortedNotesByType[targetType]];
+
+    let insertIndex = targetNotes.length;
+    if (typeof targetId === "number") {
+      const targetIndex = targetNotes.findIndex((n) => n.id === targetId);
+      if (targetIndex !== -1) insertIndex = targetIndex;
+    }
+    targetNotes.splice(insertIndex, 0, draggedItem);
+
+    const updates: { id: number; position: number; noteType?: NoteCategory }[] = [];
+    if (sourceType === targetType) {
+      targetNotes.forEach((note, index) => {
+        updates.push({ id: note.id, position: index });
+      });
+    } else {
+      sourceNotes.forEach((note, index) => {
+        updates.push({ id: note.id, position: index });
+      });
+      targetNotes.forEach((note, index) => {
+        if (note.id === draggedItem.id) {
+          updates.push({ id: note.id, position: index, noteType: targetType });
+        } else {
+          updates.push({ id: note.id, position: index });
+        }
+      });
+    }
+
+    reorderMutation.mutate(updates);
+  };
+
+  const handleDropOnNote = (e: React.DragEvent, targetId: number, targetType: NoteCategory) => {
     e.preventDefault();
-    if (draggedId === null || draggedId === targetId) {
-      setDraggedId(null);
-      setDragOverId(null);
+    e.stopPropagation();
+    if (!draggedNote || draggedNote.id === targetId) {
+      setDraggedNote(null);
+      setDragOverNote(null);
+      setDragOverCategory(null);
       return;
     }
-    
-    const newOrder = [...notes];
-    const draggedIndex = newOrder.findIndex(n => n.id === draggedId);
-    const targetIndex = newOrder.findIndex(n => n.id === targetId);
-    
-    const [draggedItem] = newOrder.splice(draggedIndex, 1);
-    newOrder.splice(targetIndex, 0, draggedItem);
-    
-    reorderMutation.mutate(newOrder.map(n => n.id));
-    setDraggedId(null);
-    setDragOverId(null);
+    handleDropCore(targetType, targetId);
+    setDraggedNote(null);
+    setDragOverNote(null);
+    setDragOverCategory(null);
+  };
+
+  const handleDropOnCategory = (e: React.DragEvent, targetType: NoteCategory) => {
+    e.preventDefault();
+    if (!draggedNote) return;
+    handleDropCore(targetType, null);
+    setDraggedNote(null);
+    setDragOverNote(null);
+    setDragOverCategory(null);
+  };
+
+  const handleCategoryDragOver = (e: React.DragEvent, _targetType: NoteCategory) => {
+    if (!draggedNote) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleCategoryDragEnter = (targetType: NoteCategory) => {
+    if (!draggedNote) return;
+    setDragOverCategory(targetType);
+  };
+
+  const handleCategoryDragLeave = (targetType: NoteCategory) => {
+    if (dragOverCategory === targetType) {
+      setDragOverCategory(null);
+    }
   };
 
   const handleDragEnd = () => {
-    setDraggedId(null);
-    setDragOverId(null);
+    setDraggedNote(null);
+    setDragOverNote(null);
+    setDragOverCategory(null);
   };
 
   return (
@@ -166,13 +330,43 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </Button>
               </SheetTrigger>
                 <SheetContent
-                  className="bg-black border-l-4 border-t-2 border-b-2 border-primary w-[300px] sm:w-[400px] shadow-2xl overflow-y-auto z-[100001] inset-y-3 h-auto"
+                  className="bg-black border-l-4 border-t-2 border-b-2 border-primary w-[340px] sm:w-[480px] lg:w-[520px] shadow-2xl overflow-y-auto z-[100001] inset-y-3 h-auto [&>button]:hidden"
                   style={{ zIndex: 100001 }}
                 >
-                <SheetTitle className="font-arcade text-primary mb-4">QUICK_NOTES</SheetTitle>
+                <div className="flex items-center gap-2 mb-4">
+                  <SheetClose asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7 rounded-none border-2 border-primary text-primary hover:bg-primary/20 hover:text-primary"
+                      aria-label="Close notes"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </SheetClose>
+                  <SheetTitle className="font-arcade text-primary">QUICK_NOTES</SheetTitle>
+                </div>
                 <SheetDescription className="sr-only">Quick notes panel</SheetDescription>
                 <div className="flex flex-col gap-4">
                   <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-1">
+                      {NOTE_CATEGORIES.map((category) => (
+                        <Button
+                          key={category.value}
+                          size="sm"
+                          variant={newNoteType === category.value ? "default" : "ghost"}
+                          className={cn(
+                            "font-arcade rounded-none text-[9px] leading-tight h-auto py-1 whitespace-normal text-center",
+                            newNoteType === category.value
+                              ? "bg-primary text-primary-foreground"
+                              : "border border-secondary text-muted-foreground hover:text-primary"
+                          )}
+                          onClick={() => setNewNoteType(category.value)}
+                        >
+                          {category.label}
+                        </Button>
+                      ))}
+                    </div>
                     <Textarea 
                       placeholder="TYPE_NOTE_HERE..." 
                       value={newNote}
@@ -194,78 +388,114 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <div className="border-t border-secondary pt-2">
                     <div className="font-arcade text-xs text-muted-foreground mb-2">SAVED NOTES ({notes.length})</div>
                     <ScrollArea className="h-[calc(100vh-280px)]">
-                      <div className="space-y-2 pr-2">
-                        {notes.map((note) => (
-                          <div 
-                            key={note.id}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, note.id)}
-                            onDragOver={(e) => handleDragOver(e, note.id)}
-                            onDrop={(e) => handleDrop(e, note.id)}
-                            onDragEnd={handleDragEnd}
-                            data-testid={`card-note-${note.id}`}
-                            className={cn(
-                              "bg-secondary/20 border border-secondary p-2 rounded-none cursor-move transition-all",
-                              draggedId === note.id && "opacity-50",
-                              dragOverId === note.id && "border-primary border-2"
-                            )}
-                          >
-                            {editingId === note.id ? (
-                              <div className="space-y-2">
-                                <Input
-                                  value={editingContent}
-                                  onChange={(e) => setEditingContent(e.target.value)}
-                                  className="bg-black border-primary rounded-none text-sm font-terminal"
-                                  autoFocus
-                                />
-                                <div className="flex gap-1">
+                      <div className="space-y-6 pr-2">
+                        {NOTE_CATEGORIES.map((category) => {
+                          const sectionNotes = sortedNotesByType[category.value];
+                          return (
+                            <div
+                              key={category.value}
+                              className={cn(
+                                "space-y-2 rounded-none border border-transparent p-1",
+                                dragOverCategory === category.value && "border-primary/70 bg-primary/5"
+                              )}
+                              onDragOver={(e) => handleCategoryDragOver(e, category.value)}
+                              onDragEnter={() => handleCategoryDragEnter(category.value)}
+                              onDragLeave={() => handleCategoryDragLeave(category.value)}
+                              onDrop={(e) => handleDropOnCategory(e, category.value)}
+                            >
+                              <div className="font-arcade text-[10px] text-muted-foreground">
+                                {category.label} ({sectionNotes.length})
+                              </div>
+                              <div
+                                className={cn(
+                                  "space-y-2 min-h-[72px] rounded-none border border-transparent p-1",
+                                  dragOverCategory === category.value && "border-primary/40"
+                                )}
+                                onDragOver={(e) => handleCategoryDragOver(e, category.value)}
+                                onDragEnter={() => handleCategoryDragEnter(category.value)}
+                                onDragLeave={() => handleCategoryDragLeave(category.value)}
+                                onDrop={(e) => handleDropOnCategory(e, category.value)}
+                              >
+                                {sectionNotes.map((note) => (
+                                  <div
+                                    key={note.id}
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, note.id, category.value)}
+                                    onDragOver={(e) => handleDragOver(e, note.id, category.value)}
+                                    onDrop={(e) => handleDropOnNote(e, note.id, category.value)}
+                                    onDragEnd={handleDragEnd}
+                                    data-testid={`card-note-${note.id}`}
+                                    className={cn(
+                                      "bg-secondary/20 border border-secondary p-2 rounded-none cursor-move transition-all",
+                                      draggedNote?.id === note.id && "opacity-50",
+                                      dragOverNote?.id === note.id && dragOverNote?.type === category.value && "border-primary border-2"
+                                    )}
+                                  >
+                                    {editingId === note.id ? (
+                                      <div className="space-y-2">
+                                        <Input
+                                          value={editingContent}
+                                          onChange={(e) => setEditingContent(e.target.value)}
+                                          className="bg-black border-primary rounded-none text-sm font-terminal"
+                                          autoFocus
+                                        />
+                                        <div className="flex gap-1">
                                   <Button 
                                     size="sm" 
                                     className="flex-1 rounded-none text-xs h-6"
-                                    onClick={() => updateNoteMutation.mutate({ id: note.id, content: editingContent })}
+                                    onClick={() => updateNoteMutation.mutate({ id: note.id, data: { content: editingContent } })}
                                   >
-                                    <Check className="w-3 h-3" />
-                                  </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="ghost"
-                                    className="rounded-none text-xs h-6"
-                                    onClick={() => setEditingId(null)}
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </Button>
-                                </div>
+                                            <Check className="w-3 h-3" />
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="rounded-none text-xs h-6"
+                                            onClick={() => setEditingId(null)}
+                                          >
+                                            <X className="w-3 h-3" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-start gap-2">
+                                        <GripVertical className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                                        <div className="flex-1 font-terminal text-sm whitespace-pre-wrap break-words">{note.content}</div>
+                                        <div className="flex gap-1 shrink-0">
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-6 w-6 p-0 rounded-none hover:bg-primary/20"
+                                            onClick={() => { setEditingId(note.id); setEditingContent(note.content); }}
+                                            data-testid={`button-edit-note-${note.id}`}
+                                          >
+                                            <Pencil className="w-3 h-3" />
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-6 w-6 p-0 rounded-none hover:bg-red-500/20 text-red-400"
+                                            onClick={() => deleteNoteMutation.mutate(note.id)}
+                                            data-testid={`button-delete-note-${note.id}`}
+                                          >
+                                            <Trash2 className="w-3 h-3" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                                {sectionNotes.length === 0 && (
+                                  <div className="text-center text-muted-foreground font-terminal text-xs py-4">
+                                    No {category.value} yet
+                                  </div>
+                                )}
                               </div>
-                            ) : (
-                              <div className="flex items-start gap-2">
-                                <GripVertical className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-                                <div className="flex-1 font-terminal text-sm whitespace-pre-wrap break-words">{note.content}</div>
-                                <div className="flex gap-1 shrink-0">
-                                  <Button 
-                                    size="sm" 
-                                    variant="ghost" 
-                                    className="h-6 w-6 p-0 rounded-none hover:bg-primary/20"
-                                    onClick={() => { setEditingId(note.id); setEditingContent(note.content); }}
-                                    data-testid={`button-edit-note-${note.id}`}
-                                  >
-                                    <Pencil className="w-3 h-3" />
-                                  </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="ghost" 
-                                    className="h-6 w-6 p-0 rounded-none hover:bg-red-500/20 text-red-400"
-                                    onClick={() => deleteNoteMutation.mutate(note.id)}
-                                    data-testid={`button-delete-note-${note.id}`}
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                            </div>
+                          );
+                        })}
                         {notes.length === 0 && (
-                          <div className="text-center text-muted-foreground font-terminal text-sm py-8">
+                          <div className="text-center text-muted-foreground font-terminal text-sm py-4">
                             No notes yet
                           </div>
                         )}
@@ -280,7 +510,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Main Content */}
-      <main className="relative z-10 flex-1 container mx-auto p-4 md:p-8 pb-24">
+      <main className="relative z-10 flex-1 w-full max-w-[1600px] mx-auto p-4 md:p-8 pb-24">
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           {children}
         </div>

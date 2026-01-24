@@ -14,7 +14,7 @@ You must read and obey `CLAUDE.md` immediately (same folder). It contains core r
 - Keep changes minimal and scoped; avoid broad reformatting.
 - Prefer ASCII; keep filenames and paths stable unless requested.
 - Prefer non-archive paths for code changes; avoid editing `archive/` (including `archive/unused`) unless explicitly requested.
-- When working in any folder, ensure a concise `README.md` exists that explains purpose, key paths, and pointers; create/update it if missing (skip `archive/` unless asked).
+- When working in any folder, ensure a concise `README.md` exists that explains purpose, key paths, and pointers; create/update it if missing (skip `archive/` unless asked). This applies to every folder you touch.
 - Ask before destructive or irreversible actions (delete, overwrite, submit, purchase).
 - Run project-required checks or clearly state when they are skipped.
 

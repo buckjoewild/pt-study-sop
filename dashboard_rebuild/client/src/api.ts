@@ -268,9 +268,9 @@ export const api = {
     delete: (id: number) => request<void>(`/notes/${id}`, {
       method: "DELETE",
     }),
-    reorder: (noteIds: number[]) => request<{ success: boolean }>("/notes/reorder", {
+    reorder: (updates: { id: number; position: number }[]) => request<{ success: boolean }>("/notes/reorder", {
       method: "POST",
-      body: JSON.stringify({ noteIds }),
+      body: JSON.stringify({ notes: updates }),
     }),
   },
 

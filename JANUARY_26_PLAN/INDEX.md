@@ -1,4 +1,4 @@
-# JANUARY 26 PLAN - INDEX
+﻿# JANUARY 26 PLAN - INDEX
 
 **Date Created:** January 23, 2026
 **Target Implementation:** January 26, 2026
@@ -34,12 +34,11 @@
 - Pre-flight checks before starting
 
 **Milestones:**
-1. Database Schema - Add tables to schema.ts, run db:push
-2. Storage Layer - Add CRUD functions to storage.ts
-3. API Endpoints - Add routes to routes.ts
-4. API Client - Add methods to client/src/api.ts
-5. ChatGPT Prompts - Create import prompt templates
-6. Ingestion Tab UI - Build Brain page Ingestion tab
+1. Database Schema - Add tables to schema.ts (types) and apply DB changes in `brain/db_setup.py`
+2. API Layer - Add CRUD handlers in `brain/dashboard/api_adapter.py`
+3. API Client - Add methods to client/src/api.ts
+4. ChatGPT Prompts - Create import prompt templates
+5. Ingestion Tab UI - Build Brain page Ingestion tab
 
 **Tonight's Minimum Viable Path:** Milestones 1-4 (2 hours)
 
@@ -47,7 +46,7 @@
 
 ### 1. PROJECT_OVERVIEW.md (383 lines)
 **What it covers:**
-- The complete vision (Tutor → Brain → Scholar loop)
+- The complete vision (Tutor â†’ Brain â†’ Scholar loop)
 - The problem we identified (material ingestion gap)
 - Current state vs what's needed
 - What we built (MASTER_SOP consolidation, Concepts Library)
@@ -94,19 +93,19 @@ sessions.source_lock (JSON string - array of source labels)
 
 ### New UI Components Needed:
 ```
-ProgressTable.tsx      → Brain page (Progress tab)
-ProgressWidget.tsx     → Dashboard page
-SessionStartCard.tsx   → Dashboard page
-QuickStartModal.tsx    → Dashboard page
-IngestionWizard.tsx    → Brain page (Ingestion tab)
+ProgressTable.tsx      â†’ Brain page (Progress tab)
+ProgressWidget.tsx     â†’ Dashboard page
+SessionStartCard.tsx   â†’ Dashboard page
+QuickStartModal.tsx    â†’ Dashboard page
+IngestionWizard.tsx    â†’ Brain page (Ingestion tab)
 ```
 
 ### Build Order (from EXECPLAN):
 **Milestone 1:** Data model and API foundation
-- Update schema.ts (add tables)
+- Update schema.ts (types only)
 - Create shared/schema.ts
-- Extend server/storage.ts
-- Add REST endpoints
+- Update `brain/db_setup.py` (legacy DB)
+- Add REST endpoints in `brain/dashboard/api_adapter.py`
 - Update client/src/api.ts
 
 **Milestone 2:** UI components and page integration
@@ -123,20 +122,21 @@ IngestionWizard.tsx    → Brain page (Ingestion tab)
 ## Related Files in Repo (Reference)
 
 ### Essential Reference:
-- `docs/full-ui-api-audit-2026-01-22.md` — Complete API endpoint inventory
-- `docs/contracts/wrap_schema.md` — WRAP required fields (source_lock is there!)
-- `docs/root/PROJECT_ARCHITECTURE.md` — Deep architecture doc
-- `docs/root/SYSTEM_INVENTORY.md` — Engines, frameworks, mechanisms, modes
+- `docs/full-ui-api-audit-2026-01-22.md` â€” Complete API endpoint inventory
+- `docs/contracts/wrap_schema.md` â€” WRAP required fields (source_lock is there!)
+- `docs/root/PROJECT_ARCHITECTURE.md` â€” Deep architecture doc
+- `docs/root/SYSTEM_INVENTORY.md` â€” Engines, frameworks, mechanisms, modes
 
 ### Helpful Context:
-- `README.md` — System overview, milestone plans
-- `CONTINUITY.md` — Recent changes log
-- `docs/root/GUIDE_USER.md` / `docs/root/GUIDE_DEV.md` / `docs/root/GUIDE_ARCHITECTURE.md` — System guides
+- `README.md` â€” System overview, milestone plans
+- `CONTINUITY.md` â€” Recent changes log
+- `docs/root/GUIDE_USER.md` / `docs/root/GUIDE_DEV.md` / `docs/root/GUIDE_ARCHITECTURE.md` â€” System guides
 
 ### Source Code:
-- `dashboard_rebuild/` — Current dashboard codebase
-- `dashboard_rebuild/schema.ts` — Database schema (NOT server/schema.ts!)
-- `dashboard_rebuild/server/routes.ts` — API endpoints
+- `dashboard_rebuild/` — Current dashboard codebase (frontend only)
+- `dashboard_rebuild/schema.ts` — Client types schema (not used for DB migrations)
+- `brain/db_setup.py` — Legacy DB schema/migrations
+- `brain/dashboard/api_adapter.py` — API endpoints
 - `dashboard_rebuild/client/src/pages/` — Page components
 
 ---
@@ -165,3 +165,4 @@ From EXECPLAN, the implementation is complete when:
 API checks:
 - `GET /api/learning-objectives` returns array
 - `GET /api/sessions/last-context?courseId=1` returns context object
+

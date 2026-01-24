@@ -33,7 +33,9 @@ Build a personal study OS that captures every session, turns it into metrics and
 
 ## Dashboard build (single source of truth)
 - Source repo (non-archive): `dashboard_rebuild`.
+- `dashboard_rebuild` is frontend-only; the API lives in `brain/dashboard/api_adapter.py`.
 - Production bundle served by Flask: `brain/static/dist` (copied from `dashboard_rebuild\dist\public`).
+- Only run the Flask dashboard on port 5000 (via `Start_Dashboard.bat`); do not start a separate dashboard_rebuild server.
 - Backups of older builds live in `archive/unused/dist_backup_*` and are **not** used by `Run_Brain_All.bat`.
 - If the UI looks wrong, rebuild from `dashboard_rebuild` and copy `dist/public` into `brain/static/dist` (do not mix assets from other dashboards).
 
@@ -68,6 +70,12 @@ Build a personal study OS that captures every session, turns it into metrics and
 - Canonical agent rules live in `ai-config/AGENTS.md` and `ai-config/CLAUDE.md` (edit there only).
 - Mirrors exist at `AGENTS.md`, `CLAUDE.md`, `.claude/AGENTS.md`, `.claude/CLAUDE.md` for tool compatibility; keep them identical to canonical.
 - Precedence: the nearest `AGENTS.md` to your working path overrides higher-level files; if you add a nested one, note the reason.
+
+## Agent Hygiene (Required)
+- Clean up after each task: remove failed scripts, temporary files, and obsolete drafts.
+- Mark tasks complete in the relevant plan/ExecPlan and document what changed.
+- If a decision changes direction, add a note explaining the change and why.
+- When a file becomes outdated, either update it or mark it deprecated with a pointer to the replacement.
 
 ## Quick Start
 1. Open Obsidian at `projects/treys-agent/context/`.

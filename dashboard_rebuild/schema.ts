@@ -271,6 +271,7 @@ export type GoogleToken = typeof googleTokens.$inferSelect;
 export const notes = sqliteTable("notes", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   content: text("content").notNull(),
+  noteType: text("note_type").notNull().default("notes"),
   position: integer("position").notNull().default(0),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });

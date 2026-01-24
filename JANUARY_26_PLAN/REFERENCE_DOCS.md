@@ -281,16 +281,16 @@ The `sessions` table already includes:
 ```bash
 # From dashboard_rebuild/
 npm install
-npm run dev          # Start dev server on port 5000
+npm run dev          # Start Vite dev server on port 3000 (UI only)
 npm run build        # Build for production
 npm run check        # Typecheck
-npm run db:push      # Apply schema changes
+# DB schema changes live in brain/db_setup.py (no db:push)
 ```
 
 ## Production
 ```bash
 # From repo root
-Run_Brain_All.bat    # Start Flask + React dashboard
+Start_Dashboard.bat  # Start Flask + React dashboard on port 5000
 ```
 
 ## Testing
@@ -308,9 +308,9 @@ python scripts/release_check.py
 | React pages | `dashboard_rebuild/client/src/pages/` |
 | React components | `dashboard_rebuild/client/src/components/` |
 | API client | `dashboard_rebuild/client/src/api.ts` |
-| Database schema | `dashboard_rebuild/schema.ts` |
-| Server routes | `dashboard_rebuild/server/routes.ts` |
-| Server storage | `dashboard_rebuild/server/storage.ts` |
+| Client types schema | `dashboard_rebuild/schema.ts` |
+| DB schema/migrations | `brain/db_setup.py` |
+| API endpoints | `brain/dashboard/api_adapter.py` |
 | Production build | `brain/static/dist/` |
 | SQLite database | `brain/data/pt_study.db` |
 | Session logs | `brain/session_logs/` |

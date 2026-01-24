@@ -1,6 +1,8 @@
 # DASHBOARD IMPLEMENTATION PLAN (Complete)
 **Purpose:** Map where each new feature goes and how to build them in parallel
 
+**Update (2026-01-23):** The `dashboard_rebuild` Node server was removed. The live API is now `brain/dashboard/api_adapter.py` and the live DB is `brain/data/pt_study.db`. Treat any `server/` references in this document as legacy; use `EXECPLAN_DASHBOARD.md` and `MILESTONE_INSTRUCTIONS.md` for current paths.
+
 ---
 
 ## CURRENT DASHBOARD PAGES - COMPLETE BREAKDOWN

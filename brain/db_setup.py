@@ -80,6 +80,9 @@ def init_database():
             anchors_locked TEXT,
             weak_anchors TEXT,
             anchors_mastery TEXT,
+            confusions TEXT,
+            concepts TEXT,
+            issues TEXT,
 
             -- Reflection
             what_worked TEXT,
@@ -170,6 +173,9 @@ def init_database():
         "calibration_check": "TEXT",
         "anchors_locked": "TEXT",
         "weak_anchors": "TEXT",
+        "confusions": "TEXT",
+        "concepts": "TEXT",
+        "issues": "TEXT",
         "anchors_mastery": "TEXT",
         "what_worked": "TEXT",
         "what_needs_fixing": "TEXT",
@@ -310,6 +316,60 @@ def init_database():
             rag_doc_ids TEXT,          -- comma-separated IDs in rag_docs
             created_at TEXT NOT NULL,
             FOREIGN KEY(course_id) REFERENCES courses(id)
+        )
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS modules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            course_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            order_index INTEGER DEFAULT 0,
+            files_downloaded INTEGER DEFAULT 0,
+            notebooklm_loaded INTEGER DEFAULT 0,
+            sources TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT,
+            FOREIGN KEY(course_id) REFERENCES courses(id)
+        )
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS learning_objectives (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            course_id INTEGER NOT NULL,
+            module_id INTEGER,
+            lo_code TEXT,
+            title TEXT NOT NULL,
+            status TEXT DEFAULT 'not_started',
+            last_session_id INTEGER,
+            last_session_date TEXT,
+            next_action TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT,
+            FOREIGN KEY(course_id) REFERENCES courses(id),
+            FOREIGN KEY(module_id) REFERENCES modules(id),
+            FOREIGN KEY(last_session_id) REFERENCES sessions(id)
+        )
+    """
+    )
+
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS lo_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lo_id INTEGER NOT NULL,
+            session_id INTEGER NOT NULL,
+            status_before TEXT,
+            status_after TEXT,
+            notes TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(lo_id) REFERENCES learning_objectives(id),
+            FOREIGN KEY(session_id) REFERENCES sessions(id)
         )
     """
     )
@@ -802,12 +862,22 @@ def init_database():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT,
             content TEXT NOT NULL,
+            note_type TEXT NOT NULL DEFAULT 'notes',
             position INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
     """
     )
+    # Backfill new columns without breaking existing DBs
+    cursor.execute("PRAGMA table_info(quick_notes)")
+    quick_notes_cols = {col[1] for col in cursor.fetchall()}
+    if "note_type" not in quick_notes_cols:
+        try:
+            cursor.execute("ALTER TABLE quick_notes ADD COLUMN note_type TEXT DEFAULT 'notes'")
+        except Exception:
+            pass
+    cursor.execute("UPDATE quick_notes SET note_type = COALESCE(note_type, 'notes')")
     cursor.execute(
         """
         CREATE INDEX IF NOT EXISTS idx_quick_notes_position

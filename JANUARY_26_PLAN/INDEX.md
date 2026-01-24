@@ -2,10 +2,28 @@
 
 **Date Created:** January 23, 2026
 **Target Implementation:** January 26, 2026
+**Last Updated:** January 23, 2026 (Planning session revision)
 
 ---
 
 ## Documents in This Folder
+
+### 0. UPDATED_PLAN.md (NEW - Read This First!)
+**What it covers:**
+- Revised data model (modules as unit of material tracking)
+- Pre-study checklist fields (files_downloaded, notebooklm_loaded)
+- Schedule events table for syllabus import
+- ChatGPT-assisted ingestion prompts
+- Minimal viable path for tonight
+- Updated build order
+
+**Key Changes from Original:**
+- Materials tracked at MODULE level, not per-LO
+- Added schedule_events table for syllabus data
+- ChatGPT does the parsing, Brain does bulk import
+- Simplified tonight's priority to just get ingestion working
+
+---
 
 ### 1. PROJECT_OVERVIEW.md (383 lines)
 **What it covers:**

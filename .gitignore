@@ -77,6 +77,10 @@ archive/unused/_old/
 # Local backups
 backups/
 
+# Local data bundle (for machine transfer - contains sensitive data)
+local_data_bundle/
+local_data_bundle.zip
+
 
 # AI config sync backups
 scripts/_ai_config_backups/

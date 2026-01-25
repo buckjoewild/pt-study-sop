@@ -115,7 +115,7 @@ def react_pages():
 
 
 def serve_react_app():
-    """Serve the React build if present; otherwise fall back to legacy Flask."""
+    """Serve the React build from static/dist."""
     import os
     from flask import send_from_directory, current_app
 
@@ -125,13 +125,13 @@ def serve_react_app():
     if os.path.exists(dist_index):
         return send_from_directory(os.path.join(static_folder, "dist"), "index.html")
 
-    return render_template("dashboard.html")
+    return "Dashboard build not found. Run 'npm run build' in dashboard_rebuild and copy dist/public to brain/static/dist.", 404
 
 
 @dashboard_bp.route("/old-dashboard")
 def old_dashboard():
-    """Legacy dashboard for reference."""
-    return render_template("dashboard.html")
+    """Legacy dashboard removed - now returns 404."""
+    return "Legacy dashboard has been removed.", 404
 
 
 @dashboard_bp.route("/favicon.ico")

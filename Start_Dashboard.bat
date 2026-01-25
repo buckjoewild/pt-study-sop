@@ -77,8 +77,10 @@ if not exist "%SERVER_DIR%\dashboard_web.py" (
 
 rem Check if Frontend Build exists (expects /static/dist/assets/index-*.js)
 if not exist "%DIST_DIR%\assets\index-*.js" (
-    echo [WARN] Frontend build missing in %DIST_DIR%.
-    echo        Start will continue with the legacy dashboard fallback.
+    echo [ERROR] Frontend build missing in %DIST_DIR%.
+    echo         The React dashboard build should be included in the repo.
+    echo         If missing, run: npm run build in dashboard_rebuild, then copy dist/public to brain/static/dist
+    goto END
 )
 
 start "PT Study Brain Dashboard" cmd /k "cd /d "%SERVER_DIR%" && "%PYEXE%" %PYEXE_ARGS% dashboard_web.py"

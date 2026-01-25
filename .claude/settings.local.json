@@ -37,7 +37,8 @@
       "Bash(netstat:*)",
       "Bash(echo $OPENROUTER_API_KEY)",
       "Bash(cmd //c taskkill /PID 27412 /F)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(npx @realmikekelly/claude-sneakpeek quick:*)"
     ],
     "defaultMode": "bypassPermissions"
   }

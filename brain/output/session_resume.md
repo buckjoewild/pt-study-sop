@@ -1,8 +1,8 @@
 # Session Resume
-Generated: 2026-01-24 09:03
+Generated: 2026-01-24 16:38
 
 ## Readiness Score
-**74/100** (8 topics, 9 sessions in 30 days)
+**82/100** (11 topics, 17 sessions in 30 days)
 
 ## Drift + SOP Usage (last 30d)
 - Prompt Drift flagged: 0
@@ -12,28 +12,34 @@ Generated: 2026-01-24 09:03
 - Common Core Learning Modules: n/a
 
 ## Recent Sessions
-- **Pipeline Test** (2026-01-24, 0d ago)
-  - Mode: Core | Understanding: n/a/5 | Confidence: n/a/5
-- **Pipeline Test** (2026-01-24, 0d ago)
-  - Mode: Core | Understanding: n/a/5 | Confidence: n/a/5
-- **Anki Test** (2026-01-24, 0d ago)
-  - Mode: Core | Understanding: n/a/5 | Confidence: n/a/5
-- **Test** (2026-01-24, 0d ago)
+- **General** (2026-01-24, 0d ago)
   - Mode: Core | Understanding: n/a/5 | Confidence: n/a/5
 - **Neuroscience** (2026-01-24, 0d ago)
-  - Mode: study | Understanding: n/a/5 | Confidence: n/a/5
+  - Mode: Core | Understanding: n/a/5 | Confidence: n/a/5
+- **Creating flashcards for debugging** (2026-01-24, 0d ago)
+  - Mode: Core | Understanding: n/a/5 | Confidence: n/a/5
+- **Debug Test** (2026-01-24, 0d ago)
+  - Mode: Core | Understanding: n/a/5 | Confidence: n/a/5
+- **Neuroscience LO1: Neuron basic structure and function** (2026-01-24, 0d ago)
+  - Mode: Core | Understanding: n/a/5 | Confidence: n/a/5
 
 ## Topic Coverage
 - **Anki Test**: 1 sessions, last 0d ago [FRESH]
   - Avg Understanding: n/a/5 | Avg Confidence: n/a/5
-- **Neuroscience**: 1 sessions, last 0d ago [FRESH]
+- **Creating flashcards for debugging**: 1 sessions, last 0d ago [FRESH]
   - Avg Understanding: n/a/5 | Avg Confidence: n/a/5
-- **Pipeline Test**: 2 sessions, last 0d ago [FRESH]
+- **Debug Test**: 1 sessions, last 0d ago [FRESH]
+  - Avg Understanding: n/a/5 | Avg Confidence: n/a/5
+- **General**: 1 sessions, last 0d ago [FRESH]
+  - Avg Understanding: n/a/5 | Avg Confidence: n/a/5
+- **Neuroscience**: 3 sessions, last 0d ago [FRESH]
+  - Avg Understanding: n/a/5 | Avg Confidence: n/a/5
+- **Neuroscience LO1: Neuron basic structure and function**: 3 sessions, last 0d ago [FRESH]
+  - Avg Understanding: 4.0/5 | Avg Confidence: 3.0/5
+- **Pipeline Test**: 3 sessions, last 0d ago [FRESH]
   - Avg Understanding: n/a/5 | Avg Confidence: n/a/5
 - **Test**: 1 sessions, last 0d ago [FRESH]
   - Avg Understanding: n/a/5 | Avg Confidence: n/a/5
-- **Neuroscience LO1: Neuron basic structure and function**: 1 sessions, last 1d ago [FRESH]
-  - Avg Understanding: 4.0/5 | Avg Confidence: 3.0/5
 - **Movement Science 1**: 1 sessions, last 3d ago [FRESH]
   - Avg Understanding: n/a/5 | Avg Confidence: n/a/5
 - **Exercise Physiology**: 1 sessions, last 4d ago [FRESH]

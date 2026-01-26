@@ -18,6 +18,12 @@ You must read and obey `CLAUDE.md` immediately (same folder). It contains core r
 - Ask before destructive or irreversible actions (delete, overwrite, submit, purchase).
 - Run project-required checks or clearly state when they are skipped.
 
+## Agent category preferences (OpenRouter setup)
+- **AVOID**: `visual-engineering` category (uses Google direct API, not OpenRouter)
+- **PREFER**: `quick`, `unspecified-low`, `unspecified-high` categories (use OpenRouter correctly)
+- **REASON**: User has OpenRouter API key configured, not Google direct API
+- **LEARNED**: Session 2026-01-25 - visual-engineering failed 3x, quick succeeded consistently
+
 ## ExecPlans
 When writing complex features or significant refactors, use an ExecPlan (as described in `.agent/PLANS.md`) from design to implementation.
 

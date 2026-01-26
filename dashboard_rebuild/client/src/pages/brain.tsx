@@ -520,23 +520,16 @@ export default function Brain() {
 
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <Tabs defaultValue="evidence" className="w-full">
-              <TabsList className="bg-black/40 border border-secondary rounded-none w-full justify-start">
-                <TabsTrigger value="evidence" className="rounded-none font-arcade text-xs data-[state=active]:bg-primary data-[state=active]:text-black">
-                  SESSION EVIDENCE
-                </TabsTrigger>
-                <TabsTrigger value="metrics" className="rounded-none font-arcade text-xs data-[state=active]:bg-primary data-[state=active]:text-black">
-                  DERIVED METRICS
-                </TabsTrigger>
-                <TabsTrigger value="issues" className="rounded-none font-arcade text-xs data-[state=active]:bg-primary data-[state=active]:text-black">
-                  ISSUES LOG
-                </TabsTrigger>
-                <TabsTrigger value="ingestion" className="rounded-none font-arcade text-xs data-[state=active]:bg-primary data-[state=active]:text-black">
-                  INGESTION
-                </TabsTrigger>
-              </TabsList>
+            {/* Ingestion first - most important */}
+            <div className="mb-6">
+              <h2 className="font-arcade text-lg text-primary mb-4">INGESTION</h2>
+              <IngestionTab />
+            </div>
 
-              <TabsContent value="evidence" className="mt-4">
+            {/* Evidence + Metrics side by side */}
+            <div className="grid lg:grid-cols-2 gap-6 mb-6">
+              <div>
+                <h2 className="font-arcade text-lg text-primary mb-4">SESSION EVIDENCE</h2>
                 <Card className="bg-black/40 border-2 border-secondary rounded-none">
                   <CardHeader className="border-b border-secondary p-4">
                     <div className="flex items-center justify-between">
@@ -646,9 +639,10 @@ export default function Brain() {
                     )}
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </div>
 
-              <TabsContent value="metrics" className="mt-4 space-y-4">
+              <div>
+                <h2 className="font-arcade text-lg text-primary mb-4">DERIVED METRICS</h2>
                 <div className="grid md:grid-cols-2 gap-4">
                   <Card className="bg-black/40 border-2 border-secondary rounded-none">
                     <CardHeader className="border-b border-secondary p-3">
@@ -751,9 +745,12 @@ export default function Brain() {
                     </CardContent>
                   </Card>
                 </div>
-              </TabsContent>
+              </div>
+            </div>
 
-              <TabsContent value="issues" className="mt-4">
+            {/* Issues Log */}
+            <div className="mb-6">
+              <h2 className="font-arcade text-lg text-primary mb-4">ISSUES LOG</h2>
                 <Card className="bg-black/40 border-2 border-secondary rounded-none">
                   <CardHeader className="border-b border-secondary p-4">
                     <CardTitle className="font-arcade text-sm flex items-center gap-2 text-red-400">
@@ -782,11 +779,7 @@ export default function Brain() {
                     )}
                   </CardContent>
                 </Card>
-              </TabsContent>
-              <TabsContent value="ingestion" className="mt-4">
-                <IngestionTab />
-              </TabsContent>
-            </Tabs>
+            </div>
 
             {/* Obsidian Vault Browser */}
             <Card className="bg-black/40 border-2 border-secondary rounded-none">

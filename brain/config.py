@@ -257,6 +257,20 @@ STRONG_THRESHOLD = 4    # Scores >= 4 are considered strong
 STALE_DAYS = 14         # Topics not studied in 14+ days are stale
 FRESH_DAYS = 7          # Topics studied within 7 days are fresh
 
+# Semester date ranges for filtering
+SEMESTER_DATES = {
+    1: {
+        'start': '2025-08-25',
+        'end': '2025-12-12',
+        'name': 'Semester 1 (Fall 2025)'
+    },
+    2: {
+        'start': '2026-01-05',
+        'end': '2026-04-24',
+        'name': 'Semester 2 (Spring 2026)'
+    }
+}
+
 # Display settings
 RECENT_SESSIONS_COUNT = 10    # Number of recent sessions to include in resume
 MAX_TOPICS_DISPLAY = 20       # Max topics to show in coverage

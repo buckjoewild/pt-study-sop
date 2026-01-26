@@ -10,7 +10,7 @@ from typing import List, Dict, Any, Optional
 
 # Import internal modules from the "Brain"
 from db_setup import get_connection
-from config import load_env, COURSE_FOLDERS
+from config import load_env, COURSE_FOLDERS, SEMESTER_DATES
 from dashboard.utils import load_api_config
 
 # ==============================================================================
@@ -298,10 +298,12 @@ def get_sessions():
     Supports optional date range filtering via query parameters:
     - start: YYYY-MM-DD (inclusive)
     - end: YYYY-MM-DD (inclusive)
+    - semester: 1 or 2 (applies semester date range)
     """
     try:
         start_date = request.args.get("start")
         end_date = request.args.get("end")
+        semester = request.args.get("semester", type=int)
         
         conn = get_connection()
         conn.row_factory = sqlite3.Row
@@ -333,6 +335,16 @@ def get_sessions():
             WHERE 1=1
         """
         params = []
+        
+        # Apply semester filter if provided
+        if semester in SEMESTER_DATES:
+            sem_config = SEMESTER_DATES[semester]
+            # If no start_date provided, use semester start
+            if not start_date:
+                start_date = sem_config['start']
+            # If no end_date provided, use semester end
+            if not end_date:
+                end_date = sem_config['end']
         
         if start_date:
             query += " AND session_date >= ?"
@@ -699,13 +711,15 @@ def get_events():
             event_time = ev.get("time")
             event_end_time = ev.get("end_time")
             if event_time:
-                start_date = f"{start_date}T{event_time}:00"
+                date_only = start_date.split("T")[0] if "T" in start_date else start_date
+                start_date = f"{date_only}T{event_time}:00"
 
             # For endDate, use end_time if present, otherwise due_date or date
             raw_end = ev.get("due_date") or ev.get("date")
             end_date = safe_iso_date(raw_end)
             if event_end_time and end_date:
-                end_date = f"{end_date}T{event_end_time}:00"
+                date_only = end_date.split("T")[0] if "T" in end_date else end_date
+                end_date = f"{date_only}T{event_end_time}:00"
 
             serialized.append(
                 {
@@ -715,9 +729,12 @@ def get_events():
                     "endDate": end_date,
                     "allDay": False if event_time else True,
                     "eventType": (ev.get("type") or "event").lower(),
-                    "course": c_info.get("code") or c_info.get("name"),
+                    "course": c_info.get("name") or c_info.get("code"),
+                    "courseId": ev.get("course_id"),
                     "color": c_info.get("color") or "#ef4444",
                     "status": ev.get("status", "pending"),
+                    "startTime": event_time,
+                    "endTime": event_end_time,
                 }
             )
 
@@ -831,6 +848,15 @@ def update_event(event_id):
         if "status" in data:
             fields.append("status = ?")
             values.append(data["status"])
+        if "courseId" in data:
+            fields.append("course_id = ?")
+            values.append(data["courseId"])
+        if "startTime" in data:
+            fields.append("time = ?")
+            values.append(data["startTime"])
+        if "endTime" in data:
+            fields.append("end_time = ?")
+            values.append(data["endTime"])
 
         if not fields:
             return jsonify({"success": True, "id": event_id})
@@ -846,7 +872,7 @@ def update_event(event_id):
         conn.commit()
 
         # Return the updated event
-        cur.execute("SELECT id, title, date, type, status FROM course_events WHERE id = ?", (event_id,))
+        cur.execute("SELECT id, title, date, type, status, course_id, time, end_time FROM course_events WHERE id = ?", (event_id,))
         row = cur.fetchone()
         conn.close()
 
@@ -857,6 +883,9 @@ def update_event(event_id):
                 "date": safe_iso_date(row[2]),
                 "eventType": row[3],
                 "status": row[4],
+                "courseId": row[5],
+                "startTime": row[6],
+                "endTime": row[7],
             })
         return jsonify({"success": True, "id": event_id})
     except Exception as e:
@@ -1072,7 +1101,10 @@ def import_syllabus_bulk():
         title = ev.get("title")
         if not ev_type or not title:
             continue
-        if ev_type in {"class", "lecture"} and ev.get("daysOfWeek"):
+        # Only expand if: type is class/lecture, has daysOfWeek, AND does NOT have a specific date
+        # If event has a specific date, it's a one-time event - don't expand even if daysOfWeek is set
+        has_specific_date = ev.get("date") and ev.get("date") != term.get("startDate")
+        if ev_type in {"class", "lecture"} and ev.get("daysOfWeek") and not has_specific_date:
             expanded = _expand_class_meetings(ev, term)
             class_meetings_expanded += max(len(expanded) - 1, 0)
             expanded_events.extend(expanded)
@@ -3068,7 +3100,17 @@ def delete_course(course_id):
         
         print(f"[DELETE] Found course: id={row[0]}, name={row[1]}, position={row[2]}")
         deleted_position = row[2]
-        
+
+        # Delete associated course_events first (cascade cleanup)
+        cur.execute("DELETE FROM course_events WHERE course_id = ?", (course_id,))
+        events_deleted = cur.rowcount
+        print(f"[DELETE] Cascade deleted {events_deleted} course_events")
+
+        # Delete associated modules (cascade cleanup)
+        cur.execute("DELETE FROM modules WHERE course_id = ?", (course_id,))
+        modules_deleted = cur.rowcount
+        print(f"[DELETE] Cascade deleted {modules_deleted} modules")
+
         # Delete the course
         cur.execute("DELETE FROM wheel_courses WHERE id = ?", (course_id,))
         deleted_count = cur.rowcount
@@ -3328,6 +3370,19 @@ def delete_module(module_id):
     try:
         conn = get_connection()
         cur = conn.cursor()
+
+        # Get module name before deleting so we can cascade delete course_events
+        cur.execute("SELECT name, course_id FROM modules WHERE id = ?", (module_id,))
+        row = cur.fetchone()
+        if row:
+            module_name = row[0]
+            course_id = row[1]
+            # Delete course_events that reference this module in raw_text
+            cur.execute("""
+                DELETE FROM course_events
+                WHERE course_id = ? AND raw_text LIKE ?
+            """, (course_id, f'%"moduleName": "{module_name}"%'))
+
         cur.execute("DELETE FROM modules WHERE id = ?", (module_id,))
         conn.commit()
         conn.close()
@@ -3350,6 +3405,19 @@ def bulk_delete_modules():
 
         conn = get_connection()
         cur = conn.cursor()
+
+        # Get module names and course_ids before deleting for cascade cleanup
+        placeholders = ",".join("?" * len(cleaned))
+        cur.execute(f"SELECT name, course_id FROM modules WHERE id IN ({placeholders})", cleaned)
+        modules_to_delete = cur.fetchall()
+
+        # Delete associated course_events for each module
+        for module_name, course_id in modules_to_delete:
+            cur.execute("""
+                DELETE FROM course_events
+                WHERE course_id = ? AND raw_text LIKE ?
+            """, (course_id, f'%"moduleName": "{module_name}"%'))
+
         cur.executemany("DELETE FROM modules WHERE id = ?", [(i,) for i in cleaned])
         conn.commit()
         conn.close()

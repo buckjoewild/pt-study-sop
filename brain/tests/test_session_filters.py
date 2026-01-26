@@ -84,3 +84,51 @@ def test_sessions_malformed_dates_handled_gracefully(client):
     # Should either return 200 with filtered results or 500 with error
     # The important thing is it doesn't crash unexpectedly
     assert response.status_code in [200, 500]
+
+
+def test_sessions_semester_1(client):
+    """Test GET /api/sessions with semester=1 filter (Fall 2025)."""
+    response = client.get('/api/sessions?semester=1')
+    assert response.status_code == 200
+    data = response.get_json()
+    assert isinstance(data, list)
+    # All returned sessions should be within Semester 1 date range
+    for session in data:
+        if 'session_date' in session:
+            assert session['session_date'] >= '2025-08-25'
+            assert session['session_date'] <= '2025-12-12'
+
+
+def test_sessions_semester_2(client):
+    """Test GET /api/sessions with semester=2 filter (Spring 2026)."""
+    response = client.get('/api/sessions?semester=2')
+    assert response.status_code == 200
+    data = response.get_json()
+    assert isinstance(data, list)
+    # All returned sessions should be within Semester 2 date range
+    for session in data:
+        if 'session_date' in session:
+            assert session['session_date'] >= '2026-01-05'
+            assert session['session_date'] <= '2026-04-24'
+
+
+def test_sessions_semester_with_custom_start(client):
+    """Test GET /api/sessions with semester=1 and custom start date."""
+    response = client.get('/api/sessions?semester=1&start=2025-09-01')
+    assert response.status_code == 200
+    data = response.get_json()
+    assert isinstance(data, list)
+    # Custom start date should override semester start; end should still be semester end
+    for session in data:
+        if 'session_date' in session:
+            assert session['session_date'] >= '2025-09-01'
+            assert session['session_date'] <= '2025-12-12'
+
+
+def test_sessions_invalid_semester_ignored(client):
+    """Test that invalid semester values are ignored gracefully."""
+    response = client.get('/api/sessions?semester=99')
+    assert response.status_code == 200
+    data = response.get_json()
+    assert isinstance(data, list)
+    # Invalid semester should be ignored; endpoint should return all sessions

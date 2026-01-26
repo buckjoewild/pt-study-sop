@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { IngestionTab } from "@/components/IngestionTab";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { DataTablesSection } from "@/components/DataTablesSection";
 import {
   Dialog,
   DialogContent,
@@ -117,7 +117,6 @@ export default function Brain() {
     { name: "Neuro", path: "School/Neuroscience" },
     { name: "TI", path: "School/Theraputic Intervention" },
   ];
-  
 
   const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
     queryKey: ["sessions"],
@@ -451,28 +450,33 @@ export default function Brain() {
             </Card>
           </div>
 
-          {/* Data Ingestion Tools (collapsed by default) */}
-          <Accordion type="single" collapsible className="border border-secondary/40 rounded-none">
-            <AccordionItem value="ingestion" className="border-secondary/40">
-              <AccordionTrigger className="font-arcade text-sm text-primary px-4 hover:no-underline">
-                DATA INGESTION TOOLS
-              </AccordionTrigger>
-              <AccordionContent className="px-2">
-                <div className="pt-2">
-                  <IngestionTab />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-
-          {/* Integrations (collapsed by default) */}
-          <Accordion type="single" collapsible className="border border-secondary/40 rounded-none">
-            <AccordionItem value="integrations" className="border-secondary/40">
-              <AccordionTrigger className="font-arcade text-sm text-primary px-4 hover:no-underline">
+          {/* 3 Horizontal Tabs */}
+          <Tabs defaultValue="ingestion" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 rounded-none bg-black border border-secondary/40">
+              <TabsTrigger value="ingestion" className="font-arcade text-xs rounded-none data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+                INGESTION
+              </TabsTrigger>
+              <TabsTrigger value="data" className="font-arcade text-xs rounded-none data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+                DATA
+              </TabsTrigger>
+              <TabsTrigger value="integrations" className="font-arcade text-xs rounded-none data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
                 INTEGRATIONS
-              </AccordionTrigger>
-              <AccordionContent className="px-2">
-                <div className="space-y-4 pt-2 min-w-0">
+              </TabsTrigger>
+            </TabsList>
+
+            {/* INGESTION Tab */}
+            <TabsContent value="ingestion" className="border border-t-0 border-secondary/40 rounded-none">
+              <IngestionTab />
+            </TabsContent>
+
+            {/* DATA Tab */}
+            <TabsContent value="data" className="border border-t-0 border-secondary/40 rounded-none">
+              <DataTablesSection />
+            </TabsContent>
+
+            {/* INTEGRATIONS Tab */}
+            <TabsContent value="integrations" className="border border-t-0 border-secondary/40 rounded-none">
+              <div className="space-y-4 p-4 min-w-0">
                   {/* Obsidian Vault Browser */}
                   <Card className="brain-card rounded-none">
                     <CardHeader className="border-b border-secondary/50 p-3">
@@ -837,158 +841,8 @@ export default function Brain() {
                     </CardContent>
                   </Card>
                 </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-
-            {/* Evidence */}
-            <div className="mb-6 min-w-0">
-              <h2 className="font-arcade text-lg text-primary mb-4">SESSION EVIDENCE</h2>
-              <Card className="brain-card rounded-none">
-                <CardHeader className="border-b border-secondary/60 p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="font-arcade text-sm flex items-center gap-2">
-                        <Database className="w-4 h-4" />
-                        SESSION EVIDENCE TABLE
-                      </CardTitle>
-                      <p className="font-terminal text-xs text-muted-foreground mt-1">
-                        Raw WRAP data. All metrics derive from these fields.
-                      </p>
-                    </div>
-                    {selectedSessions.size > 0 && (
-                      <div className="flex items-center gap-2">
-                        <span className="font-terminal text-xs text-muted-foreground">
-                          {selectedSessions.size} selected
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="font-terminal text-xs rounded-none"
-                          onClick={handleDeleteSelected}
-                          disabled={deleteSessionsMutation.isPending}
-                        >
-                          <Trash2 className="w-3 h-3 mr-1" />
-                          {deleteSessionsMutation.isPending ? "Deleting..." : "Delete"}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  {sessionsLoading ? (
-                    <div className="p-8 text-center font-terminal text-muted-foreground">LOADING...</div>
-                  ) : sessions.length === 0 ? (
-                    <div className="p-8 text-center font-terminal text-muted-foreground">NO SESSIONS YET</div>
-                  ) : (
-                    <ScrollArea className="h-[360px] xl:h-[420px]">
-                      <div className="overflow-x-auto">
-                        <Table className="min-w-[620px]">
-                          <TableHeader>
-                            <TableRow className="border-secondary/60 hover:bg-transparent">
-                              <TableHead className="w-10 px-2 py-2">
-                                <Checkbox
-                                  checked={selectedSessions.size === sessions.length && sessions.length > 0}
-                                  onCheckedChange={toggleAllSessions}
-                                  className="border-primary data-[state=checked]:bg-primary"
-                                />
-                              </TableHead>
-                              <TableHead className="font-arcade text-[10px] text-primary px-2 py-2">DATE</TableHead>
-                              <TableHead className="font-arcade text-[10px] text-primary px-2 py-2">COURSE</TableHead>
-                              <TableHead className="font-arcade text-[10px] text-primary px-2 py-2">MODE</TableHead>
-                              <TableHead className="font-arcade text-[10px] text-primary px-2 py-2">MIN</TableHead>
-                              <TableHead className="font-arcade text-[10px] text-primary px-2 py-2">CARDS</TableHead>
-                              <TableHead className="font-arcade text-[10px] text-primary px-2 py-2">CONFUSIONS</TableHead>
-                              <TableHead className="font-arcade text-[10px] text-primary w-10 px-2 py-2">ACTIONS</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {sessions.map((session) => (
-                              <TableRow key={session.id} className="border-secondary/50 hover:bg-primary/10 font-terminal text-xs" data-testid={`row-session-${session.id}`}>
-                                <TableCell className="px-2 py-2">
-                                  <Checkbox
-                                    checked={selectedSessions.has(session.id)}
-                                    onCheckedChange={() => toggleSessionSelection(session.id)}
-                                    className="border-secondary data-[state=checked]:bg-primary"
-                                  />
-                                </TableCell>
-                                <TableCell className="text-muted-foreground px-2 py-2">
-                                  {safeFormatDate(session.date)}
-                                </TableCell>
-                                <TableCell className="font-bold px-2 py-2">{session.topic || '-'}</TableCell>
-                                <TableCell className="px-2 py-2">
-                                  <Badge variant="outline" className="rounded-none border-secondary font-normal text-[10px]">{session.mode}</Badge>
-                                </TableCell>
-                                <TableCell className="px-2 py-2">{session.minutes || 0}</TableCell>
-                                <TableCell className="px-2 py-2">{session.cards || 0}</TableCell>
-                                <TableCell className="max-w-[150px] truncate text-[10px] text-muted-foreground px-2 py-2">
-                                  {parseStringArray(session.confusions).join(", ") || "-"}
-                                </TableCell>
-                                <TableCell className="px-2 py-2">
-                                  <div className="flex gap-1">
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="h-6 w-6 rounded-none hover:bg-primary/20"
-                                      onClick={() => setEditingSession(session.id)}
-                                      title="Edit session"
-                                    >
-                                      <Pencil className="w-3 h-3" />
-                                    </Button>
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="h-6 w-6 rounded-none hover:bg-destructive/20 text-destructive"
-                                      onClick={() => handleDeleteSingle(session.id)}
-                                      title="Delete session"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                    </Button>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </ScrollArea>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Issues Log */}
-            <div className="mb-6">
-              <h2 className="font-arcade text-lg text-primary mb-4">ISSUES LOG</h2>
-                <Card className="brain-card rounded-none">
-                  <CardHeader className="border-b border-secondary p-4">
-                    <CardTitle className="font-arcade text-sm flex items-center gap-2 text-red-400">
-                      <AlertTriangle className="w-4 h-4" />
-                      ISSUES AND FAILURES LOG
-                    </CardTitle>
-                    <p className="font-terminal text-xs text-muted-foreground mt-1">
-                      Aggregated session issues: interruptions, source-lock failures, workflow problems
-                    </p>
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    {(metrics?.issuesLog || []).length === 0 ? (
-                      <div className="text-center font-terminal text-muted-foreground py-8">NO ISSUES LOGGED</div>
-                    ) : (
-                      <div className="space-y-2">
-                        {metrics?.issuesLog.map((item, i) => (
-                          <div key={i} className="flex items-center justify-between p-2 border border-red-500/30 bg-red-500/5 font-terminal text-sm">
-                            <span className="text-red-300">{item.issue}</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-muted-foreground text-xs">{item.course}</span>
-                              <Badge variant="outline" className="rounded-none border-red-500/50 text-red-400">x{item.count}</Badge>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-            </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
 

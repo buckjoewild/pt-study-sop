@@ -753,7 +753,7 @@ M7 (Scholar Loop) → M8 (Calendar NL) → M9 (Integration Test)
 
 ### PR-M8: Calendar NL LLM Control
 
-- [ ] 20. Implement NL → change plan parser
+- [x] 20. Implement NL → change plan parser
 
   **What to do**:
   - Add LLM function to parse natural language into calendar operations

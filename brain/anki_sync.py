@@ -408,6 +408,69 @@ def update_card_status(
     return True
 
 
+def calculate_confidence_score(
+    front: str,
+    back: str,
+    source_citation: Optional[str] = None,
+    tags: Optional[str] = None,
+) -> float:
+    """
+    Calculate confidence score for a card draft based on quality indicators.
+    
+    Scoring criteria:
+    - Source citation present: +0.3
+    - Front completeness (>10 chars, has question mark or colon): +0.2
+    - Back completeness (>20 chars, multiple sentences): +0.3
+    - Specificity (numbers, proper nouns, technical terms): +0.2
+    
+    Args:
+        front: Card front text
+        back: Card back text
+        source_citation: Optional source reference
+        tags: Optional comma-separated tags
+        
+    Returns:
+        Confidence score between 0.0 and 1.0
+    """
+    score = 0.0
+    
+    # Source citation (+0.3)
+    if source_citation and source_citation.strip():
+        score += 0.3
+    
+    # Front completeness (+0.2)
+    front_clean = front.strip()
+    if len(front_clean) > 10:
+        score += 0.1
+    if '?' in front_clean or ':' in front_clean:
+        score += 0.1
+    
+    # Back completeness (+0.3)
+    back_clean = back.strip()
+    if len(back_clean) > 20:
+        score += 0.15
+    # Multiple sentences (periods, semicolons)
+    if back_clean.count('.') >= 1 or back_clean.count(';') >= 1:
+        score += 0.15
+    
+    # Specificity indicators (+0.2)
+    specificity_score = 0.0
+    # Numbers present
+    if any(char.isdigit() for char in back_clean):
+        specificity_score += 0.07
+    # Capital letters (proper nouns, acronyms)
+    capitals = sum(1 for char in back_clean if char.isupper())
+    if capitals >= 2:
+        specificity_score += 0.07
+    # Technical terms (parentheses, hyphens, slashes)
+    if '(' in back_clean or '-' in back_clean or '/' in back_clean:
+        specificity_score += 0.06
+    
+    score += min(specificity_score, 0.2)
+    
+    return min(score, 1.0)
+
+
 def create_card_draft(
     front: str,
     back: str,
@@ -418,6 +481,7 @@ def create_card_draft(
     topic_id: Optional[int] = None,
     course_id: Optional[int] = None,
     status: str = "draft",
+    source_citation: Optional[str] = None,
 ) -> Optional[int]:
     """
     Create a new card draft in the database.
@@ -429,11 +493,19 @@ def create_card_draft(
     cursor = conn.cursor()
     now = datetime.now().isoformat(timespec="seconds")
     
+    confidence = calculate_confidence_score(front, back, source_citation, tags)
+    
+    if status == "draft":
+        if confidence >= 0.8:
+            status = "high_confidence"
+        elif confidence < 0.5:
+            status = "low_confidence"
+    
     cursor.execute("""
         INSERT INTO card_drafts 
-        (session_id, topic_id, course_id, deck_name, card_type, front, back, tags, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (session_id, topic_id, course_id, deck_name, card_type, front, back, tags, status, now))
+        (session_id, topic_id, course_id, deck_name, card_type, front, back, tags, source_citation, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (session_id, topic_id, course_id, deck_name, card_type, front, back, tags, source_citation, status, now))
     
     card_id = cursor.lastrowid
     conn.commit()

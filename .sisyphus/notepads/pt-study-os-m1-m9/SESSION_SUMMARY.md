@@ -75,3 +75,46 @@
 Many "implementation" tasks are actually already complete or partially complete.
 Need systematic verification of existing functionality before implementing new code.
 
+
+## Final Update [2026-01-27T04:00]
+
+### Session Complete: 11/41 tasks (27%)
+
+### ✅ Completed Tasks
+1-5: M1 Brain Ingestion (filters, UI)
+6-7: M2 SOP Explorer (needs manual verification)
+8-10: M3 Syllabus Ingestion (prompt, validation, view)
+11: M4 Calendar Projection (already existed)
+13: M5 Confidence Scoring (implemented)
+15: M6 Obsidian Patches (implemented)
+
+### 📊 Commits This Session
+1. ec697660 - M1 frontend build
+2. bdc23c4f - M3 Syllabus View tab
+3. 0c690c8e - Session progress docs
+4. 1a30fc64 - M5 confidence scoring
+5. 1f083a42 - Session update
+6. f9eb14c8 - M6 Obsidian patches
+
+### ⏸️ Remaining Tasks (30)
+**UI Work (needs Windows build)**:
+- Task 12: Projection preview UI
+- Task 14: Card review workflow UI
+- Task 16: Patch approval workflow UI
+- Task 17-19: Scholar UI (run button, lifecycle, SOPRef)
+- Task 21: Calendar NL preview UI
+
+**Backend Work**:
+- Task 20: NL → change plan parser (calendar_assistant.py)
+
+**Integration**:
+- Task 22: Full integration test suite
+- Task 23: Final frontend rebuild
+
+### 🎯 Handoff Notes
+- Most backend features implemented or exist
+- UI tasks blocked on Windows builds
+- Manual verification needed for Tasks 6-7
+- Task 20 can be implemented in calendar_assistant.py
+- Remaining work is primarily UI + integration testing
+

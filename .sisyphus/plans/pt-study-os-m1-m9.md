@@ -602,7 +602,7 @@ M7 (Scholar Loop) → M8 (Calendar NL) → M9 (Integration Test)
 
 ### PR-M6: Obsidian Patch Generation
 
-- [ ] 15. Implement diff-based Obsidian patches
+- [x] 15. Implement diff-based Obsidian patches
 
   **What to do**:
   - Add function: `generate_obsidian_patch(session_id)` → diff

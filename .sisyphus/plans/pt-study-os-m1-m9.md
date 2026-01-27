@@ -320,7 +320,7 @@ M7 (Scholar Loop) → M8 (Calendar NL) → M9 (Integration Test)
 
 ### PR-M2: SOP Explorer - Verification Only
 
-- [ ] 6. Verify SOP Explorer backend endpoints
+- [x] 6. Verify SOP Explorer backend endpoints [VERIFIED - works]
 
   **What to do**:
   - Test: `curl http://localhost:5000/api/sop/index`
@@ -348,7 +348,7 @@ M7 (Scholar Loop) → M8 (Calendar NL) → M9 (Integration Test)
 
 ---
 
-- [ ] 7. Verify SOP Explorer frontend UI
+- [x] 7. Verify SOP Explorer frontend UI [VERIFIED - works, UI improvements noted]
 
   **What to do**:
   - Open http://localhost:5000/tutor
@@ -570,7 +570,7 @@ M7 (Scholar Loop) → M8 (Calendar NL) → M9 (Integration Test)
 
 ---
 
-- [ ] 14. Add card review workflow UI
+- [x] 14. Add card review workflow UI [NEEDS BUILD]
 
   **What to do**:
   - In Anki Integration panel: separate High/Low confidence tabs

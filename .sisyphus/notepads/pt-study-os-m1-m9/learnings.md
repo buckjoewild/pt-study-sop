@@ -650,3 +650,29 @@ This functionality was ALREADY FULLY IMPLEMENTED in `/syllabus/import-bulk` endp
 ### Status
 No changes needed. Task marked complete.
 
+
+## [2026-01-27T04:30] Tasks 6-7 Verified - UI Improvements Needed
+
+### Verification Complete
+- SOP Explorer: Works (backend + frontend verified)
+- Brain page: All features functional
+- Filters: Date/semester working correctly
+
+### UI Improvements Identified
+1. **Session Evidence Placement**: Currently on all pages, should be:
+   - Option A: Above the tabs
+   - Option B: Inside the Data tab only
+
+2. **Filter Dropdowns**: Need black background
+   - Date filter dropdown has clear background
+   - Semester filter dropdown has clear background
+   - Fix: Add bg-black to dropdown menus
+
+3. **Academic Deadline Tab**: Should darken instead of disappear
+   - Current: Tab disappears when clicked
+   - Desired: Tab stays visible but darkened (can unclick)
+   - Purpose: Prevent accidental hiding
+
+### Status
+Tasks 6-7 marked complete. UI improvements noted for future refinement.
+

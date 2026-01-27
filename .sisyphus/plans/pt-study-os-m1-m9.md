@@ -440,7 +440,7 @@ M7 (Scholar Loop) → M8 (Calendar NL) → M9 (Integration Test)
 
 ---
 
-- [ ] 10. Add syllabus dashboard view (by week/module)
+- [x] 10. Add syllabus dashboard view (by week/module)
 
   **What to do**:
   - New tab on Brain page: "Syllabus View"

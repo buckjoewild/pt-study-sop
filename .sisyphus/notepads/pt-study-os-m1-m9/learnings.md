@@ -539,3 +539,73 @@ No changes needed. Task marked complete.
 ### Status
 ✅ COMPLETE - JSON validation preview fully implemented and tested
 
+
+## [2026-01-27T03:30] Task 10 - Syllabus View Tab Implementation
+
+### Changes Made
+- File 1: `dashboard_rebuild/client/src/pages/brain.tsx`
+  - Changed TabsList grid from `grid-cols-3` to `grid-cols-4` (line 482)
+  - Added 4th TabsTrigger for "SYLLABUS VIEW" (lines 489-491)
+  - Added TabsContent for syllabus tab (lines 876-879)
+  - Added import for SyllabusViewTab component (line 20)
+
+- File 2: `dashboard_rebuild/client/src/components/SyllabusViewTab.tsx` (NEW)
+  - Created new component with course selector dropdown
+  - Fetches modules, learning objectives, and schedule events for selected course
+  - Groups modules by week (orderIndex)
+  - Groups objectives by moduleId
+  - Groups events by linkedModuleId (not moduleId)
+  - Displays modules organized by week with nested objectives and events
+  - Shows empty state: "No syllabus imported" when no data exists
+  - Uses existing styling: border-secondary/40, font-arcade, font-terminal, rounded-none
+
+### Implementation Details
+
+**Course Selector:**
+- Fetches courses from `/api/courses`
+- Dropdown allows selecting a course
+- Dependent queries only run when courseId is selected
+
+**Data Queries:**
+- `api.modules.getByCourse(courseId)` - modules for course
+- `api.learningObjectives.getByCourse(courseId)` - objectives for course
+- `api.scheduleEvents.getByCourse(courseId)` - events for course
+
+**Display Structure:**
+- Modules grouped by week (orderIndex)
+- Each module shows:
+  - Module name (font-arcade, text-primary)
+  - Learning objectives nested under module (loCode: title format)
+  - Associated events (quiz/exam badges with dates)
+- Events color-coded: yellow for quiz, red for exam, blue for other
+
+**Empty States:**
+- No course selected: "Select a course to view syllabus"
+- Loading: "Loading syllabus..."
+- No data: "No syllabus imported"
+
+### API Integration
+- Uses existing endpoints from api.ts
+- No new backend endpoints required
+- Leverages linkedModuleId field on ScheduleEvent (not moduleId)
+
+### TypeScript Status
+- ✅ No new TypeScript errors introduced
+- Pre-existing error in DataTablesSection.tsx (unrelated)
+- All types properly imported from @shared/schema
+
+### Files Modified
+1. `dashboard_rebuild/client/src/pages/brain.tsx` - Added 4th tab + import
+2. `dashboard_rebuild/client/src/components/SyllabusViewTab.tsx` - NEW component
+
+### Verification
+- ✅ npm run check passes (only pre-existing error in DataTablesSection.tsx)
+- ✅ TabsList updated to 4 columns
+- ✅ SYLLABUS VIEW tab trigger added with proper styling
+- ✅ TabsContent renders SyllabusViewTab component
+- ✅ Component fetches and displays data correctly
+- ✅ Empty state shows "No syllabus imported"
+
+### Status
+✅ COMPLETE - Syllabus View tab fully implemented and integrated
+

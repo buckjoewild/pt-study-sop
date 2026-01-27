@@ -64,3 +64,26 @@ Tasks 6 and 7 require testing Flask API endpoints, but Flask is running on Windo
 - Test SOP Explorer manually
 - Verify acceptance criteria from plan
 
+
+## [2026-01-27T03:30] Task 10 - Windows Build Required
+
+### Problem
+Task 10 frontend changes complete but require Windows PowerShell build to deploy.
+
+### Changes Made
+- Added SyllabusViewTab component (dashboard_rebuild/client/src/components/SyllabusViewTab.tsx)
+- Added import to brain.tsx
+- Fixed TypeScript error: moduleId -> linkedModuleId
+- Commit: bdc23c4f
+
+### Required Action (User)
+```powershell
+cd C:\pt-study-sop\dashboard_rebuild
+npm run build
+robocopy dist\public ..\brain\static\dist /E
+```
+
+### Impact
+- Cannot verify Task 10 in browser until build complete
+- Moving to Task 11 (backend work, no build required)
+

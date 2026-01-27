@@ -163,4 +163,4 @@
  -   2 0 2 6 - 0 1 - 2 6   1 4 : 1 4 : 2 3 :   R e b u i l t   d a s h b o a r d _ r e b u i l d   a n d   c o p i e d   d i s t / p u b l i c   t o   b r a i n / s t a t i c / d i s t   f o r   c a l e n d a r   M a n a g e   o r d e r i n g   +   s e l e c t i o n - o n l y   f i l t e r i n g .  
  - 2026-01-26 15:07:33: Backed up uncommitted files to _codex_backups and reverted Brain session filter/query UI changes in dashboard_rebuild/client/src/pages/brain.tsx.
 -   2 0 2 6 - 0 1 - 2 6   1 5 : 1 0 : 0 2 :   U p d a t e d   A G E N T S . m d   t o   r e q u i r e   a   g i t   c o m m i t   a f t e r   c h a n g e s ;   s y n c e d   m i r r o r s .  
- 
+ - 2026-01-26 21:11:43: Rebuilt dashboard_rebuild and copied dist/public to brain/static/dist for updated Brain UI.

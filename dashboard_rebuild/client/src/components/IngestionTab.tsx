@@ -284,8 +284,30 @@ export function IngestionTab() {
 
   return (
     <div className="space-y-6 p-4">
+      {/* Global Course Selector */}
+      <div>
+        <label className="block text-sm mb-1 font-terminal text-muted-foreground">Select Course</label>
+        <select
+          className="w-full bg-black border border-secondary rounded-none p-2 font-terminal"
+          value={selectedCourseId || ""}
+          onChange={(e) => {
+            setSelectedCourseId(e.target.value ? parseInt(e.target.value) : null);
+            setSelectedModuleId(null);
+          }}
+        >
+          <option value="">-- Select Course --</option>
+          {courses.map((c: Course) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {!selectedCourseId && (
+        <p className="text-center text-muted-foreground font-terminal text-sm py-8">Select a course above to begin ingestion.</p>
+      )}
+
       {/* WRAP SESSION INGESTION - First and prominent */}
-      <div className="border border-secondary/40 rounded-none p-4 bg-primary/5">
+      {selectedCourseId && <div className="border border-secondary/40 rounded-none p-4 bg-primary/5">
         <h2 className="text-xl font-arcade text-primary mb-4">WRAP SESSION INGESTION</h2>
 
         {wrapStatus && (
@@ -334,26 +356,10 @@ export function IngestionTab() {
             INGEST WRAP SESSION
           </button>
         </div>
-      </div>
+      </div>}
 
+      {selectedCourseId && <>
       <h2 className="text-xl font-arcade text-primary">MATERIAL INGESTION</h2>
-
-      <div>
-        <label className="block text-sm mb-1 font-terminal text-muted-foreground">Select Course</label>
-        <select
-          className="w-full bg-black border border-secondary rounded-none p-2 font-terminal"
-          value={selectedCourseId || ""}
-          onChange={(e) => {
-            setSelectedCourseId(e.target.value ? parseInt(e.target.value) : null);
-            setSelectedModuleId(null);
-          }}
-        >
-          <option value="">-- Select Course --</option>
-          {courses.map((c: Course) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-      </div>
 
       {importError && (
         <div className="bg-destructive/20 border border-destructive rounded-none p-3 text-destructive font-terminal">
@@ -504,6 +510,7 @@ export function IngestionTab() {
           </AccordionItem>
         </Accordion>
       )}
+      </>}
     </div>
   );
 }

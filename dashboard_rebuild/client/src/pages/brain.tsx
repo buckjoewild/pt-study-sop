@@ -95,6 +95,7 @@ export default function Brain() {
 
    // Filter state for Session Evidence
    const [semesterFilter, setSemesterFilter] = useState<string>("all");
+   const [courseFilter, setCourseFilter] = useState<string>("all");
    const [startDate, setStartDate] = useState<string>("");
    const [endDate, setEndDate] = useState<string>("");
 
@@ -136,6 +137,11 @@ export default function Brain() {
      setStartDate(start);
      setEndDate(end);
    }, []);
+
+    const { data: courses = [] } = useQuery({
+      queryKey: ["courses"],
+      queryFn: () => api.courses.getActive(),
+    });
 
     const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
       queryKey: ["sessions", semesterFilter, startDate, endDate],
@@ -889,7 +895,7 @@ export default function Brain() {
              <Card className="brain-card rounded-none">
                <CardContent className="p-4 space-y-4">
                  {/* Date and Semester Filters */}
-                 <div className="grid grid-cols-4 gap-4 mb-4">
+                 <div className="grid grid-cols-5 gap-4 mb-4">
                    <div>
                      <label className="text-sm font-arcade text-primary mb-2 block">Semester</label>
                      <Select
@@ -905,10 +911,27 @@ export default function Brain() {
                        <SelectTrigger className="rounded-none border-primary">
                          <SelectValue />
                        </SelectTrigger>
-                       <SelectContent>
+                       <SelectContent className="bg-black border-primary">
                          <SelectItem value="all">All</SelectItem>
                          <SelectItem value="1">Semester 1 (Fall 2025)</SelectItem>
                          <SelectItem value="2">Semester 2 (Spring 2026)</SelectItem>
+                       </SelectContent>
+                     </Select>
+                   </div>
+                   <div>
+                     <label className="text-sm font-arcade text-primary mb-2 block">Course</label>
+                     <Select
+                       value={courseFilter}
+                       onValueChange={(value) => setCourseFilter(value)}
+                     >
+                       <SelectTrigger className="rounded-none border-primary">
+                         <SelectValue />
+                       </SelectTrigger>
+                       <SelectContent className="bg-black border-primary">
+                         <SelectItem value="all">All</SelectItem>
+                         {courses.map((c: any) => (
+                           <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                         ))}
                        </SelectContent>
                      </Select>
                    </div>
@@ -947,6 +970,7 @@ export default function Brain() {
                        variant="outline"
                        onClick={() => {
                          setSemesterFilter("all");
+                         setCourseFilter("all");
                          setStartDate("");
                          setEndDate("");
                          window.history.replaceState({}, "", window.location.pathname);
@@ -980,6 +1004,7 @@ export default function Brain() {
                              />
                            </TableHead>
                            <TableHead className="font-arcade text-xs text-primary">Date</TableHead>
+                           <TableHead className="font-arcade text-xs text-primary">Course</TableHead>
                            <TableHead className="font-arcade text-xs text-primary">Mode</TableHead>
                            <TableHead className="font-arcade text-xs text-primary">Minutes</TableHead>
                            <TableHead className="font-arcade text-xs text-primary">Cards</TableHead>
@@ -988,7 +1013,7 @@ export default function Brain() {
                          </TableRow>
                        </TableHeader>
                        <TableBody>
-                         {sessions.map((session: any) => (
+                         {sessions.filter((s: any) => courseFilter === "all" || String(s.courseId) === courseFilter).map((session: any) => (
                            <TableRow key={session.id} className="border-secondary/30 hover:bg-secondary/10">
                              <TableCell>
                                <Checkbox
@@ -999,6 +1024,9 @@ export default function Brain() {
                              </TableCell>
                              <TableCell className="font-terminal text-xs">
                                {safeFormatDate(session.createdAt, "MMM dd, yyyy")}
+                             </TableCell>
+                             <TableCell className="font-terminal text-xs text-muted-foreground">
+                               {session.topic || "-"}
                              </TableCell>
                              <TableCell className="font-terminal text-xs text-muted-foreground">
                                {session.mode || "-"}

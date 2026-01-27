@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Send, Image, ChevronDown, ChevronUp, X, Loader2, BrainCircuit, MessageSquare } from "lucide-react";
+import { Send, Image, ChevronDown, ChevronUp, X, Loader2, Layers, BrainCircuit, MessageSquare, BookOpen } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
 interface ChatMessage {
@@ -32,8 +33,10 @@ export function BrainChat() {
   const [input, setInput] = useState("");
   const [pendingImages, setPendingImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [ingestTarget, setIngestTarget] = useState<"anki" | "obsidian" | "both">("anki");
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
 
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
@@ -75,7 +78,6 @@ export function BrainChat() {
   };
 
   const sendChat = async (text: string, images: string[]) => {
-    // Add empty assistant message to stream into
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
     const apiMessages = messages
@@ -131,20 +133,27 @@ export function BrainChat() {
 
   const sendIngest = async (text: string) => {
     try {
-      const res = await api.brain.chat(text, false, "all");
+      const backendMode = ingestTarget === "both" ? "all" : ingestTarget;
+      const sync = ingestTarget === "obsidian" || ingestTarget === "both";
+      const res = await api.brain.chat(text, sync, backendMode);
       let summary = res.response;
       const meta: ChatMessage["meta"] = {
         cardsCreated: res.cardsCreated,
         sessionSaved: res.sessionSaved,
         sessionId: res.sessionId,
       };
-      // Build a concise status line
       const parts: string[] = [];
       if (res.sessionSaved) parts.push(`Session saved (ID: ${res.sessionId})`);
       if (res.cardsCreated) parts.push(`${res.cardsCreated} Anki cards created`);
       if (res.obsidianSynced) parts.push("Synced to Obsidian");
+      if (res.obsidianError) parts.push(`Obsidian error: ${res.obsidianError}`);
       if (parts.length > 0) summary = `${parts.join(" | ")}\n\n${summary}`;
       setMessages((prev) => [...prev, { role: "assistant", content: summary, meta }]);
+
+      // Invalidate queries so Brain page cards refresh
+      queryClient.invalidateQueries({ queryKey: ["anki", "drafts"] });
+      queryClient.invalidateQueries({ queryKey: ["brain", "metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
     } catch (err) {
       setMessages((prev) => [...prev, { role: "assistant", content: `Error: ${err}` }]);
     }
@@ -230,13 +239,30 @@ export function BrainChat() {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        {/* Mode description */}
-        <div className="px-4 py-1 border-b border-border">
+        {/* Mode description + Obsidian toggle */}
+        <div className="px-4 py-1 border-b border-border flex items-center justify-between">
           <p className="text-[10px] text-muted-foreground">
             {mode === "chat"
-              ? "General chat with Kimi K2.5 — ask anything, paste screenshots"
-              : "Study ingestion — paste study notes to create Anki cards & save sessions"}
+              ? "General chat with Gemini Flash — ask anything, paste screenshots"
+              : "Study ingestion — paste notes to create Anki cards & save sessions"}
           </p>
+          {mode === "ingest" && (
+            <div className="flex bg-secondary/40 border border-secondary/60 rounded overflow-hidden">
+              {(["anki", "obsidian", "both"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setIngestTarget(t)}
+                  className={`flex items-center gap-1 px-2 py-0.5 text-[10px] transition-colors ${
+                    ingestTarget === t ? "bg-primary/30 text-primary" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {t === "anki" && <><Layers className="w-3 h-3" /> ANKI</>}
+                  {t === "obsidian" && <><BookOpen className="w-3 h-3" /> OBSIDIAN</>}
+                  {t === "both" && <>BOTH</>}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Messages */}
@@ -244,7 +270,7 @@ export function BrainChat() {
           {messages.length === 0 && (
             <p className="text-muted-foreground text-xs text-center py-8">
               {mode === "chat"
-                ? "Ask Kimi anything. Paste screenshots with Ctrl+V."
+                ? "Ask anything. Paste screenshots with Ctrl+V."
                 : "Paste your study notes to ingest into Brain."}
             </p>
           )}
@@ -315,7 +341,7 @@ export function BrainChat() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
-            placeholder={mode === "chat" ? "Ask Kimi... (Ctrl+V to paste images)" : "Paste study notes to ingest..."}
+            placeholder={mode === "chat" ? "Ask anything... (Ctrl+V to paste images)" : "Paste study notes to ingest..."}
             rows={mode === "ingest" ? 3 : 1}
             className="flex-1 bg-transparent border border-input rounded px-3 py-1.5 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring"
           />

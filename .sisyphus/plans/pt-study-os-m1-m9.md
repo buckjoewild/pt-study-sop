@@ -864,7 +864,7 @@ M7 (Scholar Loop) → M8 (Calendar NL) → M9 (Integration Test)
   - [x] Build succeeds [Completed by user at 21:48, 789 assets deployed]
   - [ ] All pages load correctly [BLOCKED - requires Flask server + browser]
   - [ ] No console errors [BLOCKED - requires browser]
-  - [ ] Git tag created [PENDING - awaiting full verification]
+  - [x] Git tag created [COMPLETE - v1.0-m1-m9 created with full release notes]
 
   **Commit**: YES
   - Hash: 688085fb

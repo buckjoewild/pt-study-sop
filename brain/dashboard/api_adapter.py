@@ -1064,6 +1064,9 @@ def import_syllabus_bulk():
     _ensure_academic_deadlines_table(cur)
     cur.execute("SELECT name FROM courses WHERE id = ?", (course_id,))
     course_row = cur.fetchone()
+    if not course_row or not course_row[0]:
+        cur.execute("SELECT name FROM wheel_courses WHERE id = ?", (course_id,))
+        course_row = cur.fetchone()
     course_name = course_row[0] if course_row and course_row[0] else str(course_id)
 
     cur.execute("SELECT name FROM modules WHERE course_id = ?", (course_id,))
@@ -5794,14 +5797,32 @@ def get_academic_deadlines():
             ORDER BY due_date ASC
         """)
         rows = cur.fetchall()
+
+        # Build a lookup for numeric course IDs -> course names
+        _course_name_cache: dict = {}
+        numeric_ids = set()
+        for r in rows:
+            if r[2] and r[2].isdigit():
+                numeric_ids.add(int(r[2]))
+        for cid in numeric_ids:
+            cur.execute("SELECT name FROM wheel_courses WHERE id = ?", (cid,))
+            row = cur.fetchone()
+            if not row:
+                cur.execute("SELECT name FROM courses WHERE id = ?", (cid,))
+                row = cur.fetchone()
+            _course_name_cache[cid] = row[0] if row and row[0] else str(cid)
+
         conn.close()
-        
+
         deadlines = []
         for r in rows:
+            course_val = r[2] or ""
+            if course_val.isdigit():
+                course_val = _course_name_cache.get(int(course_val), course_val)
             deadlines.append({
                 "id": r[0],
                 "title": r[1],
-                "course": r[2],
+                "course": course_val,
                 "type": r[3],
                 "dueDate": r[4],
                 "completed": bool(r[5]),

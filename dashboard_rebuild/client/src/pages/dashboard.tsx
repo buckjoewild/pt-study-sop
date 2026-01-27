@@ -2,7 +2,6 @@ import Layout from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Flame, Clock, BookOpen, AlertTriangle, Play, Check, Plus, Pencil, Trash2, Calendar, CheckCircle2, Circle, GraduationCap, ChevronLeft, ChevronRight, ListTodo } from "lucide-react";
@@ -26,7 +25,7 @@ export default function Dashboard() {
   const [editingCourse, setEditingCourse] = useState<{ id: number; name: string } | null>(null);
   const [editCourseName, setEditCourseName] = useState("");
   const [courseToDelete, setCourseToDelete] = useState<{ id: number; name: string } | null>(null);
-  
+
   // Google Tasks state
   const [currentTaskListIndex, setCurrentTaskListIndex] = useState(0);
   const [taskListInitialized, setTaskListInitialized] = useState(false);
@@ -36,9 +35,10 @@ export default function Dashboard() {
   const [editTaskNotes, setEditTaskNotes] = useState("");
   const [editTaskDue, setEditTaskDue] = useState("");
   const [editTaskDeadlineType, setEditTaskDeadlineType] = useState<"none" | "assignment" | "quiz" | "exam">("none");
-  
+
   // Academic deadlines state
   const [showAddDeadline, setShowAddDeadline] = useState(false);
+  const [deadlineCourseFilter, setDeadlineCourseFilter] = useState("all");
   const [newDeadline, setNewDeadline] = useState<InsertAcademicDeadline>({
     title: "",
     course: "",
@@ -173,7 +173,7 @@ export default function Dashboard() {
   });
 
   const createGoogleTaskMutation = useMutation({
-    mutationFn: (vars: { listId: string; title: string }) => 
+    mutationFn: (vars: { listId: string; title: string }) =>
       api.googleTasks.create(vars.listId, { title: vars.title, status: 'needsAction' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["google-tasks"] });
@@ -182,7 +182,7 @@ export default function Dashboard() {
   });
 
   const updateGoogleTaskMutation = useMutation({
-    mutationFn: (vars: { task: GoogleTask; data: { title?: string; notes?: string; due?: string } }) => 
+    mutationFn: (vars: { task: GoogleTask; data: { title?: string; notes?: string; due?: string } }) =>
       api.googleTasks.update(vars.task.id, vars.task.listId, vars.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["google-tasks"] });
@@ -299,15 +299,34 @@ export default function Dashboard() {
     }
   };
 
-  // Sort deadlines by due date, incomplete first
-  const sortedDeadlines = [...academicDeadlines].sort((a, b) => {
-    if (a.completed !== b.completed) return a.completed ? 1 : -1;
-    return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-  });
+  // Build a map of course ID -> name for resolving numeric course values
+  const courseIdToName: Record<string, string> = {};
+  courses.forEach(c => { courseIdToName[String(c.id)] = c.name; });
+
+  // Resolve course field: if numeric, look up the name from wheel courses
+  const resolveCourse = (val: string): string => {
+    if (!val) return "";
+    if (/^\d+$/.test(val)) return courseIdToName[val] || "";
+    return val;
+  };
+
+  // Unique course names from deadlines + study wheel courses
+  const deadlineCourseNames = [...new Set([
+    ...academicDeadlines.map(d => resolveCourse(d.course)).filter(Boolean),
+    ...courses.map(c => c.name),
+  ])].sort();
+
+  // Sort deadlines by due date, incomplete first, then filter by course
+  const sortedDeadlines = [...academicDeadlines]
+    .filter(d => deadlineCourseFilter === "all" || resolveCourse(d.course) === deadlineCourseFilter)
+    .sort((a, b) => {
+      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    });
 
   // Get current task list and its tasks
   const currentTaskList = googleTaskLists[currentTaskListIndex];
-  const currentListTasks = currentTaskList 
+  const currentListTasks = currentTaskList
     ? allGoogleTasks.filter((t: GoogleTask) => t.listId === currentTaskList.id)
     : [];
   const incompleteTasks = currentListTasks.filter((t: GoogleTask) => t.status !== 'completed');
@@ -320,17 +339,15 @@ export default function Dashboard() {
 
   const handleEditTask = () => {
     if (!editingTask || !editTaskTitle.trim()) return;
-    
-    // Update the task
+
     const updateData: { title?: string; notes?: string; due?: string } = {
       title: editTaskTitle.trim(),
     };
     if (editTaskNotes) updateData.notes = editTaskNotes;
     if (editTaskDue) updateData.due = new Date(editTaskDue).toISOString();
-    
+
     updateGoogleTaskMutation.mutate({ task: editingTask, data: updateData });
-    
-    // If a deadline type is selected, also create an academic deadline
+
     if (editTaskDeadlineType !== "none" && editTaskDue) {
       createDeadlineMutation.mutate({
         title: editTaskTitle.trim(),
@@ -346,12 +363,10 @@ export default function Dashboard() {
     setEditingTask(task);
     setEditTaskTitle(task.title);
     setEditTaskNotes(task.notes || "");
-    // Parse due date from ISO to YYYY-MM-DD for input
     setEditTaskDue(task.due ? task.due.split('T')[0] : "");
     setEditTaskDeadlineType("none");
   };
 
-  // Format due date for display
   const formatTaskDue = (due?: string) => {
     if (!due) return null;
     const date = new Date(due);
@@ -365,27 +380,25 @@ export default function Dashboard() {
   return (
     <Layout>
       <div className="space-y-6 max-w-5xl mx-auto">
-        {/* Header: Title + Streak */}
-        <div className="flex items-center justify-between">
-          <h1 className="font-arcade text-xl text-primary">STUDY_CONTROL</h1>
-          <div className="flex items-center gap-2 bg-black/40 border border-secondary px-4 py-2" data-testid="streak-display">
-            <Flame className="w-5 h-5 text-orange-500" />
-            <span className="font-arcade text-lg text-white" data-testid="text-streak">{streakData?.currentStreak || 0}</span>
-            <span className="font-terminal text-xs text-muted-foreground">DAY STREAK</span>
-          </div>
-        </div>
+        {/* Main Grid — Fix #1: auto rows so cards size to content */}
+        <div className="grid md:grid-cols-2 gap-6 grid-rows-[auto]">
 
-        {/* Main Grid */}
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Study Wheel - Current Course */}
+          {/* Study Wheel - Fix #2/#3: streak badge in header, no orphaned heading */}
           <Card className="bg-black/40 border-2 border-primary rounded-none md:col-span-2">
             <CardHeader className="border-b border-primary/50 p-4">
-              <CardTitle className="font-arcade text-sm flex items-center gap-2">
-                <Play className="w-4 h-4" />
-                STUDY_WHEEL
+              <CardTitle className="font-arcade text-sm flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Play className="w-4 h-4" />
+                  STUDY_WHEEL
+                </div>
+                <div className="flex items-center gap-2 bg-black/40 border border-secondary px-3 py-1" data-testid="streak-display">
+                  <Flame className="w-4 h-4 text-orange-500" />
+                  <span className="font-arcade text-sm text-white" data-testid="text-streak">{streakData?.currentStreak || 0}</span>
+                  <span className="font-terminal text-[10px] text-muted-foreground">DAY STREAK</span>
+                </div>
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               {courses.length === 0 ? (
                 <div className="text-center py-8 space-y-4">
                   <p className="font-terminal text-muted-foreground">No courses added yet. Add courses to start the study wheel.</p>
@@ -421,16 +434,16 @@ export default function Dashboard() {
                   </Dialog>
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {/* Current Course Display */}
-                  <div className="text-center space-y-2">
+                  <div className="text-center space-y-1">
                     <p className="font-terminal text-muted-foreground text-sm">▶ NEXT UP</p>
-                    <p className="font-arcade text-3xl text-primary" data-testid="text-current-course">
+                    <p className="font-arcade text-2xl text-primary" data-testid="text-current-course">
                       {currentCourse?.name || "LOADING..."}
                     </p>
                   </div>
 
-                  {/* Wheel Visualization - Rotating vertical list */}
+                  {/* Wheel Visualization */}
                   <div className="flex flex-col gap-1 max-w-md mx-auto">
                     {courses.map((course, idx) => (
                       <div
@@ -539,7 +552,7 @@ export default function Dashboard() {
                       <AlertDialogHeader>
                         <AlertDialogTitle className="font-arcade text-red-500">DELETE_COURSE</AlertDialogTitle>
                         <AlertDialogDescription className="font-terminal text-muted-foreground">
-                          Are you sure you want to delete <span className="text-primary font-bold">{courseToDelete?.name}</span>? 
+                          Are you sure you want to delete <span className="text-primary font-bold">{courseToDelete?.name}</span>?
                           This action cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
@@ -547,7 +560,7 @@ export default function Dashboard() {
                         <AlertDialogCancel className="rounded-none border-secondary font-arcade text-xs">
                           CANCEL
                         </AlertDialogCancel>
-                        <AlertDialogAction 
+                        <AlertDialogAction
                           onClick={handleConfirmDelete}
                           className="rounded-none bg-red-500 hover:bg-red-600 font-arcade text-xs text-white"
                         >
@@ -559,10 +572,10 @@ export default function Dashboard() {
 
                   {/* Session Completion */}
                   {!isCompleting ? (
-                    <div className="flex justify-center">
+                    <div className="max-w-md mx-auto">
                       <Button
                         onClick={() => setIsCompleting(true)}
-                        className="rounded-none font-arcade px-8 py-6 text-lg bg-primary hover:bg-primary/80"
+                        className="w-full rounded-none font-arcade px-8 py-6 text-lg bg-primary hover:bg-primary/80 shadow-[0_0_20px_rgba(255,0,0,0.3)] hover:shadow-[0_0_30px_rgba(255,0,0,0.5)] transition-shadow"
                         disabled={!currentCourse}
                         data-testid="button-start-session"
                       >
@@ -614,15 +627,15 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Today's Activity */}
-          <Card className="bg-black/40 border-2 border-secondary rounded-none">
-            <CardHeader className="border-b border-secondary p-4">
+          {/* Fix #4: Today's Activity — tighter, no wasted space */}
+          <Card className="bg-black/40 border-2 border-primary rounded-none self-start">
+            <CardHeader className="border-b border-primary/50 p-4">
               <CardTitle className="font-arcade text-sm flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 TODAY
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 space-y-4">
+            <CardContent className="p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="font-terminal text-muted-foreground">Sessions</span>
                 <span className="font-arcade text-xl text-white" data-testid="text-today-sessions">{todaySessionCount}</span>
@@ -631,20 +644,20 @@ export default function Dashboard() {
                 <span className="font-terminal text-muted-foreground">Minutes</span>
                 <span className="font-arcade text-xl text-primary" data-testid="text-today-minutes">{todayMinutes}</span>
               </div>
-              <div className={`p-3 border ${hasStudiedToday ? "border-green-500/50 bg-green-500/10" : "border-orange-500/50 bg-orange-500/10"}`}>
-                <span className={`font-terminal text-sm ${hasStudiedToday ? "text-green-400" : "text-orange-400"}`} data-testid="text-today-status">
+              <div className={`p-2 border ${hasStudiedToday ? "border-green-500/50 bg-green-500/10" : "border-orange-500/50 bg-orange-500/10"}`}>
+                <span className={`font-terminal text-xs ${hasStudiedToday ? "text-green-400" : "text-orange-400"}`} data-testid="text-today-status">
                   {hasStudiedToday ? "STREAK MAINTAINED" : "NO SESSIONS TODAY - STUDY NOW!"}
                 </span>
               </div>
             </CardContent>
           </Card>
 
-          {/* Course Summary */}
-          <Card className="bg-black/40 border-2 border-secondary rounded-none">
-            <CardHeader className="border-b border-secondary p-4">
+          {/* Fix #5: Course Summary — bolder values */}
+          <Card className="bg-black/40 border-2 border-primary rounded-none self-start">
+            <CardHeader className="border-b border-primary/50 p-4">
               <CardTitle className="font-arcade text-sm flex items-center gap-2">
                 <BookOpen className="w-4 h-4" />
-                COURSE_SUMMARY
+                COURSES
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 max-h-64 overflow-y-auto">
@@ -661,10 +674,10 @@ export default function Dashboard() {
                       <span className="font-terminal text-white">{course.name}</span>
                       <div className="flex items-center gap-4 text-sm font-terminal">
                         <span className="text-muted-foreground">
-                          <span className="text-white" data-testid={`course-sessions-${course.id}`}>{course.totalSessions}</span> sess
+                          <span className="text-white font-bold" data-testid={`course-sessions-${course.id}`}>{course.totalSessions}</span> sess
                         </span>
                         <span className="text-muted-foreground">
-                          <span className="text-primary" data-testid={`course-minutes-${course.id}`}>{course.totalMinutes}</span> min
+                          <span className={cn("font-bold", course.totalMinutes > 0 ? "text-green-400" : "text-muted-foreground")} data-testid={`course-minutes-${course.id}`}>{course.totalMinutes}</span> min
                         </span>
                       </div>
                     </div>
@@ -674,28 +687,28 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Google Tasks Card with Arrow Navigation */}
-          <Card className="bg-black/40 border-2 border-secondary rounded-none">
-            <CardHeader className="border-b border-secondary p-4">
+          {/* Fix #6: Tasks — styled list switcher with pill */}
+          <Card className="bg-black/40 border-2 border-primary rounded-none self-start">
+            <CardHeader className="border-b border-primary/50 p-4">
               <CardTitle className="font-arcade text-sm flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <ListTodo className="w-4 h-4 text-primary" />
+                  <ListTodo className="w-4 h-4" />
                   TASKS
                 </div>
                 {googleTaskLists.length > 1 && (
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => setCurrentTaskListIndex(prev => (prev - 1 + googleTaskLists.length) % googleTaskLists.length)}
-                      className="p-1 hover:bg-white/10 rounded transition-colors"
+                      className="p-1 hover:bg-white/10 transition-colors"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
-                    <span className="font-terminal text-xs text-muted-foreground min-w-[80px] text-center">
+                    <span className="font-terminal text-xs text-white bg-secondary/40 border border-secondary/60 px-2 py-0.5 min-w-[80px] text-center">
                       {currentTaskList?.title || "Tasks"}
                     </span>
                     <button
                       onClick={() => setCurrentTaskListIndex(prev => (prev + 1) % googleTaskLists.length)}
-                      className="p-1 hover:bg-white/10 rounded transition-colors"
+                      className="p-1 hover:bg-white/10 transition-colors"
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>
@@ -729,7 +742,7 @@ export default function Dashboard() {
                     </Button>
                   </div>
 
-                  <div className="h-52 overflow-y-auto pr-1">
+                  <div className="max-h-52 overflow-y-auto pr-1">
                     {currentListTasks.length === 0 ? (
                       <p className="font-terminal text-muted-foreground text-center py-4 text-sm">
                         No tasks in this list.
@@ -893,16 +906,17 @@ export default function Dashboard() {
             </DialogContent>
           </Dialog>
 
-          {/* Academic Deadlines Card */}
-          <Card className="bg-black/40 border-2 border-primary rounded-none md:col-span-2">
-            <CardHeader className="border-b border-primary/50 p-4 flex flex-row items-center justify-between">
-              <CardTitle className="font-arcade text-sm flex items-center gap-2">
-                <GraduationCap className="w-4 h-4" />
-                ACADEMIC_DEADLINES
-              </CardTitle>
-              <Dialog open={showAddDeadline} onOpenChange={setShowAddDeadline}>
+          {/* Academic Deadlines — Fix #7: larger checkboxes, Fix #10: smaller ADD */}
+          <Card className="bg-black/40 border-2 border-primary rounded-none self-start">
+            <CardHeader className="border-b border-primary/50 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="font-arcade text-sm flex items-center gap-2">
+                  <GraduationCap className="w-4 h-4" />
+                  DEADLINES
+                </CardTitle>
+                <Dialog open={showAddDeadline} onOpenChange={setShowAddDeadline}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="rounded-none border-primary font-arcade text-xs">
+                  <Button variant="outline" size="sm" className="rounded-none border-primary hover:bg-primary/20 font-arcade text-[10px] h-7 px-2">
                     <Plus className="w-3 h-3 mr-1" />
                     ADD
                   </Button>
@@ -932,12 +946,20 @@ export default function Dashboard() {
                         <SelectItem value="project">📂 Project</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Input
-                      placeholder="Course (optional)"
-                      value={newDeadline.course}
-                      onChange={(e) => setNewDeadline({ ...newDeadline, course: e.target.value })}
-                      className="rounded-none border-secondary bg-black font-terminal"
-                    />
+                    <Select
+                      value={newDeadline.course || "none"}
+                      onValueChange={(value) => setNewDeadline({ ...newDeadline, course: value === "none" ? "" : value })}
+                    >
+                      <SelectTrigger className="rounded-none border-secondary bg-black font-terminal">
+                        <SelectValue placeholder="Select course" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-black border-secondary rounded-none">
+                        <SelectItem value="none">No course</SelectItem>
+                        {courses.map(c => (
+                          <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Input
                       type="date"
                       value={newDeadline.dueDate}
@@ -960,14 +982,26 @@ export default function Dashboard() {
                   </div>
                 </DialogContent>
               </Dialog>
+              </div>
+              <Select value={deadlineCourseFilter} onValueChange={setDeadlineCourseFilter}>
+                <SelectTrigger className="rounded-none border-secondary bg-black/60 font-terminal text-xs h-7 w-full pl-3 pr-7">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-black border-secondary rounded-none min-w-[200px]">
+                  <SelectItem value="all">ALL COURSES</SelectItem>
+                  {deadlineCourseNames.map(name => (
+                    <SelectItem key={name} value={name}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </CardHeader>
-            <CardContent className="p-4">
+            <CardContent className="p-4 max-h-72 overflow-y-auto">
               {academicDeadlines.length === 0 ? (
                 <p className="font-terminal text-muted-foreground text-center py-8">
                   No deadlines yet. Add assignments, quizzes, and exams to track.
                 </p>
               ) : (
-                <ScrollArea className="max-h-80">
+                <ScrollArea className="h-full">
                   <div className="space-y-2">
                     {sortedDeadlines.map((deadline) => {
                       const urgency = getDeadlineUrgency(deadline.dueDate);
@@ -977,19 +1011,20 @@ export default function Dashboard() {
                           key={deadline.id}
                           className={cn(
                             "flex items-center gap-3 p-3 border transition-all",
-                            deadline.completed 
-                              ? "border-secondary/20 opacity-50" 
+                            deadline.completed
+                              ? "border-secondary/20 opacity-50"
                               : getUrgencyStyles(urgency)
                           )}
                         >
+                          {/* Fix #7: larger checkbox */}
                           <button
                             onClick={() => toggleDeadlineMutation.mutate(deadline.id)}
-                            className="flex-shrink-0"
+                            className="flex-shrink-0 p-0.5"
                           >
                             {deadline.completed ? (
-                              <CheckCircle2 className="w-5 h-5 text-green-500" />
+                              <CheckCircle2 className="w-6 h-6 text-green-500" />
                             ) : (
-                              <Circle className="w-5 h-5" />
+                              <Circle className="w-6 h-6 text-primary/70 hover:text-primary transition-colors" />
                             )}
                           </button>
                           <span className="text-lg flex-shrink-0">{getTypeIcon(deadline.type)}</span>
@@ -1000,24 +1035,26 @@ export default function Dashboard() {
                             )}>
                               {deadline.title}
                             </div>
-                            {deadline.course && (
+                            {resolveCourse(deadline.course) && (
                               <div className="font-terminal text-xs text-muted-foreground">
-                                {deadline.course}
+                                {resolveCourse(deadline.course)}
                               </div>
                             )}
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            <Badge 
-                              variant="outline" 
+                            <span
                               className={cn(
-                                "rounded-none font-terminal text-xs",
-                                !deadline.completed && urgency === "overdue" && "border-red-500 text-red-400",
-                                !deadline.completed && urgency === "today" && "border-orange-500 text-orange-400",
-                                !deadline.completed && urgency === "tomorrow" && "border-yellow-500 text-yellow-400"
+                                "px-2 py-1 font-terminal text-xs font-bold text-white",
+                                deadline.completed ? "bg-secondary/50" :
+                                urgency === "overdue" ? "bg-red-600" :
+                                urgency === "today" ? "bg-orange-600" :
+                                urgency === "tomorrow" ? "bg-yellow-600" :
+                                urgency === "soon" ? "bg-red-800" :
+                                "bg-red-900"
                               )}
                             >
                               {isValid(dueDate) ? format(dueDate, "MMM d") : "No date"}
-                            </Badge>
+                            </span>
                             <button
                               onClick={() => deleteDeadlineMutation.mutate(deadline.id)}
                               className="p-1 text-muted-foreground hover:text-red-500 transition-colors"
@@ -1034,20 +1071,16 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Weakness Queue (Read-only) */}
-          <Card className="bg-black/40 border-2 border-secondary rounded-none md:col-span-2">
-            <CardHeader className="border-b border-secondary p-4">
-              <CardTitle className="font-arcade text-sm flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-orange-500" />
-                WEAKNESS_QUEUE
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              {weaknessQueue.length === 0 ? (
-                <p className="font-terminal text-muted-foreground text-center py-4">
-                  No flagged topics. Topics you struggle with will appear here.
-                </p>
-              ) : (
+          {/* Fix #8: Weakness Queue — collapsed when empty, full-width when has content */}
+          {weaknessQueue.length > 0 ? (
+            <Card className="bg-black/40 border-2 border-primary rounded-none md:col-span-2">
+              <CardHeader className="border-b border-primary/50 p-4">
+                <CardTitle className="font-arcade text-sm flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-orange-500" />
+                  WEAKNESS_QUEUE
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
                 <div className="flex flex-wrap gap-2">
                   {weaknessQueue.map((item) => (
                     <div
@@ -1060,9 +1093,18 @@ export default function Dashboard() {
                     </div>
                   ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-black/40 border border-secondary/30 rounded-none md:col-span-2">
+              <CardContent className="p-3 flex items-center justify-center gap-2">
+                <AlertTriangle className="w-3 h-3 text-muted-foreground" />
+                <span className="font-terminal text-xs text-muted-foreground">
+                  No flagged weaknesses — topics you struggle with will appear here.
+                </span>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </Layout>

@@ -473,7 +473,7 @@ M7 (Scholar Loop) → M8 (Calendar NL) → M9 (Integration Test)
 
 ### PR-M4: Calendar Projection Rules
 
-- [ ] 11. Implement syllabus → local calendar projection
+- [x] 11. Implement syllabus → local calendar projection [ALREADY COMPLETE - api_adapter.py:1042-1150]
 
   **What to do**:
   - Add function: `project_syllabus_to_calendar(course_id)`

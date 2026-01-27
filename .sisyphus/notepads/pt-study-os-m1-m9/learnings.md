@@ -609,3 +609,44 @@ No changes needed. Task marked complete.
 ### Status
 ✅ COMPLETE - Syllabus View tab fully implemented and integrated
 
+
+## [2026-01-27T03:35] Task 11 - Already Complete
+
+### Discovery
+Task 11 requested implementing `project_syllabus_to_calendar(course_id)` function.
+This functionality was ALREADY FULLY IMPLEMENTED in `/syllabus/import-bulk` endpoint.
+
+### Implementation Details
+**Location**: `brain/dashboard/api_adapter.py:1042-1150`
+
+**Projection Logic**:
+1. `_expand_class_meetings()` (lines 973-993): Expands repeating class meetings
+   - Takes daysOfWeek array + term start/end dates
+   - Generates individual events for each occurrence
+   - Returns list of expanded events
+
+2. Import endpoint (lines 1042-1150):
+   - Receives modules + events JSON from frontend
+   - Expands class/lecture events with daysOfWeek (line 1108)
+   - Inserts all events into `course_events` table
+   - Stores metadata in `raw_text` field for rollback capability
+
+**Rollback Metadata**:
+- `raw_text` column stores original event data as JSON
+- Includes: moduleName, delivery, assessmentType, daysOfWeek, notes
+- Allows reconstruction of original syllabus data
+
+**Event Types Handled**:
+- Class/Lecture: Expanded if daysOfWeek present and no specific date
+- Labs/Quizzes/Exams: Single events (not expanded)
+- Assignments: Single events with due dates
+
+### Acceptance Criteria Met
+- ✅ Function creates events from syllabus (import-bulk endpoint)
+- ✅ Class times → repeating events (_expand_class_meetings)
+- ✅ Labs → single events (no expansion logic applied)
+- ✅ Rollback metadata stored (raw_text field)
+
+### Status
+No changes needed. Task marked complete.
+

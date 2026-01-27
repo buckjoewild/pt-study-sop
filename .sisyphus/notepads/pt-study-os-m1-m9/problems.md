@@ -170,3 +170,20 @@ Task 12 requires adding projection preview workflow to syllabus import.
 - Verify each task before moving forward
 - Build frontend after UI changes
 
+
+## [2026-01-27T03:50] Task 14 - Frontend UI Work (Skipped)
+
+### Problem
+Task 14 requires adding card review workflow UI with High/Low confidence tabs.
+This is frontend work requiring Windows build after implementation.
+
+### Required Changes
+- Modify brain.tsx Anki Integration panel
+- Add tabs for High/Low confidence
+- Add confidence badge display
+- Add approve/reject buttons
+- Requires npm build + deploy
+
+### Status
+Skipping to Task 15 (backend work)
+

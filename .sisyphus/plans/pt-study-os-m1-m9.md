@@ -539,7 +539,7 @@ M7 (Scholar Loop) → M8 (Calendar NL) → M9 (Integration Test)
 
 ### PR-M5: Flashcard Drafts Pipeline
 
-- [ ] 13. Implement confidence scoring for card drafts
+- [x] 13. Implement confidence scoring for card drafts
 
   **What to do**:
   - Add confidence field to card_drafts table (already exists: status)

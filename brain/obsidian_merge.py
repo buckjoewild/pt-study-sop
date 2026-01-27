@@ -197,7 +197,6 @@ def _deterministic_merge(existing_body: str, new_body: str) -> str:
 
 
 def _link_term(content: str, term: str) -> str:
-    # Avoid double-linking existing links
     pattern = re.compile(rf"(?<!\\[)\\b{re.escape(term)}\\b")
 
     def replace(match):
@@ -207,3 +206,63 @@ def _link_term(content: str, term: str) -> str:
         return f"[[{text}]]"
 
     return pattern.sub(replace, content)
+
+
+def generate_obsidian_patch(session_id: str, note_path: str, new_content: str) -> Optional[str]:
+    """
+    Generate a diff-based patch for Obsidian note updates.
+    
+    Args:
+        session_id: Session identifier for tracking
+        note_path: Path to the Obsidian note
+        new_content: New content to merge
+        
+    Returns:
+        Path to the generated .diff file, or None if failed
+    """
+    import os
+    from datetime import datetime
+    from pathlib import Path
+    
+    existing = read_existing_note(note_path)
+    merged = merge_sections(existing, new_content, session_id)
+    
+    if existing == merged:
+        return None
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    patch_filename = f"{session_id}_{timestamp}.diff"
+    patch_dir = Path(__file__).parent / "data" / "obsidian_patches"
+    patch_dir.mkdir(parents=True, exist_ok=True)
+    patch_path = patch_dir / patch_filename
+    
+    diff_lines = []
+    diff_lines.append(f"--- {note_path}\t(original)")
+    diff_lines.append(f"+++ {note_path}\t(modified)")
+    diff_lines.append(f"@@ session_id: {session_id} @@")
+    
+    existing_lines = existing.splitlines()
+    merged_lines = merged.splitlines()
+    
+    for i, line in enumerate(merged_lines):
+        if i >= len(existing_lines):
+            diff_lines.append(f"+ {line}")
+        elif line != existing_lines[i]:
+            diff_lines.append(f"- {existing_lines[i]}")
+            diff_lines.append(f"+ {line}")
+    
+    metadata = {
+        "session_id": session_id,
+        "note_path": note_path,
+        "timestamp": timestamp,
+        "original_length": len(existing_lines),
+        "modified_length": len(merged_lines),
+        "can_rollback": True
+    }
+    
+    diff_lines.insert(0, f"# Metadata: {json.dumps(metadata)}")
+    
+    with open(patch_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(diff_lines))
+    
+    return str(patch_path)

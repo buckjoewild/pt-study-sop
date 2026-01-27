@@ -1112,6 +1112,115 @@ def get_date_context():
     }
 
 
+def parse_nl_to_change_plan(nl_input: str) -> Dict[str, Any]:
+    """
+    Parse natural language input into structured calendar change plan.
+    
+    Args:
+        nl_input: Natural language description of calendar operation
+        
+    Returns:
+        Dict with 'success', 'plan' (list of operations), 'error' keys
+    """
+    from llm_provider import call_llm
+    
+    system_prompt = """You are a calendar operation parser. Convert natural language into structured JSON operations.
+
+Supported operations:
+- add: Create new event
+- move: Change event date/time
+- delete: Remove event
+- reschedule: Change event date
+
+Return JSON array of operations with this structure:
+{
+  "operations": [
+    {
+      "action": "add|move|delete|reschedule",
+      "event_type": "class|lecture|quiz|exam|assignment|lab",
+      "title": "string",
+      "date": "YYYY-MM-DD",
+      "time": "HH:MM" (optional),
+      "end_time": "HH:MM" (optional),
+      "original_title": "string" (for move/delete),
+      "new_date": "YYYY-MM-DD" (for move/reschedule)
+    }
+  ]
+}
+
+Examples:
+- "Add exam on March 15" → {"operations": [{"action": "add", "event_type": "exam", "title": "Exam", "date": "2026-03-15"}]}
+- "Move quiz to next Tuesday" → {"operations": [{"action": "move", "event_type": "quiz", "new_date": "2026-XX-XX"}]}
+- "Delete lab on Friday" → {"operations": [{"action": "delete", "event_type": "lab"}]}
+
+Return ONLY valid JSON, no explanation."""
+
+    result = call_llm(
+        system_prompt=system_prompt,
+        user_prompt=nl_input,
+        provider="openrouter",
+        model="google/gemini-2.0-flash-001",
+        timeout=15
+    )
+    
+    if not result.get("success"):
+        return {
+            "success": False,
+            "error": result.get("content", "LLM call failed"),
+            "plan": []
+        }
+    
+    try:
+        content = result.get("content", "").strip()
+        if content.startswith("```json"):
+            content = content.split("```json")[1].split("```")[0].strip()
+        elif content.startswith("```"):
+            content = content.split("```")[1].split("```")[0].strip()
+        
+        parsed = json.loads(content)
+        operations = parsed.get("operations", [])
+        
+        if not isinstance(operations, list):
+            return {
+                "success": False,
+                "error": "Invalid response format: operations must be array",
+                "plan": []
+            }
+        
+        for op in operations:
+            if "action" not in op:
+                return {
+                    "success": False,
+                    "error": "Invalid operation: missing 'action' field",
+                    "plan": []
+                }
+            if op["action"] not in ["add", "move", "delete", "reschedule"]:
+                return {
+                    "success": False,
+                    "error": f"Invalid action: {op['action']}",
+                    "plan": []
+                }
+        
+        return {
+            "success": True,
+            "plan": operations,
+            "error": None
+        }
+        
+    except json.JSONDecodeError as e:
+        return {
+            "success": False,
+            "error": f"Failed to parse JSON: {str(e)}",
+            "plan": []
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Unexpected error: {str(e)}",
+            "plan": []
+        }
+
+
 def run_calendar_assistant(user_message: str) -> dict:
     """
     Run the calendar assistant with the given message.

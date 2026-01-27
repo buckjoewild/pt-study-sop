@@ -208,7 +208,7 @@ def _link_term(content: str, term: str) -> str:
     return pattern.sub(replace, content)
 
 
-def generate_obsidian_patch(session_id: str, note_path: str, new_content: str) -> Optional[str]:
+def generate_obsidian_patch(session_id: str, note_path: str, new_content: str, existing_content: Optional[str] = None) -> Optional[str]:
     """
     Generate a diff-based patch for Obsidian note updates.
     
@@ -216,6 +216,7 @@ def generate_obsidian_patch(session_id: str, note_path: str, new_content: str) -
         session_id: Session identifier for tracking
         note_path: Path to the Obsidian note
         new_content: New content to merge
+        existing_content: Optional existing content (for testing); if None, reads from Obsidian API
         
     Returns:
         Path to the generated .diff file, or None if failed
@@ -224,7 +225,7 @@ def generate_obsidian_patch(session_id: str, note_path: str, new_content: str) -
     from datetime import datetime
     from pathlib import Path
     
-    existing = read_existing_note(note_path)
+    existing = existing_content if existing_content is not None else read_existing_note(note_path)
     merged = merge_sections(existing, new_content, session_id)
     
     if existing == merged:

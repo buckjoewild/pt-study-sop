@@ -62,9 +62,9 @@ def test_no_patch_for_duplicate_content():
     existing = "Same content"
     new_content = "Same content"
     
-    patch_path = generate_obsidian_patch(session_id, note_path, new_content)
+    patch_path = generate_obsidian_patch(session_id, note_path, new_content, existing_content=existing)
     
-    assert patch_path is None or not os.path.exists(patch_path)
+    assert patch_path is None
 
 
 def test_patch_directory_created():

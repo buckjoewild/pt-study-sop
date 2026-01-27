@@ -5196,6 +5196,72 @@ IMPORTANT:
         })
 
 
+@adapter_bp.route("/brain/quick-chat", methods=["POST"])
+def brain_quick_chat():
+    """Streaming chat endpoint using Kimi k2.5 via OpenRouter. Supports vision."""
+    from flask import Response
+    data = request.get_json() or {}
+    messages = data.get("messages", [])
+    if not messages:
+        return jsonify({"response": "No messages provided.", "success": False})
+
+    system_msg = {
+        "role": "system",
+        "content": "You are a concise study assistant for a DPT (Doctor of Physical Therapy) student. Keep responses short and direct. Use bullet points for lists. No fluff or unnecessary elaboration."
+    }
+
+    def generate():
+        import urllib.request
+        import urllib.error
+        from llm_provider import OPENROUTER_API_KEY
+        api_key = OPENROUTER_API_KEY or os.environ.get("OPENROUTER_API_KEY")
+        if not api_key:
+            yield "data: {\"error\": \"OPENROUTER_API_KEY not set.\"}\n\n"
+            return
+
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+            "HTTP-Referer": "http://localhost:5000",
+            "X-Title": "PT Study Brain",
+        }
+        payload = {
+            "model": "google/gemini-2.5-flash-lite",
+            "messages": [system_msg] + messages,
+            "temperature": 0.7,
+            "max_tokens": 1500,
+            "stream": True,
+        }
+        try:
+            req_data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(url, data=req_data, headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=120) as response:
+                for line in response:
+                    decoded = line.decode("utf-8").strip()
+                    if decoded.startswith("data: "):
+                        chunk = decoded[6:]
+                        if chunk == "[DONE]":
+                            yield "data: [DONE]\n\n"
+                            return
+                        try:
+                            parsed = json.loads(chunk)
+                            delta = parsed.get("choices", [{}])[0].get("delta", {})
+                            content = delta.get("content", "")
+                            if content:
+                                yield f"data: {json.dumps({'content': content})}\n\n"
+                        except json.JSONDecodeError:
+                            pass
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return Response(generate(), mimetype="text/event-stream", direct_passthrough=True, headers={
+        "Cache-Control": "no-cache, no-store",
+        "X-Accel-Buffering": "no",
+        "Connection": "keep-alive",
+    })
+
+
 @adapter_bp.route("/brain/ingest", methods=["POST"])
 def brain_ingest():
     """Ingest WRAP content into brain."""

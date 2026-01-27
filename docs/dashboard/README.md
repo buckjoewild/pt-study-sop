@@ -1,0 +1,7 @@
+# Dashboard documentation
+
+This folder contains dashboard UI docs for the rebuilt client.
+
+## Files
+- `TUTOR_PAGE_SOP_EXPLORER_v1.0.md` - spec for the Tutor SOP Explorer UI.
+- `DASHBOARD_WINDOW_INVENTORY.md` - per-page window inventory and API connections.

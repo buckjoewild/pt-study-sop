@@ -171,3 +171,4 @@
 - Added `robocopy` to `permissions.json` allowlist for Windows build copy step.
 - Rebuilt `dashboard_rebuild` and synced `dist/public` to `brain/static/dist`.
 - Added README files to `brain/output` and `brain/static` per repo folder documentation rule.
+- 2026-01-27 12:23:23: Added dashboard window inventory documentation and dashboard docs README.

@@ -114,6 +114,49 @@ def _call_openrouter_api(
         }
 
 
+def _call_openrouter_chat(
+    messages: list,
+    model: str = "google/gemini-2.5-flash-lite",
+    timeout: int = OPENAI_API_TIMEOUT,
+) -> Dict[str, Any]:
+    """
+    Call OpenRouter with a full messages array (supports vision/image_url content).
+    """
+    import urllib.request
+    import urllib.error
+
+    api_key = OPENROUTER_API_KEY or os.environ.get("OPENROUTER_API_KEY")
+    if not api_key:
+        return {"success": False, "error": "OPENROUTER_API_KEY not set.", "content": None}
+
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}",
+        "HTTP-Referer": "http://localhost:5000",
+        "X-Title": "PT Study Brain",
+    }
+    payload = {
+        "model": model,
+        "messages": messages,
+        "temperature": 0.7,
+        "max_tokens": 1500,
+    }
+
+    try:
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            result = json.loads(response.read().decode("utf-8"))
+            content = result["choices"][0]["message"]["content"]
+            return {"success": True, "content": content, "error": None}
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8") if e.fp else str(e)
+        return {"success": False, "error": f"OpenRouter API error ({e.code}): {error_body}", "content": None}
+    except Exception as e:
+        return {"success": False, "error": f"Exception calling OpenRouter chat: {str(e)}", "content": None}
+
+
 def _call_openai_api(
     system_prompt: str,
     user_prompt: str,

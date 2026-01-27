@@ -1,8 +1,8 @@
 # Session Resume
-Generated: 2026-01-27 08:49
+Generated: 2026-01-27 12:41
 
 ## Readiness Score
-**62/100** (5 topics, 5 sessions in 30 days)
+**58/100** (4 topics, 4 sessions in 30 days)
 
 ## Drift + SOP Usage (last 30d)
 - Prompt Drift flagged: 0
@@ -12,8 +12,6 @@ Generated: 2026-01-27 08:49
 - Common Core Learning Modules: n/a
 
 ## Recent Sessions
-- **Anatomy** (2026-01-26, 1d ago)
-  - Mode: Core | Understanding: n/a/5 | Confidence: n/a/5
 - **Neuroscience LO1: Neuron basic structure and function** (2026-01-23, 4d ago)
   - Mode: Core | Understanding: 4/5 | Confidence: 3/5
 - **Movement Science 1** (2026-01-21, 6d ago)
@@ -24,8 +22,6 @@ Generated: 2026-01-27 08:49
   - Mode: study | Understanding: n/a/5 | Confidence: n/a/5
 
 ## Topic Coverage
-- **Anatomy**: 1 sessions, last 1d ago [FRESH]
-  - Avg Understanding: n/a/5 | Avg Confidence: n/a/5
 - **Neuroscience LO1: Neuron basic structure and function**: 1 sessions, last 4d ago [FRESH]
   - Avg Understanding: 4.0/5 | Avg Confidence: 3.0/5
 - **Movement Science 1**: 1 sessions, last 6d ago [FRESH]

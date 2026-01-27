@@ -41,6 +41,7 @@ import {
   FileText, RefreshCw, Check, X,
   Trash2, Pencil, FolderOpen, Save, ChevronRight, File, Folder
 } from "lucide-react";
+import { BrainChat } from "@/components/BrainChat";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -449,6 +450,8 @@ export default function Brain() {
             BRAIN ANALYTICS
           </h1>
         </div>
+
+          <BrainChat />
 
         <div className="space-y-6">
           {/* System Status */}

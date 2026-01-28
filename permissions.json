@@ -27,6 +27,8 @@
                             "npm install",
                             "npm run build",
                             "npm -v",
+                            "npx",
+                            "npx skills find",
                             "Out-File",
                             "pip list",
                             "pip show",

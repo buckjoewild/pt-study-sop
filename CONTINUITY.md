@@ -190,3 +190,4 @@
 - 2026-01-28 15:16:00: Added no-destructive-commands rule.
 - 2026-01-28 15:18:00: Added auto-commit rule to CLAUDE.md.
 - 2026-01-28 15:21:00: Added shell preference (PowerShell default; WSL/Git Bash when required).
+- 2026-01-28 15:25:00: Added editor preference (Codex/Claude Code).

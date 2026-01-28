@@ -11,6 +11,7 @@ Response style: straight to the point, no fluff.
 - Shell: PowerShell
 - Shell preference: PowerShell by default; use WSL/Git Bash when required.
 - Obsidian vault: C:\Users\treyt\Desktop\PT School Semester 2
+- Editor: Codex CLI / Claude Code (no default GUI editor).
 
 ## Git Identity
 - Name: TreyT

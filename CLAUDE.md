@@ -44,7 +44,7 @@ Response style: straight to the point, no fluff.
 - Tutor logs: brain/session_logs/ (Tutor itself is external)
 
 ## External Systems (from docs)
-- Tutor (CustomGPT): started via projects/treys-agent/ask.bat (confirm path if different).
+- Tutor (CustomGPT): external only; no local launcher in use.
 - Anki (AnkiConnect): syncs card_drafts to Anki Desktop.
 - Google Calendar/Tasks: OAuth via Calendar page; config in brain/data/api_config.json.
 

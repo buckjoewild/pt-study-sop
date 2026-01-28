@@ -186,3 +186,4 @@
 - 2026-01-28 15:00:00: Added Trey git identity to CLAUDE.md.
 - 2026-01-28 15:05:00: Set default to run relevant checks after code changes.
 - 2026-01-28 15:10:00: Marked docs/README.md as canonical docs index.
+- 2026-01-28 15:13:00: Added do-not-edit rules for archive/ and brain/static/dist/.

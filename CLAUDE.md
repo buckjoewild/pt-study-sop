@@ -54,6 +54,8 @@ Response style: straight to the point, no fluff.
 6. Update CONTINUITY.md after every significant change (append only).
 7. Push to remote after every change (auto).
 8. After code changes, run relevant checks by default (pytest brain/tests/; frontend build already required).
+9. Do not edit archive/ unless explicitly requested.
+10. Do not edit brain/static/dist/ except when copying a new build output.
 
 ## Detailed Guidelines
 - Agent Workflow: ai-config/agent-workflow.md

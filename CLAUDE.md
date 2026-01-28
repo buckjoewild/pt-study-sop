@@ -57,6 +57,7 @@ Response style: straight to the point, no fluff.
 9. Do not edit archive/ unless explicitly requested.
 10. Do not edit brain/static/dist/ except when copying a new build output.
 11. No destructive commands (e.g., reset --hard, clean, rm) unless explicitly requested.
+12. Auto-commit after changes; use a conventional commit message if none is provided.
 
 ## Detailed Guidelines
 - Agent Workflow: ai-config/agent-workflow.md

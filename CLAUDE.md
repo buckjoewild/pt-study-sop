@@ -11,6 +11,10 @@ Response style: straight to the point, no fluff.
 - Shell: PowerShell
 - Obsidian vault: C:\Users\treyt\Desktop\PT School Semester 2
 
+## Git Identity
+- Name: TreyT
+- Email: Treytucker05@yahoo.com
+
 ## Core Commands
 - Start dashboard: Start_Dashboard.bat
 - Run tests: pytest brain/tests/

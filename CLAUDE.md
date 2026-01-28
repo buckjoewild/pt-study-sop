@@ -14,7 +14,7 @@ Response style: straight to the point, no fluff.
 ## Core Commands
 - Start dashboard: Start_Dashboard.bat
 - Run tests: pytest brain/tests/
-- Build frontend: cd dashboard_rebuild && npm run build
+- Build frontend: cd dashboard_rebuild && npm run build (preferred PM: npm)
 - Copy build: copy dashboard_rebuild/dist/public -> brain/static/dist
 
 ## Key Paths

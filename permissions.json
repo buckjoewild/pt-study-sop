@@ -28,6 +28,7 @@
                             "npm run build",
                             "npm -v",
                             "npx",
+                            "npx skills add",
                             "npx skills find",
                             "Out-File",
                             "pip list",

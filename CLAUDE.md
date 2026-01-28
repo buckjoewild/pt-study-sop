@@ -34,6 +34,7 @@ Response style: straight to the point, no fluff.
 - Docs index (canonical): docs/README.md (DOCS_INDEX.md is legacy)
 - Architecture doc: docs/root/PROJECT_ARCHITECTURE.md
 - SOP manifest: sop/sop_index.v1.json
+- Google Calendar credentials: GoogleCalendarTasksAPI.json (handle as sensitive; do not modify unless asked).
 
 ## System Modules
 - Dashboard, Brain, Calendar (Flask): brain/

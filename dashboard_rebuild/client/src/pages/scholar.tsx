@@ -173,7 +173,7 @@ export default function Scholar() {
 
   return (
     <Layout>
-      <div className="h-[calc(100vh-140px)] flex flex-col gap-4">
+      <div className="h-[calc(100vh-140px)] flex flex-col gap-6">
         
         {/* Header */}
         <div className="flex items-center justify-between shrink-0">
@@ -220,30 +220,30 @@ export default function Scholar() {
             </TabsList>
 
             {/* SCHOLAR SUMMARY TAB */}
-            <TabsContent value="summary" className="flex-1 overflow-hidden mt-4">
-              <div className="grid lg:grid-cols-3 gap-4 h-full">
+            <TabsContent value="summary" className="flex-1 overflow-hidden mt-6">
+              <div className="grid lg:grid-cols-3 gap-6 h-full">
                 {/* Left: Summary Cards */}
                 <div className="lg:col-span-2 space-y-4 overflow-auto pr-2">
                   {/* Study Health Overview */}
                   <Card className="bg-black/40 border-2 border-primary/50 rounded-none">
-                    <CardHeader className="p-3 border-b border-primary/30">
-                      <CardTitle className="font-arcade text-xs text-primary flex items-center gap-2">
+                    <CardHeader className="p-4 border-b border-primary/30">
+                      <CardTitle className="font-arcade text-sm text-primary flex items-center gap-3">
                         <TrendingUp className="w-4 h-4" /> STUDY HEALTH OVERVIEW
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-4 space-y-4">
-                      <div className="grid grid-cols-3 gap-4 text-center">
+                    <CardContent className="p-6 space-y-6">
+                      <div className="grid grid-cols-3 gap-6 text-center">
                         <div>
                           <div className="font-arcade text-2xl text-primary">{sessions.length}</div>
-                          <div className="font-terminal text-[10px] text-muted-foreground">TOTAL SESSIONS</div>
+                          <div className="font-terminal text-xs text-muted-foreground">TOTAL SESSIONS</div>
                         </div>
                         <div>
                           <div className="font-arcade text-2xl text-white">{sessionsThisWeek}</div>
-                          <div className="font-terminal text-[10px] text-muted-foreground">THIS WEEK</div>
+                          <div className="font-terminal text-xs text-muted-foreground">THIS WEEK</div>
                         </div>
                         <div>
                           <div className="font-arcade text-2xl text-secondary">{avgMinutesPerSession}m</div>
-                          <div className="font-terminal text-[10px] text-muted-foreground">AVG/SESSION</div>
+                          <div className="font-terminal text-xs text-muted-foreground">AVG/SESSION</div>
                         </div>
                       </div>
                     </CardContent>
@@ -256,8 +256,8 @@ export default function Scholar() {
                         <CheckCircle2 className="w-4 h-4" /> WHAT APPEARS TO BE WORKING
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-4">
-                      <ul className="space-y-2 font-terminal text-sm">
+                    <CardContent className="p-6">
+                      <ul className="space-y-3 font-terminal text-base">
                         {courses.filter(c => (c.totalSessions || 0) >= 3).length > 0 ? (
                           <>
                             <li className="flex items-start gap-2">
@@ -288,8 +288,8 @@ export default function Scholar() {
                         <XCircle className="w-4 h-4" /> POTENTIAL CONCERNS
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-4">
-                      <ul className="space-y-2 font-terminal text-sm">
+                    <CardContent className="p-6">
+                      <ul className="space-y-3 font-terminal text-base">
                         {coursesWithLowActivity.length > 0 && (
                           <li className="flex items-start gap-2">
                             <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />

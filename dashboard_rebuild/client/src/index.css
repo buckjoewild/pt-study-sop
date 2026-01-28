@@ -60,7 +60,7 @@
   --secondary-foreground: 0 0% 100%;
 
   --muted: 0 0% 15%;
-  --muted-foreground: 0 0% 60%;
+  --muted-foreground: 0 0% 70%; /* Lightened for better contrast */
 
   --accent: 0 100% 20%; /* Darker Red */
   --accent-foreground: 0 0% 100%;
@@ -72,7 +72,7 @@
   --input: 0 0% 15%;
   --ring: 0 100% 50%;
 
-  --radius: 0;
+  --radius: 0.5rem; /* Slight radius for modern feel, can be kept 0 for strict retro */
 }
 
 @layer base {
@@ -80,11 +80,11 @@
     @apply border-border;
   }
   body {
-    @apply font-terminal antialiased bg-background text-foreground tracking-wide;
-    image-rendering: pixelated;
+    @apply font-terminal antialiased bg-background text-foreground tracking-wide text-base leading-relaxed;
+    image-rendering: auto; /* Removed pixelated for text readability */
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-arcade uppercase tracking-widest text-primary;
+    @apply font-arcade uppercase tracking-widest text-primary mb-4;
     text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
   }
 }
@@ -111,23 +111,24 @@
     );
     background-size: 100% 4px;
     pointer-events: none;
+    opacity: 0.5; /* Reduced intensity */
   }
 
   .pixel-border {
     box-shadow:
-      -4px 0 0 0 var(--color-border),
-      4px 0 0 0 var(--color-border),
-      0 -4px 0 0 var(--color-border),
-      0 4px 0 0 var(--color-border);
-    margin: 4px;
+      -2px 0 0 0 var(--color-border),
+      2px 0 0 0 var(--color-border),
+      0 -2px 0 0 var(--color-border),
+      0 2px 0 0 var(--color-border);
+    margin: 2px;
   }
 
   .brain-card {
-    @apply bg-[#111] border border-[#2a0a0a] shadow-[0_0_0_1px_rgba(255,0,0,0.08)];
+    @apply bg-[#111] border border-[#2a0a0a] shadow-sm p-6 mb-4;
   }
 
   .brain-card-strong {
-    @apply bg-[#0d0d0d] border border-[#3a0a0a] shadow-[0_0_0_1px_rgba(255,0,0,0.14)];
+    @apply bg-[#0d0d0d] border border-[#3a0a0a] shadow-md p-6 mb-4;
   }
 
   /* Notes sheet positioning */

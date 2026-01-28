@@ -40,8 +40,8 @@ def diff_content(existing: str, new: str) -> dict:
     }
 
 
-def merge_sections(existing: str, new: str, session_id: Optional[str] = None) -> str:
-    """Combine content without duplication."""
+def merge_sections(existing: str, new: str, session_id: Optional[str] = None, vault_index: Optional[list] = None) -> str:
+    """Combine content without duplication. Pass vault_index for validated wikilinks."""
     if not new or not new.strip():
         return existing
 
@@ -52,7 +52,7 @@ def merge_sections(existing: str, new: str, session_id: Optional[str] = None) ->
     if managed_block:
         merged_body = _semantic_merge(_strip_managed_block(managed_block), new)
 
-    merged_body = add_concept_links(merged_body, course=None)
+    merged_body = add_concept_links(merged_body, course=None, vault_index=vault_index)
     merged_body = format_obsidian(merged_body)
     new_block = _build_managed_block(merged_body, session_id=session_id)
 
@@ -66,8 +66,8 @@ def merge_sections(existing: str, new: str, session_id: Optional[str] = None) ->
     return existing.rstrip() + "\n\n" + new_block if existing.strip() else new_block
 
 
-def add_concept_links(content: str, course: Optional[str] = None) -> str:
-    """Convert key terms to [[Wiki Links]] using LLM; fallback to raw content."""
+def add_concept_links(content: str, course: Optional[str] = None, vault_index: Optional[list] = None) -> str:
+    """Convert key terms to [[Wiki Links]] using LLM, validated against vault index."""
     if not content.strip():
         return content
 
@@ -75,12 +75,23 @@ def add_concept_links(content: str, course: Optional[str] = None) -> str:
         "Identify key terms that should be linked in Obsidian. "
         "Return JSON array of terms only. Do not include duplicates."
     )
+    if vault_index:
+        # Give the LLM ground truth so it only links to existing notes
+        sample = vault_index[:200]
+        notes_str = ", ".join(sample)
+        if len(vault_index) > 200:
+            notes_str += f" ... ({len(vault_index) - 200} more)"
+        system_prompt += (
+            f"\n\nONLY link terms that match one of these existing notes: {notes_str}. "
+            "Do NOT create links for concepts not in this list."
+        )
+
     user_prompt = f"Content:\n{content}"
     result = call_llm(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         provider="openrouter",
-        model="deepseek/deepseek-v3",
+        model="google/gemini-2.5-flash-lite",
         timeout=30,
     )
     if not result.get("success"):
@@ -93,6 +104,18 @@ def add_concept_links(content: str, course: Optional[str] = None) -> str:
 
     if not isinstance(terms, list):
         return content
+
+    # Validate against vault index if provided
+    if vault_index:
+        vault_lookup = {note.lower(): note for note in vault_index}
+        validated = []
+        for term in terms:
+            if not isinstance(term, str) or not term.strip():
+                continue
+            match = vault_lookup.get(term.strip().lower())
+            if match:
+                validated.append(match)
+        terms = validated
 
     updated = content
     for term in sorted({t for t in terms if isinstance(t, str) and t.strip()}, key=len, reverse=True):
@@ -168,7 +191,7 @@ def _semantic_merge(existing_body: str, new_body: str) -> str:
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         provider="openrouter",
-        model="deepseek/deepseek-v3",
+        model="google/gemini-2.5-flash-lite",
         timeout=45,
     )
     if not result.get("success"):

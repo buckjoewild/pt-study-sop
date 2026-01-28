@@ -4580,9 +4580,14 @@ def brain_chat():
                     course_folder = get_course_obsidian_folder(route_course) if route_course else None
                     obsidian_path = f"{course_folder}/Session-{wrap_date}.md" if course_folder else f"Inbox/Study-Log-{wrap_date}.md"
 
+                    # Fetch vault index for validated wikilinks
+                    from obsidian_index import get_vault_index
+                    vault_result = get_vault_index()
+                    vault_notes = vault_result.get("notes", []) if vault_result.get("success") else []
+
                     existing_resp = obsidian_get_file(obsidian_path)
                     existing_content = existing_resp.get("content", "") if existing_resp.get("success") else ""
-                    merged_content = merge_sections(existing_content, notes, session_id=wrap_session_id)
+                    merged_content = merge_sections(existing_content, notes, session_id=wrap_session_id, vault_index=vault_notes)
                     save_result = obsidian_save_file(obsidian_path, merged_content)
                     if save_result.get("success"):
                         obsidian_synced = True
@@ -6272,6 +6277,71 @@ def put_obsidian_file():
     if result.get("success"):
         return jsonify(result)
     return jsonify(result), 500
+
+
+@adapter_bp.route("/obsidian/vault-index", methods=["GET"])
+def get_obsidian_vault_index():
+    """Get complete vault index (all note names) with caching."""
+    from obsidian_index import get_vault_index
+    force_refresh = request.args.get("refresh", "false").lower() == "true"
+    result = get_vault_index(force_refresh=force_refresh)
+    if result.get("success"):
+        return jsonify(result)
+    return jsonify(result), 500
+
+
+@adapter_bp.route("/obsidian/vault-index/clear", methods=["POST"])
+def clear_obsidian_vault_index():
+    """Clear vault index cache."""
+    from obsidian_index import clear_vault_cache
+    return jsonify(clear_vault_cache())
+
+
+@adapter_bp.route("/obsidian/graph", methods=["GET"])
+def get_obsidian_graph():
+    """Get vault graph data (nodes + wikilink edges)."""
+    from obsidian_index import get_vault_graph
+    refresh = request.args.get("refresh", "").lower() == "true"
+    return jsonify(get_vault_graph(force_refresh=refresh))
+
+
+@adapter_bp.route("/obsidian/config", methods=["GET"])
+def get_obsidian_config():
+    """Get Obsidian configuration for frontend."""
+    vault_name = os.environ.get("OBSIDIAN_VAULT_NAME", "PT School Semester 2")
+    return jsonify({
+        "vaultName": vault_name,
+        "apiUrl": OBSIDIAN_API_URL,
+    })
+
+
+@adapter_bp.route("/obsidian/vault-file/<path:filepath>", methods=["GET"])
+def get_obsidian_vault_file(filepath):
+    """Proxy a vault file (image, etc.) from Obsidian REST API."""
+    import ssl
+    import urllib.request
+    import urllib.parse
+    api_key = os.environ.get("OBSIDIAN_API_KEY", "")
+    if not api_key:
+        return jsonify({"error": "No Obsidian API key"}), 500
+
+    encoded_path = urllib.parse.quote(filepath, safe="/")
+    url = f"{OBSIDIAN_API_URL}/vault/{encoded_path}"
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
+    req = urllib.request.Request(url, headers={
+        "Authorization": f"Bearer {api_key}",
+    })
+    try:
+        with urllib.request.urlopen(req, context=ctx, timeout=10) as resp:
+            data = resp.read()
+            content_type = resp.headers.get("Content-Type", "application/octet-stream")
+            from flask import Response
+            return Response(data, content_type=content_type)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 404
 
 
 # =========================================================================

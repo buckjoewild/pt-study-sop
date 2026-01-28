@@ -36,12 +36,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { 
-  Database, Brain as BrainIcon, AlertTriangle, Layers, 
+import {
+  Database, Brain as BrainIcon, AlertTriangle, Layers,
   FileText, RefreshCw, Check, X,
-  Trash2, Pencil, FolderOpen, Save, ChevronRight, File, Folder
+  Trash2, Pencil, FolderOpen, Save, ChevronRight, File, Folder, ExternalLink
 } from "lucide-react";
 import { BrainChat } from "@/components/BrainChat";
+import { ObsidianRenderer } from "@/components/ObsidianRenderer";
+import { VaultGraphView } from "@/components/VaultGraphView";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -93,30 +95,31 @@ export default function Brain() {
   const [editingDraft, setEditingDraft] = useState<number | null>(null);
   const [editDraftData, setEditDraftData] = useState({ front: "", back: "", deckName: "" });
 
-   // Filter state for Session Evidence
-   const [semesterFilter, setSemesterFilter] = useState<string>("all");
-   const [courseFilter, setCourseFilter] = useState<string>("all");
-   const [startDate, setStartDate] = useState<string>("");
-   const [endDate, setEndDate] = useState<string>("");
+  // Filter state for Session Evidence
+  const [semesterFilter, setSemesterFilter] = useState<string>("all");
+  const [courseFilter, setCourseFilter] = useState<string>("all");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
-   // Edit form state
-   const [editFormData, setEditFormData] = useState({
-     mode: "",
-     minutes: "",
-     cards: "",
-     confusions: "",
-     weakAnchors: "",
-     concepts: "",
-     issues: "",
-     notes: ""
-   });
-  
+  // Edit form state
+  const [editFormData, setEditFormData] = useState({
+    mode: "",
+    minutes: "",
+    cards: "",
+    confusions: "",
+    weakAnchors: "",
+    concepts: "",
+    issues: "",
+    notes: ""
+  });
+
   // Obsidian editor state
   const [obsidianCurrentFolder, setObsidianCurrentFolder] = useState("School");
   const [obsidianCurrentFile, setObsidianCurrentFile] = useState<string | null>(null);
   const [obsidianFileContent, setObsidianFileContent] = useState("");
   const [obsidianIsSaving, setObsidianIsSaving] = useState(false);
   const [obsidianHasChanges, setObsidianHasChanges] = useState(false);
+  const [obsidianPreviewMode, setObsidianPreviewMode] = useState(false);
 
   // Quick access course folders
   const courseFolders = [
@@ -127,36 +130,36 @@ export default function Brain() {
     { name: "TI", path: "School/Theraputic Intervention" },
   ];
 
-   // Read URL params on mount to restore filter state
-   useEffect(() => {
-     const params = new URLSearchParams(window.location.search);
-     const semester = params.get("semester") || "all";
-     const start = params.get("start") || "";
-     const end = params.get("end") || "";
-     setSemesterFilter(semester);
-     setStartDate(start);
-     setEndDate(end);
-   }, []);
+  // Read URL params on mount to restore filter state
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const semester = params.get("semester") || "all";
+    const start = params.get("start") || "";
+    const end = params.get("end") || "";
+    setSemesterFilter(semester);
+    setStartDate(start);
+    setEndDate(end);
+  }, []);
 
-    const { data: courses = [] } = useQuery({
-      queryKey: ["courses"],
-      queryFn: () => api.courses.getActive(),
-    });
+  const { data: courses = [] } = useQuery({
+    queryKey: ["courses"],
+    queryFn: () => api.courses.getActive(),
+  });
 
-    const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
-      queryKey: ["sessions", semesterFilter, startDate, endDate],
-      queryFn: async () => {
-        const params = new URLSearchParams();
-        if (semesterFilter !== "all") params.append("semester", semesterFilter);
-        if (startDate) params.append("start", startDate);
-        if (endDate) params.append("end", endDate);
-        const query = params.toString();
-        const url = query ? `/sessions?${query}` : "/sessions";
-        const response = await fetch(`/api${url}`);
-        if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
-        return response.json();
-      },
-    });
+  const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
+    queryKey: ["sessions", semesterFilter, startDate, endDate],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (semesterFilter !== "all") params.append("semester", semesterFilter);
+      if (startDate) params.append("start", startDate);
+      if (endDate) params.append("end", endDate);
+      const query = params.toString();
+      const url = query ? `/sessions?${query}` : "/sessions";
+      const response = await fetch(`/api${url}`);
+      if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+      return response.json();
+    },
+  });
 
   const { data: metrics } = useQuery({
     queryKey: ["brain", "metrics"],
@@ -199,56 +202,56 @@ export default function Brain() {
     });
   };
 
-   // Toggle all sessions
-   const toggleAllSessions = () => {
-     if (selectedSessions.size === sessions.length) {
-       setSelectedSessions(new Set());
-     } else {
-       setSelectedSessions(new Set(sessions.map((s: Session) => s.id)));
-     }
-   };
+  // Toggle all sessions
+  const toggleAllSessions = () => {
+    if (selectedSessions.size === sessions.length) {
+      setSelectedSessions(new Set());
+    } else {
+      setSelectedSessions(new Set(sessions.map((s: Session) => s.id)));
+    }
+  };
 
-   // Open delete dialog for selected sessions
-   const handleDeleteSelected = () => {
-     if (selectedSessions.size === 0) return;
-     setSessionsToDelete(Array.from(selectedSessions));
-     setDeleteDialogOpen(true);
-   };
+  // Open delete dialog for selected sessions
+  const handleDeleteSelected = () => {
+    if (selectedSessions.size === 0) return;
+    setSessionsToDelete(Array.from(selectedSessions));
+    setDeleteDialogOpen(true);
+  };
 
-   // Open delete dialog for single session
-   const handleDeleteSingle = (id: number) => {
-     setSessionsToDelete([id]);
-     setDeleteDialogOpen(true);
-   };
+  // Open delete dialog for single session
+  const handleDeleteSingle = (id: number) => {
+    setSessionsToDelete([id]);
+    setDeleteDialogOpen(true);
+  };
 
-   // Confirm deletion
-   const confirmDelete = () => {
-     deleteSessionsMutation.mutate(sessionsToDelete);
-     setDeleteDialogOpen(false);
-     setSessionsToDelete([]);
-   };
+  // Confirm deletion
+  const confirmDelete = () => {
+    deleteSessionsMutation.mutate(sessionsToDelete);
+    setDeleteDialogOpen(false);
+    setSessionsToDelete([]);
+  };
 
-   // Handle edit session - populate form with session data
-   useEffect(() => {
-     if (editingSession !== null) {
-       const session = sessions.find((s: Session) => s.id === editingSession);
-       if (session) {
-         setEditFormData({
-           mode: session.mode || "",
-           minutes: session.minutes?.toString() || "",
-           cards: session.cards?.toString() || "",
-           confusions: parseStringArray(session.confusions).join(", "),
-           weakAnchors: parseStringArray(session.weakAnchors).join(", "),
-           concepts: parseStringArray(session.concepts).join(", "),
-           issues: parseStringArray(session.issues).join(", "),
-           notes: session.notes || ""
-         });
-       }
-     }
-   }, [editingSession, sessions]);
+  // Handle edit session - populate form with session data
+  useEffect(() => {
+    if (editingSession !== null) {
+      const session = sessions.find((s: Session) => s.id === editingSession);
+      if (session) {
+        setEditFormData({
+          mode: session.mode || "",
+          minutes: session.minutes?.toString() || "",
+          cards: session.cards?.toString() || "",
+          confusions: parseStringArray(session.confusions).join(", "),
+          weakAnchors: parseStringArray(session.weakAnchors).join(", "),
+          concepts: parseStringArray(session.concepts).join(", "),
+          issues: parseStringArray(session.issues).join(", "),
+          notes: session.notes || ""
+        });
+      }
+    }
+  }, [editingSession, sessions]);
 
-   const editingSessionData =
-     editingSession !== null ? sessions.find((s: Session) => s.id === editingSession) : null;
+  const editingSessionData =
+    editingSession !== null ? sessions.find((s: Session) => s.id === editingSession) : null;
   const debugModals =
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).has("debugModals");
@@ -312,6 +315,17 @@ export default function Brain() {
     refetchInterval: 30000,
   });
 
+  const { data: obsidianConfig } = useQuery({
+    queryKey: ["obsidian", "config"],
+    queryFn: api.obsidian.getConfig,
+  });
+
+  const { data: vaultIndex } = useQuery({
+    queryKey: ["obsidian", "vault-index"],
+    queryFn: () => api.obsidian.getVaultIndex(),
+    enabled: obsidianStatus?.connected === true,
+  });
+
   // Obsidian files query
   const { data: obsidianFiles, refetch: refetchObsidianFiles } = useQuery({
     queryKey: ["obsidian", "files", obsidianCurrentFolder],
@@ -331,6 +345,31 @@ export default function Brain() {
     } catch (error) {
       console.error("Failed to load file:", error);
     }
+  };
+
+  // Wikilink click handler
+  const handleWikilinkClick = async (noteName: string, shiftKey: boolean) => {
+    if (shiftKey) {
+      const vaultName = obsidianConfig?.vaultName || "PT School Semester 2";
+      window.open(`obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(noteName)}`, "_blank");
+      return;
+    }
+    // Try to find the note in vault index paths
+    const fullPath = vaultIndex?.paths?.[noteName];
+    if (fullPath) {
+      await loadObsidianFile(fullPath);
+      setObsidianPreviewMode(true);
+      return;
+    }
+    // Fallback: search course folders
+    for (const cf of courseFolders) {
+      try {
+        await loadObsidianFile(`${cf.path}/${noteName}.md`);
+        setObsidianPreviewMode(true);
+        return;
+      } catch { /* continue */ }
+    }
+    console.warn(`Note not found: ${noteName}`);
   };
 
   // Save file content
@@ -438,7 +477,7 @@ export default function Brain() {
     });
   };
 
-    return (
+  return (
     <Layout>
       {debugModals && (
         <div className="fixed bottom-12 right-4 z-[70] bg-black/80 border border-primary text-primary font-terminal text-[10px] px-2 py-1 rounded-none">
@@ -449,7 +488,7 @@ export default function Brain() {
           <div>Delete count: {sessionsToDelete.length}</div>
         </div>
       )}
-      <div className="space-y-6">
+      <div className="space-y-6 min-w-0 overflow-hidden">
         <div className="flex items-center justify-between">
           <h1 className="font-arcade text-xl text-primary flex items-center gap-2">
             <BrainIcon className="w-6 h-6" />
@@ -457,15 +496,15 @@ export default function Brain() {
           </h1>
         </div>
 
-          <BrainChat />
+        <BrainChat />
 
         <div className="space-y-6">
           {/* System Status */}
           <div>
             <h2 className="font-arcade text-lg text-primary mb-4">SYSTEM STATUS</h2>
             <Card className="brain-card rounded-none">
-              <CardContent className="p-3">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 font-terminal text-xs">
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 font-terminal text-sm">
                   <div className="flex flex-wrap items-center gap-4">
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${obsidianStatus?.connected ? 'bg-green-500' : 'bg-red-500'}`} />
@@ -487,22 +526,25 @@ export default function Brain() {
             </Card>
           </div>
 
-           {/* 4 Horizontal Tabs */}
-           <Tabs defaultValue="ingestion" className="w-full">
-             <TabsList className="grid w-full grid-cols-4 rounded-none bg-black border border-secondary/40">
-               <TabsTrigger value="ingestion" className="font-arcade text-xs rounded-none data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-                 INGESTION
-               </TabsTrigger>
-               <TabsTrigger value="data" className="font-arcade text-xs rounded-none data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-                 DATA
-               </TabsTrigger>
-               <TabsTrigger value="integrations" className="font-arcade text-xs rounded-none data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-                 INTEGRATIONS
-               </TabsTrigger>
-               <TabsTrigger value="syllabus" className="font-arcade text-xs rounded-none data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-                 SYLLABUS VIEW
-               </TabsTrigger>
-             </TabsList>
+          {/* 4 Horizontal Tabs */}
+          <Tabs defaultValue="ingestion" className="w-full space-y-6">
+            <TabsList className="grid w-full grid-cols-5 rounded-none bg-black border border-secondary/40 p-1 h-auto">
+              <TabsTrigger value="ingestion" className="font-arcade text-sm py-3 rounded-none data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+                INGESTION
+              </TabsTrigger>
+              <TabsTrigger value="data" className="font-arcade text-sm py-3 rounded-none data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+                DATA
+              </TabsTrigger>
+              <TabsTrigger value="integrations" className="font-arcade text-sm py-3 rounded-none data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+                INTEGRATIONS
+              </TabsTrigger>
+              <TabsTrigger value="syllabus" className="font-arcade text-sm py-3 rounded-none data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+                SYLLABUS VIEW
+              </TabsTrigger>
+              <TabsTrigger value="graph" className="font-arcade text-sm py-3 rounded-none data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+                GRAPH VIEW
+              </TabsTrigger>
+            </TabsList>
 
             {/* INGESTION Tab */}
             <TabsContent value="ingestion" className="border border-t-0 border-secondary/40 rounded-none">
@@ -515,142 +557,163 @@ export default function Brain() {
             </TabsContent>
 
             {/* INTEGRATIONS Tab */}
-            <TabsContent value="integrations" className="border border-t-0 border-secondary/40 rounded-none">
-              <div className="space-y-4 p-4 min-w-0">
-                  {/* Obsidian Vault Browser */}
-                  <Card className="brain-card rounded-none">
-                    <CardHeader className="border-b border-secondary/50 p-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="font-arcade text-sm flex items-center gap-2">
-                          <FolderOpen className="w-4 h-4" />
-                          OBSIDIAN VAULT
-                          {obsidianStatus?.connected ? (
-                            <Check className="w-3 h-3 text-green-500" />
-                          ) : (
-                            <X className="w-3 h-3 text-red-500" />
-                          )}
-                        </CardTitle>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-6 px-2 rounded-none font-terminal text-xs"
-                            onClick={createNewNote}
+            <TabsContent value="integrations" className="border border-t-0 border-secondary/40 rounded-none mt-6">
+              <div className="space-y-6 p-6 min-w-0">
+                {/* Obsidian Vault Browser */}
+                <Card className="brain-card rounded-none">
+                  <CardHeader className="border-b border-secondary/50 p-4">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="font-arcade text-sm flex items-center gap-3">
+                        <FolderOpen className="w-4 h-4" />
+                        OBSIDIAN VAULT
+                        {obsidianStatus?.connected ? (
+                          <Check className="w-3 h-3 text-green-500" />
+                        ) : (
+                          <X className="w-3 h-3 text-red-500" />
+                        )}
+                      </CardTitle>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 px-2 rounded-none font-terminal text-xs"
+                          onClick={createNewNote}
+                          disabled={!obsidianStatus?.connected}
+                        >
+                          <FileText className="w-3 h-3 mr-1" />
+                          New Note
+                        </Button>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={syncToObsidian}
+                            onChange={(e) => setSyncToObsidian(e.target.checked)}
                             disabled={!obsidianStatus?.connected}
-                          >
-                            <FileText className="w-3 h-3 mr-1" />
-                            New Note
-                          </Button>
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={syncToObsidian}
-                              onChange={(e) => setSyncToObsidian(e.target.checked)}
-                              disabled={!obsidianStatus?.connected}
-                              className="w-4 h-4 accent-primary"
-                            />
-                            <span className="font-terminal text-xs">Auto-Sync</span>
-                          </label>
-                        </div>
+                            className="w-4 h-4 accent-primary"
+                          />
+                          <span className="font-terminal text-xs">Auto-Sync</span>
+                        </label>
                       </div>
-                      {/* Quick access course buttons */}
-                      <div className="flex items-center gap-1 mt-2 flex-wrap">
-                        {courseFolders.map((course) => (
-                          <Button
-                            key={course.path}
-                            size="sm"
-                            variant={obsidianCurrentFolder === course.path ? "default" : "outline"}
-                            className="h-6 px-2 rounded-none font-terminal text-xs"
-                            onClick={() => navigateToFolder(course.path)}
-                          >
-                            {course.name}
-                          </Button>
+                    </div>
+                    {/* Quick access course buttons */}
+                    <div className="flex items-center gap-1 mt-2 flex-wrap">
+                      {courseFolders.map((course) => (
+                        <Button
+                          key={course.path}
+                          size="sm"
+                          variant={obsidianCurrentFolder === course.path ? "default" : "outline"}
+                          className="h-6 px-2 rounded-none font-terminal text-xs"
+                          onClick={() => navigateToFolder(course.path)}
+                        >
+                          {course.name}
+                        </Button>
+                      ))}
+                    </div>
+                    {obsidianCurrentFolder && (
+                      <div className="flex items-center gap-1 mt-2 font-terminal text-xs text-muted-foreground">
+                        <button
+                          onClick={() => navigateToFolder("")}
+                          className="hover:text-primary"
+                        >
+                          vault
+                        </button>
+                        {obsidianCurrentFolder.split('/').map((part, i, arr) => (
+                          <span key={i} className="flex items-center gap-1">
+                            <ChevronRight className="w-3 h-3" />
+                            <button
+                              onClick={() => navigateToFolder(arr.slice(0, i + 1).join('/'))}
+                              className="hover:text-primary"
+                            >
+                              {part}
+                            </button>
+                          </span>
                         ))}
                       </div>
-                      {obsidianCurrentFolder && (
-                        <div className="flex items-center gap-1 mt-2 font-terminal text-xs text-muted-foreground">
-                          <button
-                            onClick={() => navigateToFolder("")}
-                            className="hover:text-primary"
-                          >
-                            vault
-                          </button>
-                          {obsidianCurrentFolder.split('/').map((part, i, arr) => (
-                            <span key={i} className="flex items-center gap-1">
-                              <ChevronRight className="w-3 h-3" />
-                              <button
-                                onClick={() => navigateToFolder(arr.slice(0, i + 1).join('/'))}
-                                className="hover:text-primary"
-                              >
-                                {part}
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      {obsidianStatus?.connected ? (
-                        <div className="grid md:grid-cols-2 h-[240px] md:h-[300px]">
-                          {/* File list */}
-                          <div className="border-r border-secondary/30">
-                            <ScrollArea className="h-[240px] md:h-[300px]">
-                              <div className="p-2 space-y-1">
-                                {obsidianCurrentFolder && (
+                    )}
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {obsidianStatus?.connected ? (
+                      <div className="grid md:grid-cols-2 h-[240px] md:h-[300px]">
+                        {/* File list */}
+                        <div className="border-r border-secondary/30">
+                          <ScrollArea className="h-[240px] md:h-[300px]">
+                            <div className="p-2 space-y-1">
+                              {obsidianCurrentFolder && (
+                                <button
+                                  onClick={() => {
+                                    const parts = obsidianCurrentFolder.split('/');
+                                    parts.pop();
+                                    navigateToFolder(parts.join('/'));
+                                  }}
+                                  className="w-full flex items-center gap-2 p-2 hover:bg-secondary/20 font-terminal text-xs text-muted-foreground"
+                                >
+                                  <Folder className="w-3 h-3" />
+                                  ..
+                                </button>
+                              )}
+                              {obsidianFiles?.files?.map((file: string | { path: string }) => {
+                                // Handle both string and object formats
+                                const filePath = typeof file === 'string' ? file : file.path;
+                                const isFolder = filePath.endsWith('/');
+                                const name = filePath.replace(/\/$/, '').split('/').pop() || filePath;
+                                return (
                                   <button
+                                    key={filePath}
                                     onClick={() => {
-                                      const parts = obsidianCurrentFolder.split('/');
-                                      parts.pop();
-                                      navigateToFolder(parts.join('/'));
+                                      if (isFolder) {
+                                        const cleanName = name.replace(/\/$/, '');
+                                        navigateToFolder(obsidianCurrentFolder ? `${obsidianCurrentFolder}/${cleanName}` : cleanName);
+                                      } else {
+                                        const fullPath = obsidianCurrentFolder ? `${obsidianCurrentFolder}/${name}` : name;
+                                        loadObsidianFile(fullPath);
+                                      }
                                     }}
-                                    className="w-full flex items-center gap-2 p-2 hover:bg-secondary/20 font-terminal text-xs text-muted-foreground"
-                                  >
-                                    <Folder className="w-3 h-3" />
-                                    ..
-                                  </button>
-                                )}
-                                {obsidianFiles?.files?.map((file: string | { path: string }) => {
-                                  // Handle both string and object formats
-                                  const filePath = typeof file === 'string' ? file : file.path;
-                                  const isFolder = filePath.endsWith('/');
-                                  const name = filePath.replace(/\/$/, '').split('/').pop() || filePath;
-                                  return (
-                                    <button
-                                      key={filePath}
-                                      onClick={() => {
-                                        if (isFolder) {
-                                          const cleanName = name.replace(/\/$/, '');
-                                          navigateToFolder(obsidianCurrentFolder ? `${obsidianCurrentFolder}/${cleanName}` : cleanName);
-                                        } else {
-                                          const fullPath = obsidianCurrentFolder ? `${obsidianCurrentFolder}/${name}` : name;
-                                          loadObsidianFile(fullPath);
-                                        }
-                                      }}
-                                      className={`w-full flex items-center gap-2 p-2 hover:bg-secondary/20 font-terminal text-xs ${
-                                        obsidianCurrentFile?.endsWith(name) ? 'bg-primary/20 text-primary' : ''
+                                    className={`w-full flex items-center gap-2 p-2 hover:bg-secondary/20 font-terminal text-xs ${obsidianCurrentFile?.endsWith(name) ? 'bg-primary/20 text-primary' : ''
                                       }`}
-                                    >
-                                      {isFolder ? (
-                                        <Folder className="w-3 h-3 text-yellow-500" />
-                                      ) : (
-                                        <File className="w-3 h-3 text-blue-400" />
-                                      )}
-                                      {name}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </ScrollArea>
-                          </div>
-                          {/* Editor */}
-                          <div className="flex flex-col h-[240px] md:h-[300px]">
-                            {obsidianCurrentFile ? (
-                              <>
-                                <div className="flex items-center justify-between p-2 border-b border-secondary/30">
+                                  >
+                                    {isFolder ? (
+                                      <Folder className="w-3 h-3 text-yellow-500" />
+                                    ) : (
+                                      <File className="w-3 h-3 text-blue-400" />
+                                    )}
+                                    {name}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </ScrollArea>
+                        </div>
+                        {/* Editor */}
+                        <div className="flex flex-col h-[240px] md:h-[300px]">
+                          {obsidianCurrentFile ? (
+                            <>
+                              <div className="flex items-center justify-between p-2 border-b border-secondary/30">
+                                <div className="flex items-center gap-2 min-w-0">
                                   <span className="font-terminal text-xs text-primary truncate">
                                     {obsidianCurrentFile.split('/').pop()}
                                     {obsidianHasChanges && <span className="text-yellow-500 ml-1">*</span>}
                                   </span>
+                                  <button
+                                    onClick={() => {
+                                      const vaultName = obsidianConfig?.vaultName || "PT School Semester 2";
+                                      const filePath = obsidianCurrentFile.replace(/\.md$/, "");
+                                      window.open(`obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(filePath)}`, "_blank");
+                                    }}
+                                    className="text-muted-foreground hover:text-primary shrink-0"
+                                    title="Open in Obsidian app"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                  </button>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 px-2 text-[10px]"
+                                    onClick={() => setObsidianPreviewMode(!obsidianPreviewMode)}
+                                  >
+                                    {obsidianPreviewMode ? "Edit" : "Preview"}
+                                  </Button>
                                   <Button
                                     size="sm"
                                     variant="ghost"
@@ -662,6 +725,15 @@ export default function Brain() {
                                     {obsidianIsSaving ? 'Saving...' : 'Save'}
                                   </Button>
                                 </div>
+                              </div>
+                              {obsidianPreviewMode ? (
+                                <div className="flex-1 w-full p-3 bg-black/60 font-terminal overflow-y-auto">
+                                  <ObsidianRenderer
+                                    content={obsidianFileContent}
+                                    onWikilinkClick={handleWikilinkClick}
+                                  />
+                                </div>
+                              ) : (
                                 <textarea
                                   value={obsidianFileContent}
                                   onChange={(e) => {
@@ -671,431 +743,438 @@ export default function Brain() {
                                   className="flex-1 w-full p-3 bg-black/60 font-terminal text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
                                   placeholder="File content..."
                                 />
-                              </>
-                            ) : (
-                              <div className="flex-1 flex items-center justify-center font-terminal text-xs text-muted-foreground">
-                                Select a file to edit
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="p-8 text-center">
-                          <p className="font-terminal text-xs text-red-400 mb-2">Obsidian Offline</p>
-                          <p className="font-terminal text-xs text-muted-foreground">
-                            Open Obsidian with Local REST API plugin enabled
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  <Card className="brain-card rounded-none">
-                    <CardHeader className="border-b border-secondary/50 p-3">
-                      <CardTitle className="font-arcade text-xs flex items-center gap-2 text-muted-foreground">
-                        <Layers className="w-3 h-3" />
-                        ANKI INTEGRATION
-                        {ankiStatus?.connected ? (
-                          <Check className="w-3 h-3 text-green-500 ml-auto" />
-                        ) : (
-                          <X className="w-3 h-3 text-red-500 ml-auto" />
-                        )}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 space-y-3">
-                      {ankiLoading ? (
-                        <p className="font-terminal text-xs text-muted-foreground">Checking Anki...</p>
-                      ) : ankiStatus?.connected ? (
-                        <>
-                          <div className="flex justify-between items-center">
-                            <span className="font-terminal text-xs text-muted-foreground">Status:</span>
-                            <Badge variant="outline" className="bg-green-500/20 text-green-400 border-green-500">
-                              Connected
-                            </Badge>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="font-terminal text-xs text-muted-foreground">Cards Created:</span>
-                            <span className="font-arcade text-xs text-primary">{metrics?.totalCards || 0}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="font-terminal text-xs text-muted-foreground">Due Today:</span>
-                            <span className="font-arcade text-xs text-secondary">{ankiDue?.dueCount || 0}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="font-terminal text-xs text-muted-foreground">Reviewed Today:</span>
-                            <span className="font-arcade text-xs text-muted-foreground">{ankiStatus.reviewedToday || 0}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="font-terminal text-xs text-muted-foreground">Decks:</span>
-                            <span className="font-arcade text-xs text-muted-foreground">{ankiStatus.decks?.length || 0}</span>
-                          </div>
-                          <div className="pt-2 flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="flex-1 font-terminal text-xs"
-                              onClick={() => refetchAnki()}
-                            >
-                              <RefreshCw className="w-3 h-3 mr-1" />
-                              Refresh
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="flex-1 font-terminal text-xs bg-secondary hover:bg-secondary/80"
-                              onClick={() => syncAnkiMutation.mutate()}
-                              disabled={syncAnkiMutation.isPending}
-                            >
-                              {syncAnkiMutation.isPending ? "Syncing..." : "Sync Cards"}
-                            </Button>
-                          </div>
-                          {/* Pending Drafts */}
-                          {pendingDrafts.length > 0 && (
-                            <div className="pt-3 border-t border-secondary/30">
-                              <div className="flex justify-between items-center mb-2">
-                                <span className="font-arcade text-[10px] text-yellow-400">PENDING CARDS ({pendingDrafts.length})</span>
-                                <div className="flex gap-1">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-5 px-2 text-[10px] font-terminal"
-                                    onClick={() => {
-                                      if (selectedDrafts.size === pendingDrafts.length) {
-                                        setSelectedDrafts(new Set());
-                                      } else {
-                                        setSelectedDrafts(new Set(pendingDrafts.map(d => d.id)));
-                                      }
-                                    }}
-                                  >
-                                    {selectedDrafts.size === pendingDrafts.length ? "None" : "All"}
-                                  </Button>
-                                </div>
-                              </div>
-                              {selectedDrafts.size > 0 && (
-                                <div className="flex gap-1 mb-2">
-                                  <Button
-                                    size="sm"
-                                    className="h-6 px-2 text-[10px] font-terminal bg-green-600 hover:bg-green-700"
-                                    onClick={() => {
-                                      selectedDrafts.forEach(id => approveDraftMutation.mutate(id));
-                                      setSelectedDrafts(new Set());
-                                    }}
-                                  >
-                                    <Check className="w-3 h-3 mr-1" />
-                                    Approve ({selectedDrafts.size})
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    className="h-6 px-2 text-[10px] font-terminal"
-                                    onClick={() => {
-                                      selectedDrafts.forEach(id => deleteDraftMutation.mutate(id));
-                                      setSelectedDrafts(new Set());
-                                    }}
-                                  >
-                                    <Trash2 className="w-3 h-3 mr-1" />
-                                    Delete ({selectedDrafts.size})
-                                  </Button>
-                                </div>
                               )}
-                              <ScrollArea className="h-[200px]">
-                                <div className="space-y-2">
-                                  {pendingDrafts.map((draft) => (
-                                    <div key={draft.id} className={`p-2 bg-black/40 border text-xs ${selectedDrafts.has(draft.id) ? 'border-primary' : 'border-secondary/30'}`}>
-                                      <div className="flex items-start gap-2">
-                                        <Checkbox
-                                          checked={selectedDrafts.has(draft.id)}
-                                          onCheckedChange={(checked) => {
-                                            const newSet = new Set(selectedDrafts);
-                                            if (checked) {
-                                              newSet.add(draft.id);
-                                            } else {
-                                              newSet.delete(draft.id);
-                                            }
-                                            setSelectedDrafts(newSet);
-                                          }}
-                                          className="mt-1 border-secondary data-[state=checked]:bg-primary"
-                                        />
-                                        <div className="flex-1 min-w-0 overflow-hidden">
-                                          <div className="font-terminal text-primary truncate">{draft.front}</div>
-                                          <div className="font-terminal text-muted-foreground mt-1 truncate">{draft.back}</div>
-                                          <div className="flex items-center gap-2 mt-1">
-                                            <Badge variant="outline" className="text-[9px] border-blue-500/50 text-blue-400 shrink-0">
-                                              {draft.deckName}
-                                            </Badge>
-                                            <Button
-                                              size="icon"
-                                              variant="outline"
-                                              className="h-5 w-5 shrink-0 border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/20"
-                                              onClick={() => handleEditDraft(draft)}
-                                              title="Edit card"
-                                            >
-                                              <Pencil className="w-3 h-3" />
-                                            </Button>
-                                            <Button
-                                              size="icon"
-                                              variant="outline"
-                                              className="h-5 w-5 shrink-0 border-green-500/50 text-green-400 hover:bg-green-500/20"
-                                              onClick={() => approveDraftMutation.mutate(draft.id)}
-                                              title="Approve card"
-                                            >
-                                              <Check className="w-3 h-3" />
-                                            </Button>
-                                            <Button
-                                              size="icon"
-                                              variant="outline"
-                                              className="h-5 w-5 shrink-0 border-red-500/50 text-red-400 hover:bg-red-500/20"
-                                              onClick={() => deleteDraftMutation.mutate(draft.id)}
-                                              title="Delete card"
-                                            >
-                                              <Trash2 className="w-3 h-3" />
-                                            </Button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </ScrollArea>
+                            </>
+                          ) : (
+                            <div className="flex-1 flex items-center justify-center font-terminal text-xs text-muted-foreground">
+                              Select a file to edit
                             </div>
                           )}
-                        </>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-8 text-center">
+                        <p className="font-terminal text-xs text-red-400 mb-2">Obsidian Offline</p>
+                        <p className="font-terminal text-xs text-muted-foreground">
+                          Open Obsidian with Local REST API plugin enabled
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="brain-card rounded-none">
+                  <CardHeader className="border-b border-secondary/50 p-4">
+                    <CardTitle className="font-arcade text-sm flex items-center gap-3 text-muted-foreground">
+                      <Layers className="w-3 h-3" />
+                      ANKI INTEGRATION
+                      {ankiStatus?.connected ? (
+                        <Check className="w-3 h-3 text-green-500 ml-auto" />
                       ) : (
-                        <div className="text-center space-y-2">
-                          <p className="font-terminal text-xs text-red-400">
-                            {ankiStatus?.error || "Anki not connected"}
-                          </p>
-                          <p className="font-terminal text-xs text-muted-foreground">
-                            Open Anki with AnkiConnect plugin
-                          </p>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="font-terminal text-xs"
+                        <X className="w-3 h-3 text-red-500 ml-auto" />
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6 space-y-4">
+                    {ankiLoading ? (
+                      <p className="font-terminal text-xs text-muted-foreground">Checking Anki...</p>
+                    ) : ankiStatus?.connected ? (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <span className="font-terminal text-xs text-muted-foreground">Status:</span>
+                          <Badge variant="outline" className="bg-green-500/20 text-green-400 border-green-500">
+                            Connected
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="font-terminal text-xs text-muted-foreground">Cards Created:</span>
+                          <span className="font-arcade text-xs text-primary">{metrics?.totalCards || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="font-terminal text-xs text-muted-foreground">Due Today:</span>
+                          <span className="font-arcade text-xs text-secondary">{ankiDue?.dueCount || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="font-terminal text-xs text-muted-foreground">Reviewed Today:</span>
+                          <span className="font-arcade text-xs text-muted-foreground">{ankiStatus.reviewedToday || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="font-terminal text-xs text-muted-foreground">Decks:</span>
+                          <span className="font-arcade text-xs text-muted-foreground">{ankiStatus.decks?.length || 0}</span>
+                        </div>
+                        <div className="pt-2 flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 font-terminal text-xs"
                             onClick={() => refetchAnki()}
                           >
                             <RefreshCw className="w-3 h-3 mr-1" />
-                            Retry
+                            Refresh
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="flex-1 font-terminal text-xs bg-secondary hover:bg-secondary/80"
+                            onClick={() => syncAnkiMutation.mutate()}
+                            disabled={syncAnkiMutation.isPending}
+                          >
+                            {syncAnkiMutation.isPending ? "Syncing..." : "Sync Cards"}
                           </Button>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                 </div>
-             </TabsContent>
+                        {/* Pending Drafts */}
+                        {pendingDrafts.length > 0 && (
+                          <div className="pt-3 border-t border-secondary/30">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="font-arcade text-[10px] text-yellow-400">PENDING CARDS ({pendingDrafts.length})</span>
+                              <div className="flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-5 px-2 text-[10px] font-terminal"
+                                  onClick={() => {
+                                    if (selectedDrafts.size === pendingDrafts.length) {
+                                      setSelectedDrafts(new Set());
+                                    } else {
+                                      setSelectedDrafts(new Set(pendingDrafts.map(d => d.id)));
+                                    }
+                                  }}
+                                >
+                                  {selectedDrafts.size === pendingDrafts.length ? "None" : "All"}
+                                </Button>
+                              </div>
+                            </div>
+                            {selectedDrafts.size > 0 && (
+                              <div className="flex gap-1 mb-2">
+                                <Button
+                                  size="sm"
+                                  className="h-6 px-2 text-[10px] font-terminal bg-green-600 hover:bg-green-700"
+                                  onClick={() => {
+                                    selectedDrafts.forEach(id => approveDraftMutation.mutate(id));
+                                    setSelectedDrafts(new Set());
+                                  }}
+                                >
+                                  <Check className="w-3 h-3 mr-1" />
+                                  Approve ({selectedDrafts.size})
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  className="h-6 px-2 text-[10px] font-terminal"
+                                  onClick={() => {
+                                    selectedDrafts.forEach(id => deleteDraftMutation.mutate(id));
+                                    setSelectedDrafts(new Set());
+                                  }}
+                                >
+                                  <Trash2 className="w-3 h-3 mr-1" />
+                                  Delete ({selectedDrafts.size})
+                                </Button>
+                              </div>
+                            )}
+                            <ScrollArea className="h-[200px]">
+                              <div className="space-y-2">
+                                {pendingDrafts.map((draft) => (
+                                  <div key={draft.id} className={`p-2 bg-black/40 border text-xs ${selectedDrafts.has(draft.id) ? 'border-primary' : 'border-secondary/30'}`}>
+                                    <div className="flex items-start gap-2">
+                                      <Checkbox
+                                        checked={selectedDrafts.has(draft.id)}
+                                        onCheckedChange={(checked) => {
+                                          const newSet = new Set(selectedDrafts);
+                                          if (checked) {
+                                            newSet.add(draft.id);
+                                          } else {
+                                            newSet.delete(draft.id);
+                                          }
+                                          setSelectedDrafts(newSet);
+                                        }}
+                                        className="mt-1 border-secondary data-[state=checked]:bg-primary"
+                                      />
+                                      <div className="flex-1 min-w-0 overflow-hidden">
+                                        <div className="font-terminal text-primary truncate">{draft.front}</div>
+                                        <div className="font-terminal text-muted-foreground mt-1 truncate">{draft.back}</div>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <Badge variant="outline" className="text-[9px] border-blue-500/50 text-blue-400 shrink-0">
+                                            {draft.deckName}
+                                          </Badge>
+                                          <Button
+                                            size="icon"
+                                            variant="outline"
+                                            className="h-5 w-5 shrink-0 border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/20"
+                                            onClick={() => handleEditDraft(draft)}
+                                            title="Edit card"
+                                          >
+                                            <Pencil className="w-3 h-3" />
+                                          </Button>
+                                          <Button
+                                            size="icon"
+                                            variant="outline"
+                                            className="h-5 w-5 shrink-0 border-green-500/50 text-green-400 hover:bg-green-500/20"
+                                            onClick={() => approveDraftMutation.mutate(draft.id)}
+                                            title="Approve card"
+                                          >
+                                            <Check className="w-3 h-3" />
+                                          </Button>
+                                          <Button
+                                            size="icon"
+                                            variant="outline"
+                                            className="h-5 w-5 shrink-0 border-red-500/50 text-red-400 hover:bg-red-500/20"
+                                            onClick={() => deleteDraftMutation.mutate(draft.id)}
+                                            title="Delete card"
+                                          >
+                                            <Trash2 className="w-3 h-3" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </ScrollArea>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center space-y-2">
+                        <p className="font-terminal text-xs text-red-400">
+                          {ankiStatus?.error || "Anki not connected"}
+                        </p>
+                        <p className="font-terminal text-xs text-muted-foreground">
+                          Open Anki with AnkiConnect plugin
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="font-terminal text-xs"
+                          onClick={() => refetchAnki()}
+                        >
+                          <RefreshCw className="w-3 h-3 mr-1" />
+                          Retry
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
 
-             {/* SYLLABUS VIEW Tab */}
-             <TabsContent value="syllabus" className="border border-t-0 border-secondary/40 rounded-none">
-               <SyllabusViewTab />
-             </TabsContent>
-            </Tabs>
+            {/* SYLLABUS VIEW Tab */}
+            <TabsContent value="syllabus" className="border border-t-0 border-secondary/40 rounded-none">
+              <SyllabusViewTab />
+            </TabsContent>
 
-           {/* Session Evidence Section */}
-           <div>
-             <h2 className="font-arcade text-lg text-primary mb-4">SESSION EVIDENCE</h2>
-             <Card className="brain-card rounded-none">
-               <CardContent className="p-4 space-y-4">
-                 {/* Date and Semester Filters */}
-                 <div className="grid grid-cols-5 gap-4 mb-4">
-                   <div>
-                     <label className="text-sm font-arcade text-primary mb-2 block">Semester</label>
-                     <Select
-                       value={semesterFilter}
-                       onValueChange={(value) => {
-                         setSemesterFilter(value);
-                         const params = new URLSearchParams(window.location.search);
-                         if (value === "all") params.delete("semester");
-                         else params.set("semester", value);
-                         window.history.replaceState({}, "", `?${params.toString()}`);
-                       }}
-                     >
-                       <SelectTrigger className="rounded-none border-primary">
-                         <SelectValue />
-                       </SelectTrigger>
-                       <SelectContent className="bg-black border-primary">
-                         <SelectItem value="all">All</SelectItem>
-                         <SelectItem value="1">Semester 1 (Fall 2025)</SelectItem>
-                         <SelectItem value="2">Semester 2 (Spring 2026)</SelectItem>
-                       </SelectContent>
-                     </Select>
-                   </div>
-                   <div>
-                     <label className="text-sm font-arcade text-primary mb-2 block">Course</label>
-                     <Select
-                       value={courseFilter}
-                       onValueChange={(value) => setCourseFilter(value)}
-                     >
-                       <SelectTrigger className="rounded-none border-primary">
-                         <SelectValue />
-                       </SelectTrigger>
-                       <SelectContent className="bg-black border-primary">
-                         <SelectItem value="all">All</SelectItem>
-                         {courses.map((c: any) => (
-                           <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
-                         ))}
-                       </SelectContent>
-                     </Select>
-                   </div>
-                   <div>
-                     <label className="text-sm font-arcade text-primary mb-2 block">Start Date</label>
-                     <Input
-                       type="date"
-                       value={startDate}
-                       onChange={(e) => {
-                         setStartDate(e.target.value);
-                         const params = new URLSearchParams(window.location.search);
-                         if (e.target.value) params.set("start", e.target.value);
-                         else params.delete("start");
-                         window.history.replaceState({}, "", `?${params.toString()}`);
-                       }}
-                       className="rounded-none border-primary"
-                     />
-                   </div>
-                   <div>
-                     <label className="text-sm font-arcade text-primary mb-2 block">End Date</label>
-                     <Input
-                       type="date"
-                       value={endDate}
-                       onChange={(e) => {
-                         setEndDate(e.target.value);
-                         const params = new URLSearchParams(window.location.search);
-                         if (e.target.value) params.set("end", e.target.value);
-                         else params.delete("end");
-                         window.history.replaceState({}, "", `?${params.toString()}`);
-                       }}
-                       className="rounded-none border-primary"
-                     />
-                   </div>
-                   <div className="flex items-end">
-                     <Button
-                       variant="outline"
-                       onClick={() => {
-                         setSemesterFilter("all");
-                         setCourseFilter("all");
-                         setStartDate("");
-                         setEndDate("");
-                         window.history.replaceState({}, "", window.location.pathname);
-                       }}
-                       className="rounded-none border-primary w-full"
-                     >
-                       Clear Filters
-                     </Button>
-                   </div>
-                 </div>
+            <TabsContent value="graph" className="border border-t-0 border-secondary/40 rounded-none overflow-hidden">
+              <div className="h-[calc(100vh-140px)] flex flex-col gap-6 min-w-0 overflow-hidden">
+                <VaultGraphView onNodeClick={(name) => handleWikilinkClick(name, false)} />
+              </div>
+            </TabsContent>
+          </Tabs>
 
-                 {/* Sessions Table */}
-                 {sessionsLoading ? (
-                   <div className="text-center py-8">
-                     <p className="font-terminal text-xs text-muted-foreground">Loading sessions...</p>
-                   </div>
-                 ) : sessions.length === 0 ? (
-                   <div className="text-center py-8">
-                     <p className="font-terminal text-xs text-muted-foreground">No sessions found</p>
-                   </div>
-                 ) : (
-                   <ScrollArea className="h-[400px]">
-                     <Table>
-                       <TableHeader>
-                         <TableRow className="border-secondary/30">
-                           <TableHead className="w-12">
-                             <Checkbox
-                               checked={selectedSessions.size === sessions.length && sessions.length > 0}
-                               onCheckedChange={toggleAllSessions}
-                               className="border-secondary"
-                             />
-                           </TableHead>
-                           <TableHead className="font-arcade text-xs text-primary">Date</TableHead>
-                           <TableHead className="font-arcade text-xs text-primary">Course</TableHead>
-                           <TableHead className="font-arcade text-xs text-primary">Mode</TableHead>
-                           <TableHead className="font-arcade text-xs text-primary">Minutes</TableHead>
-                           <TableHead className="font-arcade text-xs text-primary">Cards</TableHead>
-                           <TableHead className="font-arcade text-xs text-primary">Concepts</TableHead>
-                           <TableHead className="font-arcade text-xs text-primary">Actions</TableHead>
-                         </TableRow>
-                       </TableHeader>
-                       <TableBody>
-                         {sessions.filter((s: any) => courseFilter === "all" || String(s.courseId) === courseFilter).map((session: any) => (
-                           <TableRow key={session.id} className="border-secondary/30 hover:bg-secondary/10">
-                             <TableCell>
-                               <Checkbox
-                                 checked={selectedSessions.has(session.id)}
-                                 onCheckedChange={() => toggleSessionSelection(session.id)}
-                                 className="border-secondary"
-                               />
-                             </TableCell>
-                             <TableCell className="font-terminal text-xs">
-                               {safeFormatDate(session.createdAt, "MMM dd, yyyy")}
-                             </TableCell>
-                             <TableCell className="font-terminal text-xs text-muted-foreground">
-                               {session.topic || "-"}
-                             </TableCell>
-                             <TableCell className="font-terminal text-xs text-muted-foreground">
-                               {session.mode || "-"}
-                             </TableCell>
-                             <TableCell className="font-terminal text-xs text-muted-foreground">
-                               {session.minutes || "-"}
-                             </TableCell>
-                             <TableCell className="font-terminal text-xs text-muted-foreground">
-                               {session.cards || "-"}
-                             </TableCell>
-                             <TableCell className="font-terminal text-xs text-muted-foreground">
-                               {Array.isArray(session.concepts) ? session.concepts.length : 0}
-                             </TableCell>
-                             <TableCell className="flex gap-1">
-                               <Button
-                                 size="icon"
-                                 variant="outline"
-                                 className="h-6 w-6 border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/20"
-                                 onClick={() => setEditingSession(session.id)}
-                               >
-                                 <Pencil className="w-3 h-3" />
-                               </Button>
-                               <Button
-                                 size="icon"
-                                 variant="outline"
-                                 className="h-6 w-6 border-red-500/50 text-red-400 hover:bg-red-500/20"
-                                 onClick={() => handleDeleteSingle(session.id)}
-                               >
-                                 <Trash2 className="w-3 h-3" />
-                               </Button>
-                             </TableCell>
-                           </TableRow>
-                         ))}
-                       </TableBody>
-                     </Table>
-                   </ScrollArea>
-                 )}
+          {/* Session Evidence Section */}
+          <div>
+            <h2 className="font-arcade text-lg text-primary mb-4">SESSION EVIDENCE</h2>
+            <Card className="brain-card rounded-none">
+              <CardContent className="p-4 space-y-4">
+                {/* Date and Semester Filters */}
+                <div className="grid grid-cols-5 gap-4 mb-4">
+                  <div>
+                    <label className="text-sm font-arcade text-primary mb-2 block">Semester</label>
+                    <Select
+                      value={semesterFilter}
+                      onValueChange={(value) => {
+                        setSemesterFilter(value);
+                        const params = new URLSearchParams(window.location.search);
+                        if (value === "all") params.delete("semester");
+                        else params.set("semester", value);
+                        window.history.replaceState({}, "", `?${params.toString()}`);
+                      }}
+                    >
+                      <SelectTrigger className="rounded-none border-primary">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-black border-primary">
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="1">Semester 1 (Fall 2025)</SelectItem>
+                        <SelectItem value="2">Semester 2 (Spring 2026)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-arcade text-primary mb-2 block">Course</label>
+                    <Select
+                      value={courseFilter}
+                      onValueChange={(value) => setCourseFilter(value)}
+                    >
+                      <SelectTrigger className="rounded-none border-primary">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-black border-primary">
+                        <SelectItem value="all">All</SelectItem>
+                        {courses.map((c: any) => (
+                          <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-arcade text-primary mb-2 block">Start Date</label>
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        setStartDate(e.target.value);
+                        const params = new URLSearchParams(window.location.search);
+                        if (e.target.value) params.set("start", e.target.value);
+                        else params.delete("start");
+                        window.history.replaceState({}, "", `?${params.toString()}`);
+                      }}
+                      className="rounded-none border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-arcade text-primary mb-2 block">End Date</label>
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => {
+                        setEndDate(e.target.value);
+                        const params = new URLSearchParams(window.location.search);
+                        if (e.target.value) params.set("end", e.target.value);
+                        else params.delete("end");
+                        window.history.replaceState({}, "", `?${params.toString()}`);
+                      }}
+                      className="rounded-none border-primary"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSemesterFilter("all");
+                        setCourseFilter("all");
+                        setStartDate("");
+                        setEndDate("");
+                        window.history.replaceState({}, "", window.location.pathname);
+                      }}
+                      className="rounded-none border-primary w-full"
+                    >
+                      Clear Filters
+                    </Button>
+                  </div>
+                </div>
 
-                 {/* Bulk Actions */}
-                 {selectedSessions.size > 0 && (
-                   <div className="flex gap-2 pt-4 border-t border-secondary/30">
-                     <Button
-                       size="sm"
-                       className="flex-1 font-terminal text-xs bg-red-600 hover:bg-red-700"
-                       onClick={handleDeleteSelected}
-                     >
-                       <Trash2 className="w-3 h-3 mr-1" />
-                       Delete Selected ({selectedSessions.size})
-                     </Button>
-                   </div>
-                 )}
-               </CardContent>
-             </Card>
-           </div>
-         </div>
-       </div>
+                {/* Sessions Table */}
+                {sessionsLoading ? (
+                  <div className="text-center py-8">
+                    <p className="font-terminal text-xs text-muted-foreground">Loading sessions...</p>
+                  </div>
+                ) : sessions.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="font-terminal text-xs text-muted-foreground">No sessions found</p>
+                  </div>
+                ) : (
+                  <ScrollArea className="h-[400px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-secondary/30">
+                          <TableHead className="w-12">
+                            <Checkbox
+                              checked={selectedSessions.size === sessions.length && sessions.length > 0}
+                              onCheckedChange={toggleAllSessions}
+                              className="border-secondary"
+                            />
+                          </TableHead>
+                          <TableHead className="font-arcade text-xs text-primary">Date</TableHead>
+                          <TableHead className="font-arcade text-xs text-primary">Course</TableHead>
+                          <TableHead className="font-arcade text-xs text-primary">Mode</TableHead>
+                          <TableHead className="font-arcade text-xs text-primary">Minutes</TableHead>
+                          <TableHead className="font-arcade text-xs text-primary">Cards</TableHead>
+                          <TableHead className="font-arcade text-xs text-primary">Concepts</TableHead>
+                          <TableHead className="font-arcade text-xs text-primary">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sessions.filter((s: any) => courseFilter === "all" || String(s.courseId) === courseFilter).map((session: any) => (
+                          <TableRow key={session.id} className="border-secondary/30 hover:bg-secondary/10">
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedSessions.has(session.id)}
+                                onCheckedChange={() => toggleSessionSelection(session.id)}
+                                className="border-secondary"
+                              />
+                            </TableCell>
+                            <TableCell className="font-terminal text-xs">
+                              {safeFormatDate(session.createdAt, "MMM dd, yyyy")}
+                            </TableCell>
+                            <TableCell className="font-terminal text-xs text-muted-foreground">
+                              {session.topic || "-"}
+                            </TableCell>
+                            <TableCell className="font-terminal text-xs text-muted-foreground">
+                              {session.mode || "-"}
+                            </TableCell>
+                            <TableCell className="font-terminal text-xs text-muted-foreground">
+                              {session.minutes || "-"}
+                            </TableCell>
+                            <TableCell className="font-terminal text-xs text-muted-foreground">
+                              {session.cards || "-"}
+                            </TableCell>
+                            <TableCell className="font-terminal text-xs text-muted-foreground">
+                              {Array.isArray(session.concepts) ? session.concepts.length : 0}
+                            </TableCell>
+                            <TableCell className="flex gap-1">
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-6 w-6 border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/20"
+                                onClick={() => setEditingSession(session.id)}
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-6 w-6 border-red-500/50 text-red-400 hover:bg-red-500/20"
+                                onClick={() => handleDeleteSingle(session.id)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                )}
 
-       {/* Edit Session Dialog */}
+                {/* Bulk Actions */}
+                {selectedSessions.size > 0 && (
+                  <div className="flex gap-2 pt-4 border-t border-secondary/30">
+                    <Button
+                      size="sm"
+                      className="flex-1 font-terminal text-xs bg-red-600 hover:bg-red-700"
+                      onClick={handleDeleteSelected}
+                    >
+                      <Trash2 className="w-3 h-3 mr-1" />
+                      Delete Selected ({selectedSessions.size})
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* Edit Session Dialog */}
       <Dialog
         open={!!editingSessionData}
         onOpenChange={(open) => {
           if (!open) setEditingSession(null);
         }}
       >
-      <DialogContent
-        data-modal="brain-edit-session"
-        className="bg-black border-2 border-primary rounded-none max-w-2xl translate-y-0"
-        style={{ zIndex: 100005, top: "6rem", left: "50%", transform: "translate(-50%, 0)" }}
-      >
+        <DialogContent
+          data-modal="brain-edit-session"
+          className="bg-black border-2 border-primary rounded-none max-w-2xl translate-y-0"
+          style={{ zIndex: 100005, top: "6rem", left: "50%", transform: "translate(-50%, 0)" }}
+        >
           <DialogHeader>
             <DialogTitle className="font-arcade text-primary flex items-center gap-2">
               <Pencil className="w-5 h-5" />
@@ -1266,11 +1345,11 @@ export default function Brain() {
           if (!open) setEditingDraft(null);
         }}
       >
-      <DialogContent
-        data-modal="brain-edit-draft"
-        className="bg-black border-2 border-primary rounded-none max-w-lg translate-y-0"
-        style={{ zIndex: 100005, top: "6rem", left: "50%", transform: "translate(-50%, 0)" }}
-      >
+        <DialogContent
+          data-modal="brain-edit-draft"
+          className="bg-black border-2 border-primary rounded-none max-w-lg translate-y-0"
+          style={{ zIndex: 100005, top: "6rem", left: "50%", transform: "translate(-50%, 0)" }}
+        >
           <DialogHeader>
             <DialogTitle className="font-arcade text-primary flex items-center gap-2">
               <Pencil className="w-5 h-5" />

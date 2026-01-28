@@ -177,3 +177,4 @@
 - 2026-01-27 22:55:06: Added root Claude/Codex review loop quick-start instructions.
 - 2026-01-28 14:20:00: Added npx skills find to permissions allowlist.
 - 2026-01-28 14:28:00: Added npx skills add to permissions allowlist.
+- 2026-01-28 14:35:00: Personalized CLAUDE.md for Trey with system-specific details.

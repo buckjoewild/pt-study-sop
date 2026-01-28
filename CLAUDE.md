@@ -1,33 +1,51 @@
-# PT Study System
+# PT Study System (Trey)
 
-Personal study OS: captures sessions, generates Anki cards, drives improvement via Scholar research. Flask dashboard on port 5000, Obsidian as primary knowledge base.
+Owner: Trey.
 
-## Commands
+Personal study OS that captures sessions, produces metrics and Anki-ready outputs, keeps Obsidian as the primary knowledge base, and drives improvement via Scholar research. Flask dashboard on port 5000.
 
-- **Start dashboard:** `Start_Dashboard.bat`
-- **Run tests:** `pytest brain/tests/`
-- **Build frontend:** `cd dashboard_rebuild && npm run build`
-- **Copy build:** copy `dashboard_rebuild/dist/public` → `brain/static/dist`
+## Environment
+- Repo root: C:\pt-study-sop
+- Shell: PowerShell
+- Obsidian vault: projects/treys-agent/context/ (UNCONFIRMED: absolute path)
+
+## Core Commands
+- Start dashboard: Start_Dashboard.bat
+- Run tests: pytest brain/tests/
+- Build frontend: cd dashboard_rebuild && npm run build
+- Copy build: copy dashboard_rebuild/dist/public -> brain/static/dist
 
 ## Key Paths
+- Database: brain/data/pt_study.db
+- Session logs: brain/session_logs/
+- API: brain/dashboard/api_adapter.py
+- Frontend source: dashboard_rebuild/
+- Frontend build output: brain/static/dist/
+- SOP canon: sop/
+- Scholar outputs: scholar/outputs/
+- Docs index: docs/README.md (DOCS_INDEX.md also exists)
+- Architecture doc: docs/root/PROJECT_ARCHITECTURE.md
+- SOP manifest: sop/sop_index.v1.json
 
-- Database: `brain/data/pt_study.db`
-- Session logs: `brain/session_logs/`
-- API: `brain/dashboard/api_adapter.py`
-- Frontend source: `dashboard_rebuild/`
-- SOP canon: `sop/`
-- Scholar outputs: `scholar/outputs/`
-- Docs index: `DOCS_INDEX.md`
+## System Modules
+- Dashboard, Brain, Calendar (Flask): brain/
+- Frontend UI: dashboard_rebuild/
+- Scholar research: scholar/
+- SOP definitions: sop/
+- Tutor logs: brain/session_logs/ (Tutor itself is external)
+
+## UI/UX (Retro Arcade)
+- Theme: high-contrast red and black, no glow, consistent across pages.
+- Typography: font-arcade headers, font-terminal body.
+- Components: 2px solid red borders; semi-transparent black backgrounds.
 
 ## Rules
-
-1. Planning first — never start coding immediately.
-2. `dashboard_rebuild` is frontend-only; API lives in `brain/`.
-3. Only serve the Flask dashboard on port 5000 via `Start_Dashboard.bat`.
-4. After frontend changes: rebuild and copy dist to `brain/static/dist`.
-5. Check `permissions.json` before executing new shell commands.
-6. Update `CONTINUITY.md` after every significant change (append only).
+1. Plan before coding for any non-trivial change.
+2. dashboard_rebuild is frontend-only; API lives in brain/.
+3. Only serve the dashboard via Start_Dashboard.bat on port 5000. Do not run a separate dev server.
+4. After frontend changes: rebuild and copy dist/public -> brain/static/dist.
+5. Check permissions.json before executing new shell commands.
+6. Update CONTINUITY.md after every significant change (append only).
 
 ## Detailed Guidelines
-
-- [Agent Workflow](ai-config/agent-workflow.md)
+- Agent Workflow: ai-config/agent-workflow.md

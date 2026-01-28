@@ -7,7 +7,7 @@ Personal study OS that captures sessions, produces metrics and Anki-ready output
 ## Environment
 - Repo root: C:\pt-study-sop
 - Shell: PowerShell
-- Obsidian vault: projects/treys-agent/context/ (UNCONFIRMED: absolute path)
+- Obsidian vault: C:\Users\treyt\Desktop\PT School Semester 2
 
 ## Core Commands
 - Start dashboard: Start_Dashboard.bat

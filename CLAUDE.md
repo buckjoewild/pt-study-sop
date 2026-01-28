@@ -56,6 +56,7 @@ Response style: straight to the point, no fluff.
 8. After code changes, run relevant checks by default (pytest brain/tests/; frontend build already required).
 9. Do not edit archive/ unless explicitly requested.
 10. Do not edit brain/static/dist/ except when copying a new build output.
+11. No destructive commands (e.g., reset --hard, clean, rm) unless explicitly requested.
 
 ## Detailed Guidelines
 - Agent Workflow: ai-config/agent-workflow.md

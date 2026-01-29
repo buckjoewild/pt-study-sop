@@ -5,6 +5,7 @@ Owner: Trey.
 Personal study OS that captures sessions, produces metrics and Anki-ready outputs, keeps Obsidian as the primary knowledge base, and drives improvement via Scholar research. Flask dashboard on port 5000.
 
 Response style: straight to the point, no fluff.
+Also read `AGENTS.md` for agent behavior rules.
 
 ## Environment
 - Repo root: C:\pt-study-sop
@@ -29,11 +30,11 @@ Response style: straight to the point, no fluff.
 - API: brain/dashboard/api_adapter.py
 - Frontend source: dashboard_rebuild/
 - Frontend build output: brain/static/dist/
-- SOP canon: sop/
+- SOP canon: sop/library/
 - Scholar outputs: scholar/outputs/
 - Docs index (canonical): docs/README.md (DOCS_INDEX.md is legacy)
 - Architecture doc: docs/root/PROJECT_ARCHITECTURE.md
-- SOP manifest: sop/sop_index.v1.json
+- SOP manifest: (archived — replaced by sop/library/00-overview.md file map)
 - Google Calendar credentials: GoogleCalendarTasksAPI.json (handle as sensitive; do not modify unless asked).
 
 ## System Modules
@@ -107,6 +108,9 @@ const [state, setState] = useState<T>(() => {
 
 ### Persist Actions Need Visual Feedback
 Any button that saves state without navigating or closing a modal MUST have visual feedback: (1) a toast notification confirming the action, and (2) a status indicator (green dot = saved, red dot = unsaved changes) using a dirty state flag.
+
+### SOP Library Is Source of Truth
+The 75 original SOP files were consolidated into 13 library files at `sop/library/` (00-12). Originals archived to `sop/archive/`. The library is now the sole source of truth for all study system content. Do not reference `sop/src/`, `sop/runtime/`, or `sop/examples/` — those paths no longer exist (archived Jan 2026).
 
 ### Codex MCP Cannot Review Inline Diffs
 Codex MCP's `ask-codex` ignores full diff/code embedded in the prompt and asks for a repo path instead. When the repo isn't reachable by Codex, do the code review manually using the standard checklist (bugs, edge cases, security, performance, type correctness).

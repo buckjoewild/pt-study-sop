@@ -1663,58 +1663,62 @@ export default function CalendarPage() {
       </Dialog>
 
       {/* Edit Modal */}
-      <LocalEventEditModal
-        open={showEditModal && !!selectedEvent}
-        onOpenChange={(open) => {
-          setShowEditModal(open);
-          if (!open) setSelectedEvent(null);
-        }}
-        event={selectedEvent}
-        onEventChange={setSelectedEvent}
-        courseOptions={courseOptions}
-        onSave={() => {
-          if (!selectedEvent) return;
-          updateEventMutation.mutate({
-            id: selectedEvent.id,
-            data: {
-              title: selectedEvent.title,
-              date: selectedEvent.date,
-              endDate: selectedEvent.endDate,
-              allDay: selectedEvent.allDay,
-              eventType: selectedEvent.eventType,
-              courseId: selectedEvent.courseId ?? null,
-              course: selectedEvent.course,
-              weight: selectedEvent.weight,
-              notes: selectedEvent.notes,
-              color: selectedEvent.color,
-              recurrence: selectedEvent.recurrence,
-              location: selectedEvent.location,
-              attendees: selectedEvent.attendees,
-              visibility: selectedEvent.visibility,
-              transparency: selectedEvent.transparency,
-              reminders: selectedEvent.reminders,
-              timeZone: selectedEvent.timeZone,
-            },
-          });
-        }}
-        onDelete={() => {
-          if (selectedEvent) deleteEventMutation.mutate(selectedEvent.id);
-        }}
-      />
+      {selectedEvent && (
+        <LocalEventEditModal
+          open={showEditModal}
+          onOpenChange={(open) => {
+            setShowEditModal(open);
+            if (!open) setSelectedEvent(null);
+          }}
+          event={selectedEvent}
+          onEventChange={setSelectedEvent}
+          courseOptions={courseOptions}
+          onSave={() => {
+            if (!selectedEvent) return;
+            updateEventMutation.mutate({
+              id: selectedEvent.id,
+              data: {
+                title: selectedEvent.title,
+                date: selectedEvent.date,
+                endDate: selectedEvent.endDate,
+                allDay: selectedEvent.allDay,
+                eventType: selectedEvent.eventType,
+                courseId: selectedEvent.courseId ?? null,
+                course: selectedEvent.course,
+                weight: selectedEvent.weight,
+                notes: selectedEvent.notes,
+                color: selectedEvent.color,
+                recurrence: selectedEvent.recurrence,
+                location: selectedEvent.location,
+                attendees: selectedEvent.attendees,
+                visibility: selectedEvent.visibility,
+                transparency: selectedEvent.transparency,
+                reminders: selectedEvent.reminders,
+                timeZone: selectedEvent.timeZone,
+              },
+            });
+          }}
+          onDelete={() => {
+            if (selectedEvent) deleteEventMutation.mutate(selectedEvent.id);
+          }}
+        />
+      )}
 
       {/* Edit Google Event Modal */}
-      <EventEditModal
-        open={showGoogleEditModal && !!selectedGoogleEvent}
-        onOpenChange={(open) => {
-          setShowGoogleEditModal(open);
-          if (!open) setSelectedGoogleEvent(null);
-        }}
-        event={selectedGoogleEvent}
-        onEventChange={setSelectedGoogleEvent}
-        courseOptions={courseOptions}
-        onSave={handleGoogleSave}
-        onDelete={handleGoogleDelete}
-      />
+      {selectedGoogleEvent && (
+        <EventEditModal
+          open={showGoogleEditModal}
+          onOpenChange={(open) => {
+            setShowGoogleEditModal(open);
+            if (!open) setSelectedGoogleEvent(null);
+          }}
+          event={selectedGoogleEvent}
+          onEventChange={setSelectedGoogleEvent}
+          courseOptions={courseOptions}
+          onSave={handleGoogleSave}
+          onDelete={handleGoogleDelete}
+        />
+      )}
       <CalendarAssistant isOpen={showAssistant} onClose={() => setShowAssistant(false)} />
     </Layout>
   );

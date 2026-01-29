@@ -225,4 +225,4 @@
 - 2026-01-29: Anchored dashboard dialogs (add/edit course, add deadline, edit task, delete course) to top offset to prevent off-screen modal overlay; rebuilt and synced dashboard.
 - 2026-01-29: Added course number field to edit course dialog (Study Wheel) and update payload; render calendar edit modals only when selected events exist to avoid black-screen overlay; rebuilt and synced dashboard.
 -   2 0 2 6 - 0 1 - 2 9 :   U p d a t e d   A G E N T S . m d   w i t h   p r o j e c t - e x p l o r a t i o n - b e f o r e - s k i l l s   g u i d a n c e ,   S w i f t U I   r e t r i e v a l - f i r s t   r u l e ,   a n d   d o c s   T a b l e   o f   C o n t e n t s   r e q u i r e m e n t .  
- 
+ - 2026-01-29: Fixed calendar edit modal crash by rendering course dropdown options as course names/ids (not raw objects) in local + Google edit modals; rebuilt and synced dashboard.

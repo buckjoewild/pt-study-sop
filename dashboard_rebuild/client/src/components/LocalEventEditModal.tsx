@@ -269,8 +269,8 @@ export function LocalEventEditModal({
                         </SelectItem>
                       )}
                       {courseOptions.map((course) => (
-                        <SelectItem key={course} value={course}>
-                          {course}
+                        <SelectItem key={course.id} value={String(course.id)}>
+                          {course.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

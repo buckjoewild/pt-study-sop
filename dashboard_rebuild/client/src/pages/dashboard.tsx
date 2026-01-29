@@ -23,8 +23,9 @@ export default function Dashboard() {
   const [newCourseName, setNewCourseName] = useState("");
   const [newCourseCode, setNewCourseCode] = useState("");
   const [showAddCourse, setShowAddCourse] = useState(false);
-  const [editingCourse, setEditingCourse] = useState<{ id: number; name: string } | null>(null);
+  const [editingCourse, setEditingCourse] = useState<{ id: number; name: string; code?: string | null } | null>(null);
   const [editCourseName, setEditCourseName] = useState("");
+  const [editCourseCode, setEditCourseCode] = useState("");
   const [courseToDelete, setCourseToDelete] = useState<{ id: number; name: string } | null>(null);
   const dialogAnchorStyle = { zIndex: 100005, top: "6rem", left: "50%", transform: "translate(-50%, 0)" } as const;
 
@@ -139,12 +140,14 @@ export default function Dashboard() {
   });
 
   const editCourseMutation = useMutation({
-    mutationFn: ({ id, name }: { id: number; name: string }) => api.courses.update(id, { name }),
+    mutationFn: ({ id, name, code }: { id: number; name: string; code?: string | null }) =>
+      api.courses.update(id, { name, code }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["courses"] });
       queryClient.invalidateQueries({ queryKey: ["study-wheel"] });
       setEditingCourse(null);
       setEditCourseName("");
+      setEditCourseCode("");
       toast({ title: "Course updated!", description: "Course name has been changed." });
     },
     onError: () => {
@@ -254,7 +257,11 @@ export default function Dashboard() {
 
   const handleEditCourse = () => {
     if (!editingCourse || !editCourseName.trim()) return;
-    editCourseMutation.mutate({ id: editingCourse.id, name: editCourseName.trim() });
+    editCourseMutation.mutate({
+      id: editingCourse.id,
+      name: editCourseName.trim(),
+      code: editCourseCode.trim() || null,
+    });
   };
 
   const handleConfirmDelete = () => {
@@ -264,9 +271,10 @@ export default function Dashboard() {
     }
   };
 
-  const startEditCourse = (course: { id: number; name: string }) => {
+  const startEditCourse = (course: { id: number; name: string; code?: string | null }) => {
     setEditingCourse(course);
     setEditCourseName(course.name);
+    setEditCourseCode(course.code ?? "");
   };
 
   const handleAddDeadline = () => {
@@ -483,7 +491,7 @@ export default function Dashboard() {
                         </div>
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => startEditCourse({ id: course.id, name: course.name })}
+                            onClick={() => startEditCourse({ id: course.id, name: course.name, code: course.code })}
                             className="p-1 hover:text-primary transition-colors text-muted-foreground"
                             data-testid={`button-edit-course-${course.id}`}
                           >
@@ -542,7 +550,16 @@ export default function Dashboard() {
                   </div>
 
                   {/* Edit Course Dialog */}
-                  <Dialog open={!!editingCourse} onOpenChange={(open) => !open && setEditingCourse(null)}>
+                  <Dialog
+                    open={!!editingCourse}
+                    onOpenChange={(open) => {
+                      if (!open) {
+                        setEditingCourse(null);
+                        setEditCourseName("");
+                        setEditCourseCode("");
+                      }
+                    }}
+                  >
                     <DialogContent className="bg-black border-2 border-primary rounded-none translate-y-0" style={dialogAnchorStyle}>
                       <DialogHeader>
                         <DialogTitle className="font-arcade">EDIT_COURSE</DialogTitle>
@@ -554,6 +571,13 @@ export default function Dashboard() {
                           onChange={(e) => setEditCourseName(e.target.value)}
                           className="rounded-none border-secondary bg-black font-terminal"
                           data-testid="input-edit-course-name"
+                        />
+                        <Input
+                          placeholder="Course number (e.g., PHTH 5301)"
+                          value={editCourseCode}
+                          onChange={(e) => setEditCourseCode(e.target.value)}
+                          className="rounded-none border-secondary bg-black font-terminal"
+                          data-testid="input-edit-course-code"
                         />
                         <Button
                           onClick={handleEditCourse}

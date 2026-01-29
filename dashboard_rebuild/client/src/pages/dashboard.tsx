@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [minutes, setMinutes] = useState("");
   const [isCompleting, setIsCompleting] = useState(false);
   const [newCourseName, setNewCourseName] = useState("");
+  const [newCourseCode, setNewCourseCode] = useState("");
   const [showAddCourse, setShowAddCourse] = useState(false);
   const [editingCourse, setEditingCourse] = useState<{ id: number; name: string } | null>(null);
   const [editCourseName, setEditCourseName] = useState("");
@@ -121,11 +122,13 @@ export default function Dashboard() {
   });
 
   const addCourseMutation = useMutation({
-    mutationFn: (name: string) => api.courses.create({ name, active: true, position: courses.length }),
+    mutationFn: ({ name, code }: { name: string; code?: string }) =>
+      api.courses.create({ name, code, active: true, position: courses.length }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["courses"] });
       queryClient.invalidateQueries({ queryKey: ["study-wheel"] });
       setNewCourseName("");
+      setNewCourseCode("");
       setShowAddCourse(false);
       toast({ title: "Course added!", description: "New course added to the wheel." });
     },
@@ -242,7 +245,10 @@ export default function Dashboard() {
 
   const handleAddCourse = () => {
     if (!newCourseName.trim()) return;
-    addCourseMutation.mutate(newCourseName.trim());
+    addCourseMutation.mutate({
+      name: newCourseName.trim(),
+      code: newCourseCode.trim() || undefined,
+    });
   };
 
   const handleEditCourse = () => {
@@ -421,6 +427,13 @@ export default function Dashboard() {
                           className="rounded-none border-secondary bg-black font-terminal"
                           data-testid="input-course-name"
                         />
+                        <Input
+                          placeholder="Course number (e.g., PHTH 5301)"
+                          value={newCourseCode}
+                          onChange={(e) => setNewCourseCode(e.target.value)}
+                          className="rounded-none border-secondary bg-black font-terminal"
+                          data-testid="input-course-code"
+                        />
                         <Button
                           onClick={handleAddCourse}
                           disabled={!newCourseName.trim() || addCourseMutation.isPending}
@@ -506,6 +519,13 @@ export default function Dashboard() {
                             onChange={(e) => setNewCourseName(e.target.value)}
                             className="rounded-none border-secondary bg-black font-terminal"
                             data-testid="input-course-name-inline"
+                          />
+                          <Input
+                            placeholder="Course number (e.g., PHTH 5301)"
+                            value={newCourseCode}
+                            onChange={(e) => setNewCourseCode(e.target.value)}
+                            className="rounded-none border-secondary bg-black font-terminal"
+                            data-testid="input-course-code-inline"
                           />
                           <Button
                             onClick={handleAddCourse}

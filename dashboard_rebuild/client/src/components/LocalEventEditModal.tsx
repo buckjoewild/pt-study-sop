@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,21 @@ export type LocalCalendarEvent = Omit<
 };
 
 type Tab = "details" | "time" | "recurrence" | "people" | "settings";
+
+const FALLBACK_TIME_ZONES = [
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Phoenix",
+  "America/Anchorage",
+  "Pacific/Honolulu",
+  "Europe/London",
+  "Europe/Paris",
+  "Asia/Tokyo",
+  "Australia/Sydney",
+];
 
 interface LocalEventEditModalProps {
   open: boolean;
@@ -73,6 +88,21 @@ export function LocalEventEditModal({ open, onOpenChange, event, onEventChange, 
 
   const eventDate = new Date(event.date);
   const endDate = event.endDate ? new Date(event.endDate) : null;
+  const timeZoneOptions = useMemo(() => {
+    if (typeof Intl !== "undefined" && "supportedValuesOf" in Intl) {
+      try {
+        return (Intl.supportedValuesOf("timeZone") as string[]).slice().sort();
+      } catch {
+        return FALLBACK_TIME_ZONES;
+      }
+    }
+    return FALLBACK_TIME_ZONES;
+  }, []);
+  const resolvedTimeZone =
+    event.timeZone ||
+    Intl.DateTimeFormat().resolvedOptions().timeZone ||
+    "UTC";
+  const timeZoneValue = timeZoneOptions.includes(resolvedTimeZone) ? resolvedTimeZone : "UTC";
   const recurrenceValue = (() => {
     const raw = event.recurrence || "none";
     if (raw === "daily") return "RRULE:FREQ=DAILY";
@@ -289,12 +319,18 @@ export function LocalEventEditModal({ open, onOpenChange, event, onEventChange, 
                 )}
                 <div className="space-y-2">
                   <Label className="text-xs text-primary/80">TIMEZONE_</Label>
-                  <Input
-                    value={event.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone}
-                    onChange={(e) => setField("timeZone", e.target.value)}
-                    className="bg-black border-primary/50 text-primary font-terminal rounded-none text-xs"
-                    placeholder="America/Chicago"
-                  />
+                  <Select value={timeZoneValue} onValueChange={(v) => setField("timeZone", v)}>
+                    <SelectTrigger className="bg-black border-primary/50 text-primary rounded-none h-8 font-terminal text-xs">
+                      <SelectValue placeholder="Select timezone" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-black border-primary text-primary font-terminal z-[100010]">
+                      {timeZoneOptions.map((tz) => (
+                        <SelectItem key={tz} value={tz}>
+                          {tz}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </>
             )}

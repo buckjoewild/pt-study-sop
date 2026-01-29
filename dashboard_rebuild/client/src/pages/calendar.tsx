@@ -724,6 +724,8 @@ export default function CalendarPage() {
       if (event.eventType !== undefined) privateProps.eventType = event.eventType;
       if (event.course !== undefined) privateProps.course = event.course;
       if (event.weight !== undefined) privateProps.weight = event.weight;
+      const timeZoneProp = event.extendedProperties?.private?.timeZone || event.start?.timeZone;
+      if (timeZoneProp) privateProps.timeZone = timeZoneProp;
       const extendedProperties = Object.keys(privateProps).length ? { private: privateProps } : undefined;
 
       const res = await fetch(`/api/google-calendar/events/${encodeURIComponent(event.id)}`, {

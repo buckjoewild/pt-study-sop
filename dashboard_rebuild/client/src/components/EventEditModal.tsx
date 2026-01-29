@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +38,21 @@ interface GoogleCalendarEvent {
 
 type Tab = "details" | "time" | "recurrence" | "people" | "settings";
 
+const FALLBACK_TIME_ZONES = [
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Phoenix",
+  "America/Anchorage",
+  "Pacific/Honolulu",
+  "Europe/London",
+  "Europe/Paris",
+  "Asia/Tokyo",
+  "Australia/Sydney",
+];
+
 interface EventEditModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -54,6 +69,22 @@ export function EventEditModal({ open, onOpenChange, event, onEventChange, onSav
   if (!event) return null;
 
   const isAllDay = !!event.start?.date && !event.start?.dateTime;
+  const timeZoneOptions = useMemo(() => {
+    if (typeof Intl !== "undefined" && "supportedValuesOf" in Intl) {
+      try {
+        return (Intl.supportedValuesOf("timeZone") as string[]).slice().sort();
+      } catch {
+        return FALLBACK_TIME_ZONES;
+      }
+    }
+    return FALLBACK_TIME_ZONES;
+  }, []);
+  const resolvedTimeZone =
+    event.start?.timeZone ||
+    event.extendedProperties?.private?.timeZone ||
+    Intl.DateTimeFormat().resolvedOptions().timeZone ||
+    "UTC";
+  const timeZoneValue = timeZoneOptions.includes(resolvedTimeZone) ? resolvedTimeZone : "UTC";
 
   const setField = <K extends keyof GoogleCalendarEvent>(key: K, value: GoogleCalendarEvent[K]) => {
     onEventChange({ ...event, [key]: value });
@@ -76,6 +107,24 @@ export function EventEditModal({ open, onOpenChange, event, onEventChange, onSav
         end: { dateTime: `${startDate}T10:00` },
       });
     }
+  };
+
+  const updateTimeZone = (value: string) => {
+    const nextExtended = {
+      ...event.extendedProperties,
+      private: {
+        ...(event.extendedProperties?.private || {}),
+        timeZone: value,
+      },
+    };
+    const nextStart = event.start?.dateTime ? { ...event.start, timeZone: value } : event.start;
+    const nextEnd = event.end?.dateTime ? { ...event.end, timeZone: value } : event.end;
+    onEventChange({
+      ...event,
+      start: nextStart,
+      end: nextEnd,
+      extendedProperties: nextExtended,
+    });
   };
 
   const addAttendee = () => {
@@ -282,16 +331,18 @@ export function EventEditModal({ open, onOpenChange, event, onEventChange, onSav
                 )}
                 <div className="space-y-2">
                   <Label className="text-xs text-green-500/80">TIMEZONE_</Label>
-                  <Input
-                    value={event.start?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone}
-                    onChange={(e) => onEventChange({
-                      ...event,
-                      start: { ...event.start, timeZone: e.target.value },
-                      end: { ...event.end, timeZone: e.target.value },
-                    })}
-                    className="bg-black border-green-500/50 text-green-500 font-terminal rounded-none text-xs"
-                    placeholder="America/Chicago"
-                  />
+                  <Select value={timeZoneValue} onValueChange={updateTimeZone}>
+                    <SelectTrigger className="bg-black border-green-500/50 text-green-500 rounded-none h-8 font-terminal text-xs">
+                      <SelectValue placeholder="Select timezone" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-black border-green-500 text-green-500 font-terminal z-[100010]">
+                      {timeZoneOptions.map((tz) => (
+                        <SelectItem key={tz} value={tz}>
+                          {tz}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </>
             )}

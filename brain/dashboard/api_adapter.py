@@ -776,6 +776,7 @@ def get_events():
                 date_only = end_date.split("T")[0] if "T" in end_date else end_date
                 end_date = f"{date_only}T{event_end_time}:00"
 
+            calendar_id = ev.get("google_calendar_id") or "local"
             serialized.append(
                 {
                     "id": ev["id"],
@@ -791,7 +792,7 @@ def get_events():
                     "color": event_color,
                     "status": ev.get("status", "pending"),
                     "recurrence": ev.get("recurrence_rule"),
-                    "calendarId": "local",
+                    "calendarId": calendar_id,
                     "location": ev.get("location"),
                     "attendees": attendees_val,
                     "visibility": ev.get("visibility"),

@@ -531,6 +531,7 @@ export default function CalendarPage() {
     queryFn: api.google.getStatus,
     retry: 1,
   });
+  const googleConnected = !!googleStatus?.connected;
 
   const handleSync = async () => {
     if (isSyncing) return;
@@ -690,10 +691,6 @@ export default function CalendarPage() {
     mutationFn: api.events.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
-      if (newEvent.calendarId && newEvent.calendarId !== "local") {
-        queryClient.invalidateQueries({ queryKey: ["google-calendar"] });
-        refetchGoogle();
-      }
       setShowEventModal(false);
       resetNewEvent();
     },
@@ -852,6 +849,35 @@ export default function CalendarPage() {
     }
   });
 
+  const createGoogleEventMutation = useMutation({
+    mutationFn: async (payload: {
+      calendarId: string;
+      title: string;
+      date: Date;
+      endDate: Date | null;
+      allDay: boolean;
+      recurrence?: string | null;
+    }) => {
+      const res = await fetch("/api/google-calendar/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Failed to create Google event");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["google-calendar"] });
+      refetchGoogle();
+      setShowEventModal(false);
+      resetNewEvent();
+      toast({ title: "EVENT_CREATED", description: "Saved to Google Calendar" });
+    },
+    onError: (err) => {
+      toast({ title: "CREATE_FAILED", description: err.message, variant: "destructive" });
+    }
+  });
+
   const handleGoogleDelete = () => {
     if (selectedGoogleEvent && selectedGoogleEvent.calendarId) {
       if (selectedGoogleEvent.recurringEventId) {
@@ -900,19 +926,41 @@ export default function CalendarPage() {
     });
   };
 
+  const normalizeRecurrence = (value: string) => {
+    if (!value || value === "none") return null;
+    if (value.startsWith("RRULE:")) return value;
+    switch (value) {
+      case "daily":
+        return "RRULE:FREQ=DAILY";
+      case "weekly":
+        return "RRULE:FREQ=WEEKLY";
+      case "monthly":
+        return "RRULE:FREQ=MONTHLY";
+      case "yearly":
+        return "RRULE:FREQ=YEARLY";
+      default:
+        return value;
+    }
+  };
+
   const normalizeEvent = (event: CalendarEvent | GoogleCalendarEvent): NormalizedEvent => {
     if ('summary' in event) {
       const gEvent = event as GoogleCalendarEvent;
       const isAllDay = !!gEvent.start?.date && !gEvent.start?.dateTime;
       const startStr = gEvent.start?.dateTime || gEvent.start?.date || new Date().toISOString();
       const endStr = gEvent.end?.dateTime || gEvent.end?.date || startStr;
+      const start = new Date(startStr);
+      let end = new Date(endStr);
+      if (isAllDay && gEvent.start?.date && gEvent.end?.date && gEvent.end.date > gEvent.start.date) {
+        end = addDays(new Date(gEvent.end.date), -1);
+      }
       const isOnline = !!(gEvent.conferenceData || gEvent.hangoutLink);
       const storedEventType = gEvent.eventType || gEvent.extendedProperties?.private?.eventType;
       return {
         id: gEvent.id,
         title: gEvent.summary || 'Untitled',
-        start: new Date(startStr),
-        end: new Date(endStr),
+        start,
+        end,
         allDay: isAllDay,
         isGoogle: true,
         eventType: storedEventType || (isOnline ? 'online' : 'synchronous'),
@@ -938,6 +986,9 @@ export default function CalendarPage() {
     }
   };
 
+  const isLocalOnlyEvent = (event: LocalCalendarEvent) =>
+    !event.calendarId || event.calendarId === "local";
+
   const handleCreateEvent = () => {
     if (newEvent.title && newEvent.date) {
       const [startHours, startMinutes] = newEvent.startTime.split(':').map(Number);
@@ -949,8 +1000,29 @@ export default function CalendarPage() {
         const endDateStr = newEvent.endDate || newEvent.date;
         endDateTime = setMinutes(setHours(new Date(endDateStr), endHours), endMinutes);
       } else if (newEvent.endDate) {
-        // For all-day events, add a day to make end date inclusive (calendar convention uses exclusive end)
-        endDateTime = addDays(new Date(newEvent.endDate), 1);
+        endDateTime = new Date(newEvent.endDate);
+      }
+
+      const recurrence = normalizeRecurrence(newEvent.recurrence);
+
+      if (newEvent.calendarId && newEvent.calendarId !== "local") {
+        if (!googleConnected) {
+          toast({ title: "SYNC_FAILED", description: "Google is not connected.", variant: "destructive" });
+          return;
+        }
+        const googleEndDate =
+          newEvent.allDay && newEvent.endDate
+            ? addDays(new Date(newEvent.endDate), 1)
+            : endDateTime;
+        createGoogleEventMutation.mutate({
+          calendarId: newEvent.calendarId,
+          title: newEvent.title,
+          date: startDate,
+          endDate: googleEndDate,
+          allDay: newEvent.allDay,
+          recurrence,
+        });
+        return;
       }
 
       createEventMutation.mutate({
@@ -960,8 +1032,8 @@ export default function CalendarPage() {
         allDay: newEvent.allDay,
         eventType: newEvent.eventType,
         color: newEvent.color,
-        recurrence: newEvent.recurrence || null,
-        calendarId: newEvent.calendarId || null,
+        recurrence,
+        calendarId: "local",
       });
     }
   };
@@ -1020,6 +1092,7 @@ export default function CalendarPage() {
 
     if (showLocalEvents) {
       localEvents.forEach(event => {
+        if (googleConnected && !isLocalOnlyEvent(event)) return;
         if (event.title.toLowerCase().includes(query)) {
           results.push(normalizeEvent(event));
         }
@@ -1047,6 +1120,7 @@ export default function CalendarPage() {
 
     if (showLocalEvents) {
       localEvents.forEach(event => {
+        if (googleConnected && !isLocalOnlyEvent(event)) return;
         const normalized = normalizeEvent(event);
         if (eventSpansDay(normalized, day)) {
           allEvents.push(normalized);

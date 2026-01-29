@@ -230,3 +230,5 @@
  - 2026-01-29: Strengthened Calendar Sync button to refresh Google status, calendar list, and events; auto-resets calendar selection if it no longer matches current Google calendars; added sync success/failure toasts; rebuilt and synced dashboard.
 - 2026-01-29: Sync now forces Google calendar selection to all current calendars and clears hidden calendars so the dashboard mirrors Google after sync; rebuilt and synced dashboard.
 - 2026-01-29: Updated repo instructions (AGENTS.md, CLAUDE.md) to explicitly require reading global C:\\Users\\treyt\\.claude\\CLAUDE.md first.
+- 2026-01-29: Calendar create now writes to Google when a Google calendar is selected; local events are restricted to calendarId=local, and local events assigned to Google calendars are hidden when Google is connected to prevent duplicate listings.
+- 2026-01-29: Normalized Google all-day event end dates to avoid spillover, split all-day end handling for local vs Google creates, and tagged local events with google calendar IDs so Google-connected views hide duplicates; rebuilt and synced dashboard.

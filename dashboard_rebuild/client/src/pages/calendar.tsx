@@ -1020,7 +1020,7 @@ export default function CalendarPage() {
   };
 
   const getEventInlineStyle = (event: NormalizedEvent): React.CSSProperties => {
-    if (event.isGoogle && event.calendarColor) {
+    if (event.calendarColor) {
       // Convert hex to rgba for glass effect
       const hex = event.calendarColor.replace('#', '');
       const r = parseInt(hex.substring(0, 2), 16);

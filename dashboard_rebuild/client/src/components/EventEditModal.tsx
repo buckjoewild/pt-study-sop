@@ -150,11 +150,11 @@ export function EventEditModal({ open, onOpenChange, event, onEventChange, onSav
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        data-modal="calendar-edit-google"
-        className="font-arcade bg-black border-2 border-green-500 rounded-none max-w-lg p-0 overflow-hidden translate-y-0"
-        style={{ zIndex: 100005, top: "4rem", left: "50%", transform: "translate(-50%, 0)" }}
-      >
+        <DialogContent
+          data-modal="calendar-edit-google"
+          className="font-arcade bg-black border-2 border-green-500 rounded-none max-w-lg p-0 overflow-hidden translate-y-0"
+          style={{ zIndex: 100005, top: "6rem", left: "50%", transform: "translate(-50%, 0)" }}
+        >
         <div className="flex flex-col h-full max-h-[80vh]">
           {/* Header */}
           <div className="bg-green-500/20 border-b border-green-500 p-4 flex items-center justify-between shrink-0">

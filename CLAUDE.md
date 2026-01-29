@@ -88,7 +88,28 @@ Never place `useSensors`, `useSensor`, or any `use*` hook inside JSX or callback
 When filtering Google events by `selectedCalendars`, always use `event.calendarId || ''` — never rely on a truthy check on `calendarId` since some events have undefined/empty calendarId and would bypass the filter.
 
 ### Build & Deploy
-After frontend changes, run `npm run build` in `dashboard_rebuild/`, then copy `dist/public/` to `brain/static/dist/`. The Flask server serves static files from there. Without this step, changes won't appear in the browser.
+After frontend changes, run `npm run build` in `dashboard_rebuild/`, then copy `dist/public/` to `brain/static/dist/`. The Flask server serves static files from there. Without this step, changes won't appear in the browser. NEVER run `npm run dev` or `vite dev` — always build and copy. See Post-Implementation Checklist above.
+
+### localStorage in React useState Initializers
+When initializing state from `localStorage` with `JSON.parse`, always wrap in try/catch and validate the parsed type (e.g. `Array.isArray`). Corrupted or stale localStorage data will crash the component on mount otherwise.
+```ts
+const [state, setState] = useState<T>(() => {
+  try {
+    const saved = localStorage.getItem("key");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return new Set(parsed); // validate shape
+    }
+  } catch { /* corrupted — fall through */ }
+  return defaultValue;
+});
+```
+
+### Persist Actions Need Visual Feedback
+Any button that saves state without navigating or closing a modal MUST have visual feedback: (1) a toast notification confirming the action, and (2) a status indicator (green dot = saved, red dot = unsaved changes) using a dirty state flag.
+
+### Codex MCP Cannot Review Inline Diffs
+Codex MCP's `ask-codex` ignores full diff/code embedded in the prompt and asks for a repo path instead. When the repo isn't reachable by Codex, do the code review manually using the standard checklist (bugs, edge cases, security, performance, type correctness).
 
 ## Detailed Guidelines
 - Agent Workflow: ai-config/agent-workflow.md

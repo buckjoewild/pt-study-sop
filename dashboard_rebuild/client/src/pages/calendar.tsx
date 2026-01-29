@@ -351,6 +351,7 @@ export default function CalendarPage() {
     return new Set();
   });
   const [showLocalEvents, setShowLocalEvents] = useState(true);
+  const [calendarSelectionDirty, setCalendarSelectionDirty] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedGoogleEvent, setSelectedGoogleEvent] = useState<GoogleCalendarEvent | null>(null);
   const [showGoogleEditModal, setShowGoogleEditModal] = useState(false);
@@ -609,6 +610,7 @@ export default function CalendarPage() {
       }
       return newSet;
     });
+    setCalendarSelectionDirty(true);
   };
 
   const createEventMutation = useMutation({
@@ -1193,11 +1195,14 @@ export default function CalendarPage() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-6 px-2 rounded-none hover:bg-primary/20 font-arcade text-[9px]"
+                  className="h-6 px-2 rounded-none hover:bg-primary/20 font-arcade text-[9px] flex items-center gap-1.5"
                   onClick={() => {
                     localStorage.setItem("selectedCalendars", JSON.stringify(Array.from(selectedCalendars)));
+                    setCalendarSelectionDirty(false);
+                    toast({ title: "SAVED", description: `${selectedCalendars.size} calendar(s) saved` });
                   }}
                 >
+                  <div className={cn("w-2 h-2 rounded-full", calendarSelectionDirty ? "bg-red-500" : "bg-green-500")} />
                   SAVE
                 </Button>
                 <Button

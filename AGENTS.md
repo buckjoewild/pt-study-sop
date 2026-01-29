@@ -14,6 +14,8 @@ Applies to all work under `C:/pt-study-sop`. A nearer `AGENTS.md` overrides this
 - Ask before destructive or irreversible actions.
 - Run project-required checks or state when they are skipped.
 - Auto-commit after changes with a conventional commit message if none is provided.
+- Explore the project first (key files/paths), then invoke any skill.
+- For SwiftUI tasks, prefer retrieval-led reasoning over pre-training-led reasoning.
 
 ## When to Ask
 
@@ -30,6 +32,10 @@ For complex features or significant refactors, use an ExecPlan per `.agent/PLANS
 ## Folder READMEs
 
 Add a concise `README.md` to folders with non-obvious purpose. Skip `archive/`, config dirs, and folders where the name is self-explanatory.
+
+## Docs
+
+Add or maintain a Table of Contents for documentation.
 
 ## Continuity
 

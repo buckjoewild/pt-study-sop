@@ -1,6 +1,6 @@
 # Agent Rules
 
-Read and obey `CLAUDE.md` first — it contains project context and key paths.
+Read and obey the global instructions first: `C:\Users\treyt\.claude\CLAUDE.md`. Then read the repo `CLAUDE.md` for project context and key paths.
 
 ## Scope
 

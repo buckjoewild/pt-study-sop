@@ -5,6 +5,8 @@ Owner: Trey.
 Personal study OS that captures sessions, produces metrics and Anki-ready outputs, keeps Obsidian as the primary knowledge base, and drives improvement via Scholar research. Flask dashboard on port 5000.
 
 Response style: straight to the point, no fluff.
+
+Global instructions: read `C:\Users\treyt\.claude\CLAUDE.md` first, then this file.
 Also read `AGENTS.md` for agent behavior rules.
 
 ## Environment

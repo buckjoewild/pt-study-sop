@@ -182,10 +182,10 @@ export function LocalEventEditModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           data-modal="calendar-edit-local"
-          className="font-arcade bg-black border-2 border-primary rounded-none max-w-lg p-0 overflow-hidden translate-y-0 max-h-[calc(100vh-6rem)]"
-          style={{ zIndex: 100005, top: "4rem", left: "50%", transform: "translate(-50%, 0)" }}
+          className="font-arcade bg-black border-2 border-primary rounded-none max-w-lg p-0 overflow-hidden translate-y-0 max-h-[calc(100vh-4rem)]"
+          style={{ zIndex: 100005, top: "3rem", left: "50%", transform: "translate(-50%, 0)" }}
         >
-        <div className="flex flex-col h-full max-h-[calc(100vh-10rem)]">
+        <div className="flex flex-col h-full min-h-0">
           {/* Header */}
           <div className="bg-primary/20 border-b border-primary p-4 flex items-center gap-2 shrink-0">
             <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
@@ -209,7 +209,7 @@ export function LocalEventEditModal({
           </div>
 
           {/* Tab Content */}
-          <div className="p-5 space-y-4 overflow-y-auto flex-1">
+          <div className="p-5 space-y-4 overflow-y-auto flex-1 min-h-0">
             {activeTab === "details" && (
               <>
                 <div className="space-y-2">

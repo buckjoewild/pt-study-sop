@@ -235,12 +235,12 @@ export function EventEditModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           data-modal="calendar-edit-google"
-          className="font-arcade bg-black border-2 border-green-500 rounded-none max-w-lg p-0 overflow-hidden translate-y-0 max-h-[calc(100vh-6rem)]"
-          style={{ zIndex: 100005, top: "4rem", left: "50%", transform: "translate(-50%, 0)" }}
+          className="font-arcade bg-black border-2 border-green-500 rounded-none max-w-lg p-0 overflow-hidden translate-y-0 max-h-[calc(100vh-4rem)]"
+          style={{ zIndex: 100005, top: "3rem", left: "50%", transform: "translate(-50%, 0)" }}
         >
         <DialogTitle className="sr-only">Edit Google Calendar event</DialogTitle>
         <DialogDescription className="sr-only">Update event details, time, recurrence, attendees, and settings.</DialogDescription>
-        <div className="flex flex-col h-full max-h-[calc(100vh-10rem)]">
+        <div className="flex flex-col h-full min-h-0">
           {/* Header */}
           <div className="bg-green-500/20 border-b border-green-500 p-4 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
@@ -295,7 +295,7 @@ export function EventEditModal({
           </div>
 
           {/* Tab Content */}
-          <div className="p-5 space-y-4 overflow-y-auto flex-1">
+          <div className="p-5 space-y-4 overflow-y-auto flex-1 min-h-0">
             {activeTab === "details" && (
               <>
                 <div className="space-y-2">

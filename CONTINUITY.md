@@ -239,3 +239,4 @@
 - 2026-01-30: Reduced calendar edit modal height and top offset to fit the viewport (local + Google); rebuilt and synced dashboard.
 - 2026-01-30: Increased calendar edit modal max height and enabled flex scroll shrink (min-h-0) so inner content fits and scrolls; rebuilt and synced dashboard.
 - 2026-01-30: Widened Google edit modal (max-w override with viewport clamp) so synced event forms fit the window; rebuilt and synced dashboard.
+- 2026-01-30: Added sop/sop_index.v1.json manifest pointing the Tutor SOP Explorer to sop/library (source of truth).

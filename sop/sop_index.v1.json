@@ -1,0 +1,33 @@
+﻿{
+  "version": "sop-index-v1",
+  "default_group": "library",
+  "groups": [
+    {
+      "id": "library",
+      "title": "SOP Library (C:\\pt-study-sop\\sop\\library)",
+      "root_hint": "sop/library/",
+      "sections": [
+        {
+          "id": "library_files",
+          "title": "Library Files",
+          "items": [
+            { "id": "library_00_overview", "title": "00 Overview", "path": "sop/library/00-overview.md", "type": "md", "tags": ["library"] },
+            { "id": "library_01_core_rules", "title": "01 Core Rules", "path": "sop/library/01-core-rules.md", "type": "md", "tags": ["library"] },
+            { "id": "library_02_learning_cycle", "title": "02 Learning Cycle", "path": "sop/library/02-learning-cycle.md", "type": "md", "tags": ["library"] },
+            { "id": "library_03_frameworks", "title": "03 Frameworks", "path": "sop/library/03-frameworks.md", "type": "md", "tags": ["library"] },
+            { "id": "library_04_engines", "title": "04 Engines", "path": "sop/library/04-engines.md", "type": "md", "tags": ["library"] },
+            { "id": "library_05_session_flow", "title": "05 Session Flow", "path": "sop/library/05-session-flow.md", "type": "md", "tags": ["library"] },
+            { "id": "library_06_modes", "title": "06 Modes", "path": "sop/library/06-modes.md", "type": "md", "tags": ["library"] },
+            { "id": "library_07_workload", "title": "07 Workload", "path": "sop/library/07-workload.md", "type": "md", "tags": ["library"] },
+            { "id": "library_08_logging", "title": "08 Logging", "path": "sop/library/08-logging.md", "type": "md", "tags": ["library"] },
+            { "id": "library_09_templates", "title": "09 Templates", "path": "sop/library/09-templates.md", "type": "md", "tags": ["library"] },
+            { "id": "library_10_deployment", "title": "10 Deployment", "path": "sop/library/10-deployment.md", "type": "md", "tags": ["library"] },
+            { "id": "library_11_examples", "title": "11 Examples", "path": "sop/library/11-examples.md", "type": "md", "tags": ["library"] },
+            { "id": "library_12_evidence", "title": "12 Evidence", "path": "sop/library/12-evidence.md", "type": "md", "tags": ["library"] },
+            { "id": "library_readme", "title": "README", "path": "sop/library/README.md", "type": "md", "tags": ["library", "meta"] }
+          ]
+        }
+      ]
+    }
+  ]
+}

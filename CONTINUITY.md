@@ -242,3 +242,4 @@
 - 2026-01-30: Added sop/sop_index.v1.json manifest pointing the Tutor SOP Explorer to sop/library (source of truth).
 - 2026-01-30: Rewrote sop/sop_index.v1.json without BOM to fix /api/sop/index 500.
 - 2026-01-30: Added SOP runtime bundle generator/validator, golden log tests, and runtime prompt outputs for Custom GPT v9.3 (sop/runtime, sop/tools, sop/tests).
+- 2026-01-30: Added ExecPlan for SOP runtime bundle build in .agent/context/plans/SOP_RUNTIME_V9_3_CUSTOM_GPT_EXECPLAN.md.

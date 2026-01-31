@@ -250,3 +250,15 @@
 - 2026-01-31: Updated v9.4 Custom GPT system instructions with pre-test guardrail (NO-GUESS), first exposure vs review rule, and LO relabel restriction.
 -   2 0 2 6 - 0 1 - 3 1 :   B u i l t   d a s h b o a r d   f r o n t e n d   a n d   s y n c e d   b r a i n / s t a t i c / d i s t   f r o m   d a s h b o a r d _ r e b u i l d / d i s t / p u b l i c   f o r   l i v e   d e p l o y .  
  
+## 2026-01-31
+
+- 2026-01-31 22:10:00: Completed UI Overhaul v9.4.2 boulder work - all core features delivered (11 commits total):
+  - Runtime bundle drift resolved (8ac74c5f)
+  - Scholar runnable backend + frontend (dc97111d, ca985eec, b88e6ac0, 1d320047)
+  - Planner CTA after JSON attach (93490a5b)
+  - Dashboard compact preview with top 3 tasks + Open Brain button (2f05a0da, bdb5207a)
+  - Brain tab reorganization: DAILY/WEEKLY/ADVANCED → TODAY/THIS WEEK/TOOLS/DATA (990cecd1)
+  - Scholar tab consolidation: 7 tabs → 3 tabs (SUMMARY/ANALYSIS/PROPOSALS) with new ANALYSIS section (b88e6ac0, 1d320047)
+  - Documentation and plan completion (07ee0e64, 55989154, e7e5e1e4, 26cbf75b)
+  - Calendar view separation deferred to v9.4.3 (documented in .sisyphus/notepads/ui-overhaul-v9.4.2/calendar-deferred.md)
+  - **Action required:** 4 commits need manual push (26cbf75b, 55989154, 2f05a0da, 1d320047) - git push failed due to WSL auth

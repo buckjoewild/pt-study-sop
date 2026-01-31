@@ -25,15 +25,15 @@ import {
 const FLOW_STEPS = [
   { id: "study", label: "Study (Tutor)", tab: null, section: null },
   { id: "wrap", label: "Lite Wrap Ledger", tab: null, section: null },
-  { id: "generate", label: "Generate JSON", tab: "daily", section: "section-ingestion" },
-  { id: "attach", label: "Attach JSON", tab: "daily", section: "section-ingestion" },
-  { id: "planner", label: "Planner Queue", tab: "weekly", section: "section-planner" },
-  { id: "actions", label: "Next Actions", tab: "daily", section: "section-actions" },
+  { id: "generate", label: "Generate JSON", tab: "today", section: "section-ingestion" },
+  { id: "attach", label: "Attach JSON", tab: "today", section: "section-ingestion" },
+  { id: "planner", label: "Planner Queue", tab: "this_week", section: "section-planner" },
+  { id: "actions", label: "Next Actions", tab: "today", section: "section-actions" },
 ] as const;
 
 export default function Brain() {
   const [graphMode, setGraphMode] = useState<"vault" | "mindmap">("vault");
-  const [activeTab, setActiveTab] = useState("daily");
+  const [activeTab, setActiveTab] = useState("today");
 
   const { data: obsidianStatus } = useQuery({
     queryKey: ["obsidian", "status"],
@@ -173,22 +173,25 @@ export default function Brain() {
           )}
         </div>
 
-        {/* Main Tabs: DAILY / WEEKLY / ADVANCED */}
+        {/* Main Tabs: TODAY / THIS WEEK / TOOLS / DATA */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
-          <TabsList className="grid w-full grid-cols-3 rounded-none bg-black/40 border-2 border-primary p-0 h-auto">
-            <TabsTrigger value="daily" className="font-arcade text-xs py-3 rounded-none data-[state=active]:bg-primary data-[state=active]:text-black data-[state=inactive]:text-muted-foreground border-r border-primary/30">
-              DAILY
+          <TabsList className="grid w-full grid-cols-4 rounded-none bg-black/40 border-2 border-primary p-0 h-auto">
+            <TabsTrigger value="today" className="font-arcade text-xs py-3 rounded-none data-[state=active]:bg-primary data-[state=active]:text-black data-[state=inactive]:text-muted-foreground border-r border-primary/30">
+              TODAY
             </TabsTrigger>
-            <TabsTrigger value="weekly" className="font-arcade text-xs py-3 rounded-none data-[state=active]:bg-primary data-[state=active]:text-black data-[state=inactive]:text-muted-foreground border-r border-primary/30">
-              WEEKLY
+            <TabsTrigger value="this_week" className="font-arcade text-xs py-3 rounded-none data-[state=active]:bg-primary data-[state=active]:text-black data-[state=inactive]:text-muted-foreground border-r border-primary/30">
+              THIS WEEK
             </TabsTrigger>
-            <TabsTrigger value="advanced" className="font-arcade text-xs py-3 rounded-none data-[state=active]:bg-primary data-[state=active]:text-black data-[state=inactive]:text-muted-foreground">
-              ADVANCED
+            <TabsTrigger value="tools" className="font-arcade text-xs py-3 rounded-none data-[state=active]:bg-primary data-[state=active]:text-black data-[state=inactive]:text-muted-foreground border-r border-primary/30">
+              TOOLS
+            </TabsTrigger>
+            <TabsTrigger value="data" className="font-arcade text-xs py-3 rounded-none data-[state=active]:bg-primary data-[state=active]:text-black data-[state=inactive]:text-muted-foreground">
+              DATA
             </TabsTrigger>
           </TabsList>
 
-          {/* ─── DAILY TAB ─── */}
-          <TabsContent value="daily" className="space-y-6">
+          {/* ─── TODAY TAB ─── */}
+          <TabsContent value="today" className="space-y-6">
             {/* Empty state */}
             {!hasRecentSession && (
               <Card className="bg-black/40 border-2 border-secondary/50 rounded-none">
@@ -240,8 +243,8 @@ export default function Brain() {
             <SessionEvidence />
           </TabsContent>
 
-          {/* ─── WEEKLY TAB ─── */}
-          <TabsContent value="weekly" className="space-y-6">
+          {/* ─── THIS WEEK TAB ─── */}
+          <TabsContent value="this_week" className="space-y-6">
             {/* Planner — full view */}
             <div id="section-planner" className="transition-all duration-300">
               <Card className="bg-black/40 border-2 border-secondary/50 rounded-none">
@@ -256,16 +259,6 @@ export default function Brain() {
                 </CardContent>
               </Card>
             </div>
-
-            {/* Data Tables */}
-            <Card className="bg-black/40 border-2 border-secondary/50 rounded-none">
-              <CardHeader className="p-3 border-b border-secondary/30">
-                <CardTitle className="font-arcade text-xs">SESSION DATA</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <DataTablesSection />
-              </CardContent>
-            </Card>
 
             {/* Stale Topics Alert */}
             {metrics?.staleTopics && metrics.staleTopics.length > 0 && (
@@ -289,8 +282,8 @@ export default function Brain() {
             )}
           </TabsContent>
 
-          {/* ─── ADVANCED TAB ─── */}
-          <TabsContent value="advanced" className="space-y-6">
+          {/* ─── TOOLS TAB ─── */}
+          <TabsContent value="tools" className="space-y-6">
             {/* Six-Phase Topic Note Builder */}
             <TopicNoteBuilder />
 
@@ -325,6 +318,19 @@ export default function Brain() {
                 <div className="h-[calc(100vh-200px)] flex flex-col min-w-0 overflow-hidden">
                   {graphMode === "vault" ? <VaultGraphView /> : <MindMapView />}
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ─── DATA TAB ─── */}
+          <TabsContent value="data" className="space-y-6">
+            {/* Data Tables */}
+            <Card className="bg-black/40 border-2 border-secondary/50 rounded-none">
+              <CardHeader className="p-3 border-b border-secondary/30">
+                <CardTitle className="font-arcade text-xs">SESSION DATA</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <DataTablesSection />
               </CardContent>
             </Card>
           </TabsContent>

@@ -221,12 +221,8 @@ export default function Scholar() {
             <TabsList className="bg-black/60 border border-secondary rounded-none p-1 shrink-0 w-full justify-start overflow-x-auto">
               {[
                 { id: 'summary', label: 'SUMMARY', icon: TrendingUp },
-                { id: 'audit', label: 'TUTOR AUDIT', icon: Search },
-                { id: 'pipeline', label: 'QUESTIONS', icon: HelpCircle },
-                { id: 'evidence', label: 'EVIDENCE', icon: BookOpen },
+                { id: 'analysis', label: 'ANALYSIS', icon: Search },
                 { id: 'proposals', label: 'PROPOSALS', icon: Lightbulb },
-                { id: 'clusters', label: 'CLUSTERS', icon: Layers },
-                { id: 'history', label: 'HISTORY', icon: History },
               ].map(tab => (
                 <TabsTrigger
                   key={tab.id}

@@ -2469,40 +2469,24 @@ def update_planner_task(task_id):
 def run_scholar():
     """
     Triggers the Scholar agent loop.
-    Uses subprocess to spawn independent process or background thread?
-    For safety, let's use a background thread calling `scholar.run_scholar_orchestrator` if properly isolated,
-    or subprocess to run `run_scholar.bat` (unattended).
-
-    Subprocess is safer to avoid blocking Flask.
+    Uses the in-app orchestrator runner so the button actually starts
+    the Codex-powered Scholar workflow and writes outputs.
     """
-    import subprocess
     from pathlib import Path
 
     try:
+        from dashboard.scholar import cleanup_stale_pids, run_scholar_orchestrator
         repo_root = Path(__file__).parent.parent.parent.resolve()
-        script_path = repo_root / "scripts" / "run_scholar.bat"
+        run_dir = repo_root / "scholar" / "outputs" / "orchestrator_runs"
+        run_dir.mkdir(parents=True, exist_ok=True)
 
-        # Check if running? (Optional)
+        cleanup_stale_pids()
+        is_running = any(run_dir.glob("*.pid")) or any(run_dir.glob("*.running"))
+        if is_running:
+            return jsonify({"success": False, "message": "Scholar run already in progress"}), 409
 
-        # Spawn process
-        # We use a special flag or mode? The bat file shows a menu.
-        # We need an unattended mode.
-        # The user wants "Unattended execution" from menu.
-        # But for now, let's just assume we can call the python script directly.
-
-        # Direct python call to bypass menu:
-        # python brain/dashboard/scholar.py --mode orchestrator
-
-        py_script = repo_root / "brain" / "dashboard" / "scholar.py"
-
-        # Use Popen to run in background
-        subprocess.Popen(
-            ["python", str(py_script), "--mode", "orchestrator"],
-            cwd=str(repo_root),
-            start_new_session=True,  # Detach
-        )
-
-        return jsonify({"success": True, "message": "Scholar process started"})
+        result = run_scholar_orchestrator()
+        return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

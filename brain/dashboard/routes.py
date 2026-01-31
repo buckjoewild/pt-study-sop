@@ -917,6 +917,58 @@ def api_scholar_implementation_bundle():
     return jsonify(result), status_code
 
 
+@dashboard_bp.route("/api/scholar/run", methods=["POST"])
+def api_scholar_run():
+    """Trigger a full Scholar orchestration run."""
+    from dashboard.scholar import run_scholar_orchestrator_tracking, get_scholar_run_status
+    import threading
+    
+    data = request.get_json() or {}
+    triggered_by = data.get('triggered_by', 'ui')
+    
+    # Check if a run is already in progress
+    current_status = get_scholar_run_status()
+    if current_status.get('status') == 'running':
+        return jsonify({
+            'ok': False,
+            'message': 'A run is already in progress',
+            'current_run': current_status
+        }), 409
+    
+    # Start run in background thread (don't block request)
+    def run_async():
+        run_scholar_orchestrator_tracking(save_outputs=True, triggered_by=triggered_by)
+    
+    thread = threading.Thread(target=run_async)
+    thread.daemon = True
+    thread.start()
+    
+    # Return current status (will show 'running')
+    return jsonify({
+        'ok': True,
+        'message': 'Scholar run started',
+        'status': get_scholar_run_status()
+    })
+
+
+@dashboard_bp.route("/api/scholar/run/status", methods=["GET"])
+def api_scholar_run_status():
+    """Get the current/latest run status."""
+    from dashboard.scholar import get_scholar_run_status
+    return jsonify(get_scholar_run_status())
+
+
+@dashboard_bp.route("/api/scholar/run/history", methods=["GET"])
+def api_scholar_run_history():
+    """Get run history."""
+    from dashboard.scholar import get_scholar_run_history
+    limit = request.args.get('limit', 10, type=int)
+    return jsonify({
+        'ok': True,
+        'runs': get_scholar_run_history(limit)
+    })
+
+
 @dashboard_bp.route("/api/mastery")
 def api_mastery():
     """Get topic mastery statistics for identifying weak areas and relearning needs."""

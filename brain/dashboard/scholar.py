@@ -2766,3 +2766,150 @@ def check_proposal_similarity(title: str, scope_text: str = "") -> list:
     similar_proposals.sort(key=lambda x: x["similarity"], reverse=True)
     
     return similar_proposals
+
+
+def run_scholar_orchestrator_tracking(save_outputs=True, triggered_by='ui', run_id=None):
+    """
+    Run full Scholar orchestration with run tracking:
+    1. Generate weekly digest from recent sessions
+    2. Create proposals from digest insights
+    3. Update run tracking
+    
+    Args:
+        save_outputs: Whether to save digest to DB and files
+        triggered_by: 'ui', 'scheduled', or 'manual'
+        run_id: Pre-created run ID to update (optional)
+    
+    Returns:
+        dict: {ok, run_id, digest_id, proposals_created, error}
+    """
+    from db_setup import get_connection
+    from datetime import datetime
+    
+    conn = get_connection()
+    cur = conn.cursor()
+    
+    if run_id is None:
+        cur.execute("""
+            INSERT INTO scholar_runs (started_at, status, triggered_by)
+            VALUES (?, 'running', ?)
+        """, (datetime.now().isoformat(), triggered_by))
+        conn.commit()
+        run_id = cur.lastrowid
+    
+    try:
+        digest_result = generate_weekly_digest(days=7)
+        
+        if not digest_result.get('ok'):
+            raise Exception(f"Digest generation failed: {digest_result.get('error', 'Unknown')}")
+        
+        digest_id = None
+        if save_outputs and digest_result.get('digest'):
+            from dashboard.routes import _save_digest_artifacts
+            saved = _save_digest_artifacts(digest_result['digest'], digest_type='weekly')
+            digest_id = saved.get('id')
+        
+        proposals_created = 0
+        
+        cur.execute("""
+            UPDATE scholar_runs 
+            SET status = 'success', 
+                ended_at = ?,
+                digest_id = ?,
+                proposals_created = ?,
+                notes = ?
+            WHERE id = ?
+        """, (
+            datetime.now().isoformat(),
+            digest_id,
+            proposals_created,
+            f"Digest generated: {digest_result.get('title', 'Untitled')}",
+            run_id
+        ))
+        conn.commit()
+        
+        return {
+            'ok': True,
+            'run_id': run_id,
+            'digest_id': digest_id,
+            'proposals_created': proposals_created
+        }
+        
+    except Exception as e:
+        cur.execute("""
+            UPDATE scholar_runs 
+            SET status = 'failed', 
+                ended_at = ?,
+                error_message = ?
+            WHERE id = ?
+        """, (datetime.now().isoformat(), str(e), run_id))
+        conn.commit()
+        
+        return {
+            'ok': False,
+            'run_id': run_id,
+            'error': str(e)
+        }
+    finally:
+        conn.close()
+
+
+def get_scholar_run_status():
+    """Get the latest run status."""
+    from db_setup import get_connection
+    conn = get_connection()
+    cur = conn.cursor()
+    
+    cur.execute("""
+        SELECT id, status, started_at, ended_at, digest_id, proposals_created, error_message
+        FROM scholar_runs
+        ORDER BY started_at DESC
+        LIMIT 1
+    """)
+    
+    row = cur.fetchone()
+    conn.close()
+    
+    if not row:
+        return {'status': 'idle', 'message': 'No runs yet'}
+    
+    return {
+        'run_id': row[0],
+        'status': row[1],
+        'started_at': row[2],
+        'ended_at': row[3],
+        'digest_id': row[4],
+        'proposals_created': row[5],
+        'error_message': row[6]
+    }
+
+
+def get_scholar_run_history(limit=10):
+    """Get recent run history."""
+    from db_setup import get_connection
+    conn = get_connection()
+    cur = conn.cursor()
+    
+    cur.execute("""
+        SELECT id, status, started_at, ended_at, proposals_created, error_message, triggered_by
+        FROM scholar_runs
+        ORDER BY started_at DESC
+        LIMIT ?
+    """, (limit,))
+    
+    rows = cur.fetchall()
+    conn.close()
+    
+    return [
+        {
+            'id': row[0],
+            'status': row[1],
+            'started_at': row[2],
+            'ended_at': row[3],
+            'proposals_created': row[4],
+            'error_message': row[5],
+            'triggered_by': row[6]
+        }
+        for row in rows
+    ]
+

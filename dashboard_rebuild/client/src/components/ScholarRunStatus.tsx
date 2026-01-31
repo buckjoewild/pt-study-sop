@@ -35,6 +35,7 @@ export function ScholarRunStatus() {
       const response = await fetch("/api/scholar/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ triggered_by: "ui" }),
       });
       if (!response.ok) throw new Error("Failed to start Scholar run");
       return response.json();

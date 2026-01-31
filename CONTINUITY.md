@@ -264,4 +264,5 @@
   - **Action required:** 4 commits need manual push (26cbf75b, 55989154, 2f05a0da, 1d320047) - git push failed due to WSL auth
 -   2 0 2 6 - 0 1 - 3 1 :   R e b u i l t   d a s h b o a r d   a n d   r e - s y n c e d   b r a i n / s t a t i c / d i s t   f r o m   d a s h b o a r d _ r e b u i l d / d i s t / p u b l i c .  
  -   2 0 2 6 - 0 1 - 3 1 :   F i x e d   D a s h b o a r d / S c h o l a r   b l a c k   s c r e e n s   ( p l a n n e r   q u e u e   +   c l u s t e r i n g   m u t a t i o n   r e f s ) ;   r e b u i l t   a n d   s y n c e d   d a s h b o a r d   a s s e t s .  
+ -   2 0 2 6 - 0 1 - 3 1 :   F i x e d   S c h o l a r   r u n   b u t t o n   p a y l o a d   ( s e n d   J S O N   b o d y )   a n d   r e b u i l t / s y n c e d   d a s h b o a r d   a s s e t s .  
  

@@ -270,25 +270,36 @@ adapter_bp = Blueprint("api_adapter", __name__, url_prefix="/api")
 
 
 @adapter_bp.route("/db/health", methods=["GET"])
+@adapter_bp.route("/health/db", methods=["GET"])
 def db_health():
     """Read-only health check: schema version, tables, v9.4 readiness.
 
     Only reports structural info — no file paths exposed.
     """
-    from config import VERSION
+    from config import VERSION, DB_PATH
     import os as _os
-    from config import DB_PATH
 
-    result = {"config_version": VERSION, "db_exists": _os.path.exists(DB_PATH)}
+    result = {
+        "ok": False,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "config_version": VERSION,
+        "db_path": DB_PATH,
+        "db_exists": _os.path.exists(DB_PATH),
+        "schema_version": None,
+    }
 
     if not result["db_exists"]:
+        result["error"] = "DB file not found"
         return jsonify(result)
 
     conn = None
     try:
-        conn = sqlite3.connect(DB_PATH, timeout=5)
+        conn = get_connection()
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
+        cur.execute("SELECT 1")
+        cur.fetchone()
+        result["ok"] = True
         # schema version from first session row
         cur.execute("SELECT schema_version FROM sessions LIMIT 1")
         row = cur.fetchone()
@@ -311,6 +322,7 @@ def db_health():
         if missing:
             result["v94_missing"] = missing
     except Exception as e:
+        result["ok"] = False
         result["error"] = str(e)
     finally:
         if conn:

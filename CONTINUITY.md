@@ -267,3 +267,4 @@
  -   2 0 2 6 - 0 1 - 3 1 :   F i x e d   S c h o l a r   r u n   b u t t o n   p a y l o a d   ( s e n d   J S O N   b o d y )   a n d   r e b u i l t / s y n c e d   d a s h b o a r d   a s s e t s .  
  -   2 0 2 6 - 0 1 - 3 1 :   W i r e d   / a p i / s c h o l a r / r u n   t o   t r i g g e r   t h e   C o d e x - b a s e d   o r c h e s t r a t o r   ( p r e v e n t s   n o - o p   r u n s ) .  
  - 2026-02-01: Added /api/health/db alias and DB health payload fields for smoke test.
+- 2026-02-01: Removed deprecated web_search_request flag from Codex config to silence warning.

@@ -2478,6 +2478,118 @@ def update_planner_task(task_id):
 # ==============================================================================
 
 
+def _scholar_status_payload() -> dict:
+    """
+    Return a UI-friendly Scholar orchestrator status payload.
+
+    Frontend expects:
+      - running: bool
+      - status: "running" | "complete" | "error" | "idle"
+      - last_run: ISO timestamp (best-effort)
+      - current_step: string (best-effort)
+      - progress: number 0-100 (optional; best-effort)
+      - errors: list[str] (best-effort)
+    """
+    from pathlib import Path
+
+    repo_root = Path(__file__).parent.parent.parent.resolve()
+    run_dir = repo_root / "scholar" / "outputs" / "orchestrator_runs"
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    running = any(run_dir.glob("*.pid")) or any(run_dir.glob("*.running"))
+
+    last_run: str | None = None
+    current_step: str | None = None
+    progress: float | None = None
+    errors: list[str] = []
+
+    # Prefer latest log file for timestamps + step/error hints
+    log_files = list(run_dir.glob("*.log"))
+    if log_files:
+        latest_log = max(log_files, key=lambda f: f.stat().st_mtime)
+        try:
+            last_run = datetime.fromtimestamp(latest_log.stat().st_mtime).isoformat()
+        except Exception:
+            last_run = None
+
+        try:
+            content = latest_log.read_text(encoding="utf-8", errors="ignore")
+            tail = [ln.strip() for ln in content.splitlines()[-120:] if ln.strip()]
+            if tail:
+                # Best-effort: last non-empty line as "current step"
+                current_step = tail[-1][:200]
+
+            # Best-effort: surface explicit error lines
+            for ln in tail[-120:]:
+                if re.search(r"\b(error|exception|traceback)\b", ln, re.IGNORECASE):
+                    errors.append(ln[:300])
+            errors = errors[-10:]
+
+            # Best-effort progress parsing: look for "Progress: NN%" in tail
+            for ln in reversed(tail):
+                m = re.search(r"progress\s*[:=-]\s*(\d{1,3})\s*%?", ln, re.IGNORECASE)
+                if m:
+                    try:
+                        pct = float(m.group(1))
+                        progress = max(0.0, min(100.0, pct))
+                        break
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+    else:
+        # Fall back to latest final artifact timestamp (if any)
+        final_files = list(run_dir.glob("unattended_final_*.md"))
+        if final_files:
+            latest_final = max(final_files, key=lambda f: f.stat().st_mtime)
+            try:
+                last_run = datetime.fromtimestamp(latest_final.stat().st_mtime).isoformat()
+            except Exception:
+                last_run = None
+
+    if running:
+        status = "running"
+    elif errors:
+        status = "error"
+    elif last_run:
+        status = "complete"
+    else:
+        status = "idle"
+
+    payload: dict = {
+        "running": bool(running),
+        "status": status,
+        "last_run": last_run,
+    }
+    if current_step:
+        payload["current_step"] = current_step
+    if progress is not None:
+        payload["progress"] = progress
+    if errors:
+        payload["errors"] = errors
+
+    return payload
+
+
+@adapter_bp.route("/scholar", methods=["GET"])
+def scholar_overview():
+    """
+    UI polling endpoint for Scholar orchestrator status.
+    Kept intentionally lightweight; detailed artifacts are available via /scholar/logs
+    and the rest of the Scholar endpoints.
+    """
+    try:
+        # Opportunistic cleanup so stale pid markers don't wedge the UI.
+        try:
+            from dashboard.scholar import cleanup_stale_pids
+            cleanup_stale_pids()
+        except Exception:
+            pass
+        return jsonify(_scholar_status_payload())
+    except Exception as e:
+        return jsonify({"running": False, "status": "error", "errors": [str(e)]}), 500
+
+
 @adapter_bp.route("/scholar/run", methods=["POST"])
 def run_scholar():
     """
@@ -2506,24 +2618,10 @@ def run_scholar():
 
 @adapter_bp.route("/scholar/status", methods=["GET"])
 def scholar_status():
-    """Check if Scholar is running."""
-    from pathlib import Path
-
+    """Back-compat alias for Scholar status polling."""
     try:
-        repo_root = Path(__file__).parent.parent.parent.resolve()
-        run_dir = repo_root / "scholar" / "outputs" / "orchestrator_runs"
-
-        is_running = False
-        if run_dir.exists():
-            for pid_file in run_dir.glob("*.pid"):
-                # If pid file exists, check if process is still running
-                is_running = True
-                break
-
-        return jsonify(
-            {"running": is_running, "status": "active" if is_running else "idle"}
-        )
-    except:
+        return jsonify(_scholar_status_payload())
+    except Exception:
         return jsonify({"running": False, "status": "unknown"})
 
 

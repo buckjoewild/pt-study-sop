@@ -2610,7 +2610,13 @@ def run_scholar():
         if is_running:
             return jsonify({"success": False, "message": "Scholar run already in progress"}), 409
 
-        result = run_scholar_orchestrator()
+        data = request.get_json() or {}
+        mode = data.get("mode", "brain")
+        if mode not in ("brain", "tutor"):
+            mode = "brain"
+        result = run_scholar_orchestrator(mode=mode)
+        if result.get("ok") is False:
+            return jsonify(result), 400
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500

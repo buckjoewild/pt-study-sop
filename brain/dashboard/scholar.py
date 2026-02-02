@@ -910,12 +910,10 @@ def _describe_file_timestamp(path: Optional[Path], repo_root: Path) -> Optional[
     }
 
 
-def get_scholar_run_readiness(repo_root: Optional[Path] = None) -> Dict[str, Any]:
+def get_scholar_run_readiness(repo_root: Optional[Path] = None, mode: str = "brain") -> Dict[str, Any]:
     repo_root = repo_root or Path(__file__).parent.parent.parent.resolve()
-    session_logs_dir = repo_root / "brain" / "session_logs"
     run_dir = repo_root / "scholar" / "outputs" / "orchestrator_runs"
 
-    latest_session = _get_latest_file(session_logs_dir, "*.md")
     latest_runs = []
     if run_dir.exists():
         for pattern in ("unattended_final_*.md", "run_*.md"):
@@ -928,28 +926,48 @@ def get_scholar_run_readiness(repo_root: Optional[Path] = None) -> Dict[str, Any
 
     reasons = []
     ready = False
+    latest_session = None
+    sop_library_count = 0
 
-    if not latest_session:
-        reasons.append("no_session_logs")
-    else:
-        session_ts = latest_session.stat().st_mtime
-        if not latest_run:
-            reasons.append("no_previous_run")
+    if mode == "tutor":
+        sop_library_dir = repo_root / "sop" / "library"
+        if sop_library_dir.exists():
+            sop_library_count = len(list(sop_library_dir.glob("*.md")))
+        if sop_library_count > 0:
+            reasons.append("sop_library_available")
             ready = True
         else:
-            run_ts = latest_run.stat().st_mtime
-            if session_ts > run_ts:
-                reasons.append("new_session_logs")
+            reasons.append("no_sop_library_files")
+            ready = True
+    else:
+        session_logs_dir = repo_root / "brain" / "session_logs"
+        latest_session = _get_latest_file(session_logs_dir, "*.md")
+        if not latest_session:
+            reasons.append("no_session_logs")
+        else:
+            session_ts = latest_session.stat().st_mtime
+            if not latest_run:
+                reasons.append("no_previous_run")
                 ready = True
             else:
-                reasons.append("no_new_session_logs")
+                run_ts = latest_run.stat().st_mtime
+                if session_ts > run_ts:
+                    reasons.append("new_session_logs")
+                    ready = True
+                else:
+                    reasons.append("no_new_session_logs")
 
-    return {
+    result = {
         "ready": ready,
         "reasons": reasons,
-        "latest_session_log": _describe_file_timestamp(latest_session, repo_root),
+        "mode": mode,
         "latest_orchestrator_run": _describe_file_timestamp(latest_run, repo_root),
     }
+    if mode == "brain":
+        result["latest_session_log"] = _describe_file_timestamp(latest_session, repo_root)
+    else:
+        result["sop_library_count"] = sop_library_count
+    return result
 
 
 def _is_questions_nonempty(path: Path) -> bool:
@@ -1124,9 +1142,10 @@ def _compose_agent_prompt(template_path: Path, header_lines: List[str], context_
     return _truncate_context(full)
 
 
-def run_scholar_orchestrator_multi(manifest: Dict[str, Any]) -> Dict[str, Any]:
+def run_scholar_orchestrator_multi(manifest: Dict[str, Any], mode: str = "brain") -> Dict[str, Any]:
     """
     Trigger a multi-agent Scholar orchestrator run (supervisor + specialists).
+    mode: "brain" (default) = Brain Study; "tutor" = Tutor Study (SOP library only, no telemetry).
     Returns result dict (not jsonify).
     """
     repo_root = Path(__file__).parent.parent.parent.resolve()
@@ -1168,6 +1187,7 @@ def run_scholar_orchestrator_multi(manifest: Dict[str, Any]) -> Dict[str, Any]:
             "ok": True,
             "message": "Scholar run queued (requires Codex CLI)",
             "run_id": timestamp,
+            "mode": mode,
             "log_file": str(log_path.relative_to(repo_root)),
             "final_file": str(final_path.relative_to(repo_root)),
             "preserved_questions": preserved_count,
@@ -1197,13 +1217,18 @@ def run_scholar_orchestrator_multi(manifest: Dict[str, Any]) -> Dict[str, Any]:
             with open(log_path, "w", encoding="utf-8") as log_file:
                 log_file.write(f"Scholar Multi-Agent Run Started: {datetime.now().isoformat()}\n")
                 log_file.write(f"Run ID: {timestamp}\n")
+                log_file.write(f"Mode: {mode}\n")
                 log_file.write(f"Safe mode: {safe_mode}\n")
                 log_file.write(f"Max concurrency: {max_conc}\n\n")
 
-                telemetry_path = build_telemetry_snapshot(timestamp, manifest, log_file=log_file)
-                telemetry_content = _read_text_safe(telemetry_path, limit=24000) if telemetry_path else ""
-
-                sop_allowlist = (manifest or {}).get("tutor_paths", [])
+                if mode == "tutor":
+                    telemetry_path = None
+                    telemetry_content = "(Tutor Study: no telemetry used)"
+                    sop_allowlist = (manifest or {}).get("tutor_study_paths", []) or (manifest or {}).get("tutor_paths", [])
+                else:
+                    telemetry_path = build_telemetry_snapshot(timestamp, manifest, log_file=log_file)
+                    telemetry_content = _read_text_safe(telemetry_path, limit=24000) if telemetry_path else ""
+                    sop_allowlist = (manifest or {}).get("tutor_paths", [])
                 sop_list = "\n".join([f"- {p}" for p in sop_allowlist]) if sop_allowlist else "(none)"
 
                 header_common = [
@@ -1437,21 +1462,26 @@ def run_scholar_orchestrator_multi(manifest: Dict[str, Any]) -> Dict[str, Any]:
         "ok": True,
         "message": "Scholar multi-agent run started",
         "run_id": timestamp,
+        "mode": mode,
         "log_file": str(log_path.relative_to(repo_root)),
         "final_file": str(final_path.relative_to(repo_root)),
         "preserved_questions": preserved_count,
     }
 
-def run_scholar_orchestrator():
+def run_scholar_orchestrator(mode: str = "brain"):
     """
     Trigger a Scholar orchestrator run.
+    mode: "brain" (default) = Brain Study (session logs + SOP); "tutor" = Tutor Study (SOP library only, no telemetry).
     Returns result dict (not jsonify).
     """
     manifest = load_audit_manifest()
     if manifest.get("multi_agent", {}).get("enabled"):
-        return run_scholar_orchestrator_multi(manifest)
+        return run_scholar_orchestrator_multi(manifest, mode=mode)
     repo_root = Path(__file__).parent.parent.parent.resolve()
-    prompt_file = repo_root / "scholar" / "workflows" / "orchestrator_run_prompt.md"
+    if mode == "tutor":
+        prompt_file = repo_root / "scholar" / "workflows" / "tutor_study_prompt.md"
+    else:
+        prompt_file = repo_root / "scholar" / "workflows" / "orchestrator_run_prompt.md"
     run_dir = repo_root / "scholar" / "outputs" / "orchestrator_runs"
     run_dir.mkdir(parents=True, exist_ok=True)
     
@@ -1572,13 +1602,14 @@ def run_scholar_orchestrator():
         }
     
     if not prompt_file.exists():
-        return {"ok": False, "message": f"Prompt file not found: {prompt_file}"}, 404
+        return {"ok": False, "message": f"Prompt file not found: {prompt_file}"}
     
     # Define internal function to run in background
     def _run_scholar_thread():
         try:
             with open(log_path, "w", encoding="utf-8") as log_file:
                 log_file.write(f"Scholar Run Started: {datetime.now().isoformat()}\n")
+                log_file.write(f"Mode: {mode}\n")
                 log_file.write(f"Using Codex: {codex_cmd}\n")
                 log_file.write(f"Prompt file: {prompt_file}\n\n")
                 log_file.flush()
@@ -1704,6 +1735,7 @@ def run_scholar_orchestrator():
         "ok": True,
         "message": "Scholar run started",
         "run_id": timestamp,
+        "mode": mode,
         "log_file": str(log_path.relative_to(repo_root)),
         "final_file": str(final_path.relative_to(repo_root)),
     }

@@ -53,5 +53,24 @@
   "brain_paths": [
     "brain/session_logs/",
     "brain/session_logs/TEMPLATE.md"
+  ],
+
+  "tutor_study_paths": [
+    "sop/library/00-overview.md",
+    "sop/library/01-core-rules.md",
+    "sop/library/02-learning-cycle.md",
+    "sop/library/03-frameworks.md",
+    "sop/library/04-engines.md",
+    "sop/library/05-session-flow.md",
+    "sop/library/06-modes.md",
+    "sop/library/07-workload.md",
+    "sop/library/08-logging.md",
+    "sop/library/09-templates.md",
+    "sop/library/10-deployment.md",
+    "sop/library/11-examples.md",
+    "sop/library/12-evidence.md",
+    "sop/library/13-custom-gpt-system-instructions.md",
+    "sop/library/14-lo-engine.md",
+    "sop/library/README.md"
   ]
 }

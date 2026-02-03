@@ -6658,6 +6658,11 @@ IMPORTANT:
             if parsed_data.get("notes"):
                 obsidian_content += f"### Notes\n{parsed_data['notes']}\n"
 
+            raw_notes = message if isinstance(message, str) else ""
+            if raw_notes.strip():
+                obsidian_content += "### Full Notes (Raw)\n"
+                obsidian_content += f"{raw_notes.strip()}\n"
+
             # Route to course-specific folder or fall back to Inbox
             if course_folder:
                 obsidian_path = f"{course_folder}/Session-{today}.md"
@@ -6769,7 +6774,6 @@ def brain_quick_chat():
     return Response(
         generate(),
         mimetype="text/event-stream",
-        direct_passthrough=True,
         headers={
             "Cache-Control": "no-cache, no-store",
             "X-Accel-Buffering": "no",

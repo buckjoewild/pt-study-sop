@@ -291,3 +291,5 @@
 - Prevent Start_Dashboard.bat from overwriting brain/static/dist with an older dashboard_rebuild/dist/public build.
 - When syncing, mirror the build output (robocopy /MIR) so stale hashed assets don't linger.
 - Ignore local verification screenshots (_tmp_*.png).
+
+2026-02-06 - Added jules-sdk local smoke test (smoke.ts) and README instructions for running via tsx.

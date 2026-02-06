@@ -305,3 +305,8 @@
 ## 2026-02-06 - Align Dashboard Build/Run Docs
 
 - Update dashboard_rebuild and brain READMEs to match the canonical workflow: build via npm run build, sync dist/public -> brain/static/dist, run via Start_Dashboard.bat (no Vite dev server).
+
+
+## 2026-02-06 - Allow Codex CLI in Repo Permissions
+
+- Permit codex exec / codex resume in permissions.json (and .claude/permissions.json) so the codex-subagent workflow isn't blocked by the repo allowlist.

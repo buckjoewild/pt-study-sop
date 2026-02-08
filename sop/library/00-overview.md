@@ -60,7 +60,7 @@ A structured AI study operating system for DPT coursework. It enforces an end-to
 | 10 | `10-deployment.md` | Custom GPT deployment guide + Brain ingestion prompts |
 | 11 | `11-examples.md` | Command reference and dialogue examples |
 | 12 | `12-evidence.md` | Evidence base, NotebookLM bridge, research backlog |
-| 13 | `13-custom-gpt-system-instructions.md` | Custom GPT system instructions (v9.4 Lite Wrap) |
+| 13 | `13-custom-gpt-system-instructions.md` | Custom GPT system instructions (v9.5 Split-Track) |
 | 14 | `14-lo-engine.md` | Learning Objective Engine (LO Engine) protocol pack + outputs |
 | 15 | `15-method-library.md` | Composable Method Library: blocks, chains, ratings, context matching |
 

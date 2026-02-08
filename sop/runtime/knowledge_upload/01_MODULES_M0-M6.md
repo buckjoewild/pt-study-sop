@@ -216,7 +216,7 @@ Practice with increasing difficulty. Lock understanding.
 
 ## M6: Wrap (Close and Schedule)
 
-Lite Wrap v9.4 (Close Session).
+Lite Wrap v9.5 (Close Session).
 
 2-10 minutes. Mandatory.
 

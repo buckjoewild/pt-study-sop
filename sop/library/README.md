@@ -1,6 +1,6 @@
 # SOP Library — Navigation Guide
 
-**Version:** v9.4 | **Owner:** Trey Tucker
+**Version:** v9.5 | **Owner:** Trey Tucker
 
 This is the canonical source of truth for the PT Study OS. Runtime bundles in `sop/runtime/` are generated artifacts — if anything conflicts, these library files win.
 
@@ -29,8 +29,9 @@ This is the canonical source of truth for the PT Study OS. Runtime bundles in `s
 | 10 | [10-deployment.md](10-deployment.md) | Operations | Custom GPT deployment + Brain ingestion |
 | 11 | [11-examples.md](11-examples.md) | Reference | Command reference + dialogue examples |
 | 12 | [12-evidence.md](12-evidence.md) | Reference | Citations, heuristics, research backlog |
-| 13 | [13-custom-gpt-system-instructions.md](13-custom-gpt-system-instructions.md) | Reference | GPT system prompt (v9.4.1) |
+| 13 | [13-custom-gpt-system-instructions.md](13-custom-gpt-system-instructions.md) | Reference | GPT system prompt (v9.5) |
 | 14 | [14-lo-engine.md](14-lo-engine.md) | Reference | Learning Objective Engine |
+| 15 | [15-method-library.md](15-method-library.md) | Reference | Composable Method Library |
 
 ## Key Cross-References
 

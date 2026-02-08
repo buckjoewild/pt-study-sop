@@ -70,8 +70,8 @@ def create_method():
         cursor = conn.cursor()
         cursor.execute(
             """
-            INSERT INTO method_blocks (name, category, description, default_duration_min, energy_cost, best_stage, tags, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            INSERT INTO method_blocks (name, category, description, default_duration_min, energy_cost, best_stage, tags, evidence, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
             """,
             (
                 data["name"],
@@ -81,6 +81,7 @@ def create_method():
                 data.get("energy_cost", "medium"),
                 data.get("best_stage"),
                 json.dumps(data.get("tags", [])),
+                data.get("evidence"),
             ),
         )
         new_id = cursor.lastrowid
@@ -99,7 +100,7 @@ def update_method(method_id: int):
     # Build dynamic SET clause
     fields = []
     values = []
-    for key in ("name", "category", "description", "default_duration_min", "energy_cost", "best_stage"):
+    for key in ("name", "category", "description", "default_duration_min", "energy_cost", "best_stage", "evidence"):
         if key in data:
             fields.append(f"{key} = ?")
             values.append(data[key])

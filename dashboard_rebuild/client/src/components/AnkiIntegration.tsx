@@ -20,22 +20,25 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Layers, RefreshCw, Check, X, Trash2, Pencil, Save,
+  Layers, RefreshCw, Check, X, Trash2, Pencil, Save, Loader2,
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface AnkiIntegrationProps {
   totalCards: number;
+  compact?: boolean;
 }
 
-export function AnkiIntegration({ totalCards }: AnkiIntegrationProps) {
+export function AnkiIntegration({ totalCards, compact }: AnkiIntegrationProps) {
   const [selectedDrafts, setSelectedDrafts] = useState<Set<number>>(new Set());
   const [editingDraft, setEditingDraft] = useState<number | null>(null);
   const [editDraftData, setEditDraftData] = useState({ front: "", back: "", deckName: "" });
 
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: ankiStatus, isLoading: ankiLoading, refetch: refetchAnki } = useQuery({
     queryKey: ["anki", "status"],
@@ -58,9 +61,20 @@ export function AnkiIntegration({ totalCards }: AnkiIntegrationProps) {
 
   const syncAnkiMutation = useMutation({
     mutationFn: api.anki.sync,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["anki"] });
       refetchDrafts();
+      toast({
+        title: "Anki sync complete",
+        description: data.output || "Cards synced successfully",
+      });
+    },
+    onError: (err: Error) => {
+      toast({
+        title: "Anki sync failed",
+        description: err.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -71,7 +85,18 @@ export function AnkiIntegration({ totalCards }: AnkiIntegrationProps) {
 
   const deleteDraftMutation = useMutation({
     mutationFn: (id: number) => api.anki.deleteDraft(id),
-    onSuccess: () => refetchDrafts(),
+    onMutate: async (id: number) => {
+      await queryClient.cancelQueries({ queryKey: ["anki", "drafts"] });
+      const prev = queryClient.getQueryData(["anki", "drafts"]);
+      queryClient.setQueryData(["anki", "drafts"], (old: typeof ankiDrafts) =>
+        old ? old.filter((d) => d.id !== id) : []
+      );
+      return { prev };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.prev) queryClient.setQueryData(["anki", "drafts"], context.prev);
+    },
+    onSettled: () => refetchDrafts(),
   });
 
   const updateDraftMutation = useMutation({
@@ -93,21 +118,8 @@ export function AnkiIntegration({ totalCards }: AnkiIntegrationProps) {
     updateDraftMutation.mutate({ id: editingDraft, data: editDraftData });
   };
 
-  return (
-    <>
-      <Card className="bg-black/40 border-2 border-primary rounded-none">
-        <CardHeader className="border-b border-primary/50 p-4">
-          <CardTitle className="font-arcade text-sm flex items-center gap-3">
-            <Layers className="w-4 h-4" />
-            ANKI INTEGRATION
-            {ankiStatus?.connected ? (
-              <Check className="w-3 h-3 text-green-500 ml-auto" />
-            ) : (
-              <X className="w-3 h-3 text-red-500 ml-auto" />
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 space-y-3">
+  const content = (
+        <div className={compact ? "p-3 space-y-3" : "p-4 space-y-3"}>
           {ankiLoading ? (
             <p className="font-terminal text-xs text-muted-foreground">Checking Anki...</p>
           ) : ankiStatus?.connected ? (
@@ -135,9 +147,29 @@ export function AnkiIntegration({ totalCards }: AnkiIntegrationProps) {
                   onClick={() => syncAnkiMutation.mutate()}
                   disabled={syncAnkiMutation.isPending}
                 >
+                  {syncAnkiMutation.isPending ? (
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-3 h-3 mr-1" />
+                  )}
                   {syncAnkiMutation.isPending ? "Syncing..." : "Sync Cards"}
                 </Button>
               </div>
+              {syncAnkiMutation.isError && (
+                <div className="p-2 bg-red-500/10 border border-red-500/30 text-red-400 font-terminal text-[10px]">
+                  <span className="font-arcade">SYNC ERROR:</span>{" "}
+                  {(syncAnkiMutation.error as Error)?.message || "Unknown error"}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="ml-2 h-5 px-2 text-[10px] font-terminal border-red-500/50 text-red-400"
+                    onClick={() => syncAnkiMutation.mutate()}
+                    disabled={syncAnkiMutation.isPending}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              )}
               {pendingDrafts.length > 0 && (
                 <div className="pt-3 border-t border-secondary/30">
                   <div className="flex justify-between items-center mb-2">
@@ -267,8 +299,29 @@ export function AnkiIntegration({ totalCards }: AnkiIntegrationProps) {
               </Button>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+  );
+
+  return (
+    <>
+      {compact ? content : (
+        <Card className="bg-black/40 border-2 border-primary rounded-none">
+          <CardHeader className="border-b border-primary/50 p-4">
+            <CardTitle className="font-arcade text-sm flex items-center gap-3">
+              <Layers className="w-4 h-4" />
+              ANKI INTEGRATION
+              {ankiStatus?.connected ? (
+                <Check className="w-3 h-3 text-green-500 ml-auto" />
+              ) : (
+                <X className="w-3 h-3 text-red-500 ml-auto" />
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {content}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Edit Card Draft Dialog */}
       <Dialog

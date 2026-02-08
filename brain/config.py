@@ -321,7 +321,7 @@ COURSE_FOLDERS = {
     "Exercise Physiology": "School/Exercise Physiology",
     "Movement Science 1": "School/Movement Science 1",
     "Neuroscience": "School/Neuroscience",
-    "Therapeutic Intervention": "School/Theraputic Intervention",
+    "Therapeutic Intervention": "School/Therapeutic Intervention",
 }
 
 # Readiness score weights

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/layout";
 import MethodBlockCard from "@/components/MethodBlockCard";
@@ -15,7 +15,7 @@ import RatingDialog from "@/components/RatingDialog";
 import { api } from "@/lib/api";
 import type { MethodBlock, MethodChain, MethodChainExpanded } from "@/api";
 
-const CATEGORIES = ["all", "activate", "map", "encode", "retrieve", "connect", "consolidate"] as const;
+const CATEGORIES = ["all", "prepare", "encode", "interrogate", "retrieve", "refine", "overlearn"] as const;
 
 const TAB_ITEMS = [
   { id: "library", label: "LIBRARY", icon: Blocks },
@@ -413,7 +413,7 @@ function AddBlockDialog({
   onSubmit: (data: Omit<MethodBlock, "id" | "created_at">) => void;
 }) {
   const [name, setName] = useState("");
-  const [category, setCategory] = useState("activate");
+  const [category, setCategory] = useState("prepare");
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState(5);
   const [energyCost, setEnergyCost] = useState("medium");
@@ -438,6 +438,7 @@ function AddBlockDialog({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="bg-black border-2 border-primary rounded-none max-w-md">
         <DialogTitle className="font-arcade text-xs text-primary">NEW METHOD BLOCK</DialogTitle>
+        <DialogDescription className="sr-only">Create a new method block</DialogDescription>
         <div className="space-y-3 mt-2">
           <Input
             placeholder="Method name"
@@ -450,7 +451,7 @@ function AddBlockDialog({
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-black border-2 border-primary rounded-none">
-              {["activate", "map", "encode", "retrieve", "connect", "consolidate"].map((c) => (
+              {["prepare", "encode", "interrogate", "retrieve", "refine", "overlearn"].map((c) => (
                 <SelectItem key={c} value={c} className="font-terminal text-sm">
                   {c.charAt(0).toUpperCase() + c.slice(1)}
                 </SelectItem>
@@ -546,6 +547,7 @@ function AddChainDialog({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="bg-black border-2 border-primary rounded-none max-w-md">
         <DialogTitle className="font-arcade text-xs text-primary">NEW CHAIN</DialogTitle>
+        <DialogDescription className="sr-only">Create a new method chain</DialogDescription>
         <div className="space-y-3 mt-2">
           <Input
             placeholder="Chain name"

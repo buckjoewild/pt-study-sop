@@ -55,11 +55,12 @@ class TestMethodBlocks:
             "/api/methods",
             data=json.dumps({
                 "name": "Test Method XYZ",
-                "category": "activate",
+                "category": "prepare",
                 "description": "A unique test method",
                 "default_duration_min": 3,
                 "energy_cost": "low",
                 "tags": ["test-tag-1", "test-tag-2"],
+                "evidence": "Test et al. (2024); evidence for testing",
             }),
             content_type="application/json",
         )
@@ -91,6 +92,13 @@ class TestMethodBlocks:
         resp = client.get("/api/methods/999")
         assert resp.status_code == 404
 
+    def test_evidence_round_trip(self, client):
+        """Verify evidence field persists through create → get."""
+        mid = TestMethodBlocks._created_id
+        resp = client.get(f"/api/methods/{mid}")
+        data = resp.get_json()
+        assert data["evidence"] == "Test et al. (2024); evidence for testing"
+
     def test_filter_by_category(self, client):
         # Create another method in a different category
         client.post(
@@ -98,9 +106,9 @@ class TestMethodBlocks:
             data=json.dumps({"name": "Test Encode XYZ", "category": "encode"}),
             content_type="application/json",
         )
-        resp = client.get("/api/methods?category=activate")
+        resp = client.get("/api/methods?category=prepare")
         methods = resp.get_json()
-        assert all(m["category"] == "activate" for m in methods)
+        assert all(m["category"] == "prepare" for m in methods)
 
     def test_update_method(self, client):
         mid = TestMethodBlocks._created_id
@@ -120,7 +128,7 @@ class TestMethodBlocks:
         # Create then delete
         resp = client.post(
             "/api/methods",
-            data=json.dumps({"name": "Temp Method", "category": "map"}),
+            data=json.dumps({"name": "Temp Method", "category": "prepare"}),
             content_type="application/json",
         )
         new_id = resp.get_json()["id"]
@@ -150,14 +158,16 @@ class TestChains:
             data=json.dumps({
                 "name": "Test Chain",
                 "description": "A test chain",
-                "block_ids": [1, 2],
+                "block_ids": [TestMethodBlocks._created_id],
                 "context_tags": {"stage": "review"},
                 "is_template": 0,
             }),
             content_type="application/json",
         )
         assert resp.status_code == 201
-        assert resp.get_json()["name"] == "Test Chain"
+        data = resp.get_json()
+        assert data["name"] == "Test Chain"
+        TestChains._created_id = data["id"]
 
     def test_list_chains(self, client):
         resp = client.get("/api/chains")
@@ -166,16 +176,19 @@ class TestChains:
         assert len(chains) >= 1
 
     def test_get_chain_with_blocks(self, client):
-        resp = client.get("/api/chains/1")
+        cid = TestChains._created_id
+        resp = client.get(f"/api/chains/{cid}")
         assert resp.status_code == 200
         data = resp.get_json()
         assert "blocks" in data
         assert isinstance(data["blocks"], list)
 
     def test_update_chain(self, client):
+        cid = TestChains._created_id
+        mid = TestMethodBlocks._created_id
         resp = client.put(
-            "/api/chains/1",
-            data=json.dumps({"block_ids": [1]}),
+            f"/api/chains/{cid}",
+            data=json.dumps({"block_ids": [mid]}),
             content_type="application/json",
         )
         assert resp.status_code == 200
@@ -197,8 +210,9 @@ class TestChains:
 
 class TestRatings:
     def test_rate_method(self, client):
+        mid = TestMethodBlocks._created_id
         resp = client.post(
-            "/api/methods/1/rate",
+            f"/api/methods/{mid}/rate",
             data=json.dumps({
                 "effectiveness": 4,
                 "engagement": 3,
@@ -211,8 +225,9 @@ class TestRatings:
         assert resp.get_json()["rated"] is True
 
     def test_rate_chain(self, client):
+        cid = TestChains._created_id
         resp = client.post(
-            "/api/chains/1/rate",
+            f"/api/chains/{cid}/rate",
             data=json.dumps({
                 "effectiveness": 5,
                 "engagement": 4,

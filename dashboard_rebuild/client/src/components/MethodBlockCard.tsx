@@ -2,21 +2,21 @@ import { Clock, Zap } from "lucide-react";
 import type { MethodBlock } from "@/api";
 
 const CATEGORY_COLORS: Record<string, string> = {
-  activate: "border-yellow-500 bg-yellow-500/10",
-  map: "border-blue-500 bg-blue-500/10",
+  prepare: "border-yellow-500 bg-yellow-500/10",
   encode: "border-purple-500 bg-purple-500/10",
+  interrogate: "border-green-500 bg-green-500/10",
   retrieve: "border-red-500 bg-red-500/10",
-  connect: "border-green-500 bg-green-500/10",
-  consolidate: "border-gray-500 bg-gray-500/10",
+  refine: "border-blue-500 bg-blue-500/10",
+  overlearn: "border-gray-500 bg-gray-500/10",
 };
 
 const CATEGORY_BADGE: Record<string, string> = {
-  activate: "bg-yellow-500/20 text-yellow-400",
-  map: "bg-blue-500/20 text-blue-400",
+  prepare: "bg-yellow-500/20 text-yellow-400",
   encode: "bg-purple-500/20 text-purple-400",
+  interrogate: "bg-green-500/20 text-green-400",
   retrieve: "bg-red-500/20 text-red-400",
-  connect: "bg-green-500/20 text-green-400",
-  consolidate: "bg-gray-500/20 text-gray-400",
+  refine: "bg-blue-500/20 text-blue-400",
+  overlearn: "bg-gray-500/20 text-gray-400",
 };
 
 const ENERGY_ICON: Record<string, string> = {
@@ -72,6 +72,11 @@ export default function MethodBlockCard({ block, compact, onClick, draggable, on
       {block.description && (
         <p className="font-terminal text-xs text-muted-foreground mb-2 line-clamp-2">
           {block.description}
+        </p>
+      )}
+      {block.evidence && (
+        <p className="font-terminal text-[10px] text-primary/50 italic mb-2 line-clamp-1">
+          {block.evidence}
         </p>
       )}
       <div className="flex items-center gap-3 text-[10px] text-muted-foreground font-terminal">

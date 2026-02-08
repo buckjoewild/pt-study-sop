@@ -440,10 +440,24 @@ export const api = {
     getDecks: () => request<AnkiDeck[]>("/anki/decks"),
     getDue: () => request<AnkiDueInfo>("/anki/due"),
     getDrafts: () => request<CardDraft[]>("/anki/drafts"),
-    sync: () => request<AnkiSyncResult>("/anki/sync", { method: "POST" }),
+    sync: async () => {
+      const result = await request<AnkiSyncResult>("/anki/sync", { method: "POST" });
+      if (!result.success) {
+        throw new Error(result.error || "Anki sync failed");
+      }
+      return result;
+    },
     approveDraft: (id: number) => request<{ success: boolean }>(`/anki/drafts/${id}/approve`, {
       method: "POST",
     }),
+    deleteDraft: (id: number) => request<void>(`/anki/drafts/${id}`, {
+      method: "DELETE",
+    }),
+    updateDraft: (id: number, data: { front?: string; back?: string; deckName?: string }) =>
+      request<{ success: boolean }>(`/anki/drafts/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
   },
 
   obsidian: {
@@ -707,15 +721,36 @@ export interface BrainOrganizePreviewResponse {
 }
 
 // Method Library types
+export type MethodCategory = "prepare" | "encode" | "interrogate" | "retrieve" | "refine" | "overlearn";
+
+export const CATEGORY_LABELS: Record<MethodCategory, string> = {
+  prepare: "Prepare",
+  encode: "Encode",
+  interrogate: "Interrogate",
+  retrieve: "Retrieve",
+  refine: "Refine",
+  overlearn: "Overlearn",
+};
+
+export const CATEGORY_COLORS: Record<MethodCategory, string> = {
+  prepare: "#f59e0b",
+  encode: "#8b5cf6",
+  interrogate: "#10b981",
+  retrieve: "#ef4444",
+  refine: "#3b82f6",
+  overlearn: "#6b7280",
+};
+
 export interface MethodBlock {
   id: number;
   name: string;
-  category: string;
+  category: MethodCategory;
   description: string | null;
   default_duration_min: number;
   energy_cost: string;
   best_stage: string | null;
   tags: string[];
+  evidence: string | null;
   created_at: string;
 }
 

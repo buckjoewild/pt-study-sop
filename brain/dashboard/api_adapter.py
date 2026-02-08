@@ -3,9 +3,12 @@ from datetime import datetime, timedelta
 import sqlite3
 import json
 import os
+import logging
 import re
 import requests
 from typing import List, Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
 
 
 # Import internal modules from the "Brain"
@@ -43,7 +46,10 @@ def get_obsidian_api_key() -> str:
     return ""
 
 
-OBSIDIAN_API_KEY = get_obsidian_api_key()
+def _obsidian_api_key() -> str:
+    """Return the current API key, re-reading .env so restarts aren't needed."""
+    load_env()
+    return get_obsidian_api_key()
 
 
 def obsidian_health_check() -> dict:
@@ -51,7 +57,7 @@ def obsidian_health_check() -> dict:
     try:
         resp = requests.get(
             f"{OBSIDIAN_API_URL}/",
-            headers={"Authorization": f"Bearer {OBSIDIAN_API_KEY}"},
+            headers={"Authorization": f"Bearer {_obsidian_api_key()}"},
             timeout=3,
             verify=False,  # Self-signed cert
         )
@@ -80,7 +86,7 @@ def obsidian_append(path: str, content: str) -> dict:
             f"{OBSIDIAN_API_URL}/vault/{path}",
             data=content.encode("utf-8"),
             headers={
-                "Authorization": f"Bearer {OBSIDIAN_API_KEY}",
+                "Authorization": f"Bearer {_obsidian_api_key()}",
                 "Content-Type": "text/markdown",
             },
             timeout=10,
@@ -106,7 +112,7 @@ def obsidian_list_files(folder: str = "") -> dict:
         resp = requests.get(
             url,
             headers={
-                "Authorization": f"Bearer {OBSIDIAN_API_KEY}",
+                "Authorization": f"Bearer {_obsidian_api_key()}",
                 "Accept": "application/json",
             },
             timeout=10,
@@ -167,7 +173,7 @@ def obsidian_get_file(path: str) -> dict:
         resp = requests.get(
             f"{OBSIDIAN_API_URL}/vault/{path}",
             headers={
-                "Authorization": f"Bearer {OBSIDIAN_API_KEY}",
+                "Authorization": f"Bearer {_obsidian_api_key()}",
                 "Accept": "text/markdown",
             },
             timeout=10,
@@ -187,7 +193,7 @@ def obsidian_save_file(path: str, content: str) -> dict:
             f"{OBSIDIAN_API_URL}/vault/{path}",
             data=content.encode("utf-8"),
             headers={
-                "Authorization": f"Bearer {OBSIDIAN_API_KEY}",
+                "Authorization": f"Bearer {_obsidian_api_key()}",
                 "Content-Type": "text/markdown",
             },
             timeout=10,
@@ -8458,11 +8464,20 @@ def trigger_anki_sync():
             timeout=30,
         )
 
+        if result.returncode != 0:
+            logger.error("Anki sync failed: %s", result.stderr)
+            return jsonify(
+                {
+                    "success": False,
+                    "output": result.stdout,
+                    "error": result.stderr or "Sync process exited with errors",
+                }
+            ), 500
+
         return jsonify(
             {
-                "success": result.returncode == 0,
+                "success": True,
                 "output": result.stdout,
-                "error": result.stderr if result.returncode != 0 else None,
             }
         )
 

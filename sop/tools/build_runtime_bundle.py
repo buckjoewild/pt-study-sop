@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import Iterable, List
 
-VERSION = "9.5"
+VERSION = "9.5.2"
 
 ROOT = Path(__file__).resolve().parents[2]
 SOP_DIR = ROOT / "sop"
@@ -144,6 +144,7 @@ def build_index_and_rules(core_rules: str, evidence: str) -> str:
 4) 03_ENGINES.md
 5) 04_LOGGING_AND_TEMPLATES.md
 6) 05_EXAMPLES_MINI.md
+7) 06_METHODS.md
 
 ## Canonical Library Map (current filenames)
 - 02-learning-cycle.md (PEIRRO + KWIK)
@@ -248,6 +249,7 @@ def build_examples(examples: str) -> str:
     headings = [
         "## Command Reference",
         "## Example: Session Start (Planning)",
+        "## Example: Core Mode Teaching (First Exposure — Three-Layer Chunks + KWIK)",
         "## Example: Sprint Mode (Fail-First)",
         "## Example: Wrap Output",
     ]
@@ -267,6 +269,39 @@ def build_examples(examples: str) -> str:
     return render_source_block(LIB_DIR / "11-examples.md", extract)
 
 
+def find_heading(text: str, prefix: str) -> str:
+    """Find the actual heading line that starts with the given prefix."""
+    for line in normalize(text).split("\n"):
+        if line.strip().startswith(prefix):
+            return line.strip()
+    raise ValueError(f"No heading starting with: {prefix}")
+
+
+def build_methods(methods_text: str) -> str:
+    """Extract compact method library summary for knowledge upload."""
+    headings = [
+        "## §1 Purpose",
+        "## §2 Method Block Schema",
+        find_heading(methods_text, "## §2.1 Block Catalog"),
+        find_heading(methods_text, "## §4 Template Chains"),
+        "## §6 Context Dimensions",
+    ]
+    sections: list[str] = []
+    missing: list[str] = []
+    for heading in headings:
+        try:
+            sections.append(extract_section(methods_text, heading))
+        except ValueError:
+            missing.append(heading)
+    if missing:
+        print(
+            "WARNING: Missing method headings: " + ", ".join(missing),
+            file=sys.stderr,
+        )
+    extract = "\n\n".join(sections).strip()
+    return render_source_block(LIB_DIR / "15-method-library.md", extract)
+
+
 def build_runtime_prompt() -> str:
     return sanitize(
         f"""Structured Architect v{VERSION} active.
@@ -280,7 +315,11 @@ Role: guide active construction; enforce planning gates; prevent phantom outputs
 - Level gating: L2 teach-back before L4 detail.
 
 ## Pacing rules
-- One-Step Rule: each message = exactly ONE question OR ONE micro-teach. Never both.
+- Teaching Rule: when delivering content (M3 Encode, Phase 3), I teach a complete Three-Layer Chunk (Source Facts + Interpretation + Application) as ONE message. I end with ONE comprehension question (why/how/apply). I do NOT ask you to repeat what I just said.
+- Retrieval Rule: when testing (M4 Build, Phase 4, Sprint/Drill), each message = ONE question. Wait for your answer. Brief feedback. Next question.
+- Comprehension over parrot-back: after teaching, I ask WHY/HOW/APPLY questions. I NEVER ask "Can you repeat that?" or "What did I just say?"
+- KWIK during encoding: when I encounter a new term in M3, I run KWIK (Sound -> Function -> Image -> Resonance -> Lock) before the next chunk. This happens DURING teaching, not at Wrap.
+- Sustain teaching: I teach a full cluster (2-4 chunks) before switching to retrieval practice.
 - Continuation: after your answer -> brief feedback -> next single step. Never stall or end without a next action.
 - Default mode: FIRST EXPOSURE (teach-first) unless you say "review" or "drill."
 - No MCQ in Core mode. Use free-recall, fill-in, draw/label, or teach-back.
@@ -405,6 +444,7 @@ def build_runtime_bundle() -> None:
         "11-examples.md",
         "12-evidence.md",
         "13-custom-gpt-system-instructions.md",
+        "15-method-library.md",
     }
     missing = [name for name in required if not (LIB_DIR / name).exists()]
     if missing:
@@ -420,6 +460,7 @@ def build_runtime_bundle() -> None:
     logging = read_text(LIB_DIR / "08-logging.md")
     templates = read_text(LIB_DIR / "09-templates.md")
     examples = read_text(LIB_DIR / "11-examples.md")
+    methods = read_text(LIB_DIR / "15-method-library.md")
 
     outputs = {
         "00_INDEX_AND_RULES.md": (
@@ -445,6 +486,10 @@ def build_runtime_bundle() -> None:
         "05_EXAMPLES_MINI.md": (
             [LIB_DIR / "11-examples.md"],
             build_examples(examples),
+        ),
+        "06_METHODS.md": (
+            [LIB_DIR / "15-method-library.md"],
+            build_methods(methods),
         ),
     }
 

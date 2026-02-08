@@ -15,7 +15,7 @@ const COURSE_FOLDERS = [
   { name: "ExPhys", path: "School/Exercise Physiology" },
   { name: "MS1", path: "School/Movement Science 1" },
   { name: "Neuro", path: "School/Neuroscience" },
-  { name: "TI", path: "School/Theraputic Intervention" },
+  { name: "TI", path: "School/Therapeutic Intervention" },
 ];
 
 interface ObsidianVaultBrowserProps {
@@ -101,7 +101,7 @@ export function ObsidianVaultBrowser({ onWikilinkClick }: ObsidianVaultBrowserPr
 
   const handleWikilinkClick = async (noteName: string, shiftKey: boolean) => {
     if (shiftKey) {
-      const vaultName = obsidianConfig?.vaultName || "PT School Semester 2";
+      const vaultName = obsidianConfig?.vaultName || "Treys School";
       window.open(`obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(noteName)}`, "_blank");
       return;
     }
@@ -253,7 +253,7 @@ export function ObsidianVaultBrowser({ onWikilinkClick }: ObsidianVaultBrowserPr
                       </span>
                       <button
                         onClick={() => {
-                          const vaultName = obsidianConfig?.vaultName || "PT School Semester 2";
+                          const vaultName = obsidianConfig?.vaultName || "Treys School";
                           const fp = currentFile.replace(/\.md$/, "");
                           window.open(`obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(fp)}`, "_blank");
                         }}

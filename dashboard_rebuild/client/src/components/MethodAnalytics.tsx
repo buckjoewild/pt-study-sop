@@ -6,12 +6,12 @@ interface MethodAnalyticsProps {
 }
 
 const CATEGORY_BAR_COLOR: Record<string, string> = {
-  activate: "bg-yellow-500",
-  map: "bg-blue-500",
+  prepare: "bg-yellow-500",
   encode: "bg-purple-500",
+  interrogate: "bg-green-500",
   retrieve: "bg-red-500",
-  connect: "bg-green-500",
-  consolidate: "bg-gray-500",
+  refine: "bg-blue-500",
+  overlearn: "bg-gray-500",
 };
 
 export default function MethodAnalytics({ data }: MethodAnalyticsProps) {

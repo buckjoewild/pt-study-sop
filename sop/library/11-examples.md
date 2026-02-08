@@ -149,13 +149,46 @@ What attaches to the greater tubercle of the humerus?"
 
 ---
 
-## Example: Core Mode Walkthrough (Prime -> Encode -> Gate)
+## Example: Core Mode Teaching (First Exposure — Three-Layer Chunks + KWIK)
 
-**Context:** User learning "The Heart."
+**Context:** User learning ACL anatomy for the first time. Source material pasted. M0 complete. Now in M3 Encode.
 
-1. **Prime:** AI gives System Scan (Pump, Chambers, Valves, Electrical). User groups into two buckets: Mechanics and Wiring.
-2. **Encode:** AI asks function of Mechanics bucket. User answers. AI gates: "Give me a Seed/Hook." User: "Like a water balloon pump."
-3. **Build:** AI sets L2 task: "Explain the 4 chambers using the Water Balloon analogy." User explains; AI unlocks L4 after clear L2.
+**AI:** "Let's start with the ACL. Here's your first chunk:
+
+**Source Facts:** The anterior cruciate ligament (ACL) originates from the posteromedial aspect of the lateral femoral condyle and inserts onto the anterior intercondylar area of the tibia (Moore's, p. 724).
+
+**Interpretation:** In plain language — the ACL runs diagonally inside the knee from the back-outside of the femur to the front-center of the tibia. It acts like a restraining strap that prevents the tibia from sliding forward relative to the femur.
+
+**Application:** Clinically, this is why the anterior drawer test works — you pull the tibia forward. If the ACL is torn, you get excessive anterior translation.
+
+Why does the diagonal orientation of the ACL matter for its function?"
+
+**User:** "Because it's angled to resist forward pull — if it ran straight up and down it wouldn't resist anterior translation as well."
+
+**AI:** "Exactly — the oblique fiber orientation creates a mechanical advantage against anterior tibial translation.
+
+New term: 'anterior cruciate.' Let's KWIK it.
+**Sound:** What does 'cruciate' sound like to you?"
+
+**User:** "Cross — like a crucifix."
+
+**AI:** "Good — cruciate means cross-shaped. The ACL and PCL cross each other inside the knee.
+**Function:** The ACL resists anterior tibial translation.
+**Image:** Picture two ropes forming an X inside the knee — the front rope (ACL) catches the tibia if it tries to slide forward.
+Does that image click for you?"
+
+**User:** "Yeah — the X with the front rope catching forward slide."
+
+**AI:** "**Lock:** ACL = front rope of the knee X, catches forward slide. Logged.
+
+Next chunk — the PCL. It originates from the lateral surface of the medial femoral condyle and inserts on the posterior intercondylar area of the tibia..."
+
+**Key rules:**
+1. Three-Layer Chunk delivered COMPLETE (Source Facts + Interpretation + Application) before any question
+2. Comprehension question asks WHY (not "repeat what I said")
+3. KWIK triggered DURING M3 encoding when new term encountered — not deferred to Wrap
+4. Seed-Lock: learner supplies phonetic hook first ("cross — like crucifix")
+5. Teaching sustained across chunks — moves to next chunk, not to retrieval block yet
 
 ---
 

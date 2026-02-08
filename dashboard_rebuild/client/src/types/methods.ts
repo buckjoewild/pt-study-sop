@@ -1,10 +1,10 @@
 export type MethodCategory =
-  | "activate"
-  | "map"
+  | "prepare"
   | "encode"
+  | "interrogate"
   | "retrieve"
-  | "connect"
-  | "consolidate";
+  | "refine"
+  | "overlearn";
 
 export type EnergyLevel = "low" | "medium" | "high";
 
@@ -23,6 +23,7 @@ export interface MethodBlock {
   energy_cost: EnergyLevel;
   best_stage: StudyStage | null;
   tags: string[];
+  evidence: string | null;
   created_at: string;
 }
 
@@ -83,19 +84,19 @@ export interface MethodAnalytics {
 }
 
 export const CATEGORY_COLORS: Record<MethodCategory, string> = {
-  activate: "#f59e0b",
-  map: "#3b82f6",
+  prepare: "#f59e0b",
   encode: "#8b5cf6",
+  interrogate: "#10b981",
   retrieve: "#ef4444",
-  connect: "#10b981",
-  consolidate: "#6b7280",
+  refine: "#3b82f6",
+  overlearn: "#6b7280",
 };
 
 export const CATEGORY_LABELS: Record<MethodCategory, string> = {
-  activate: "Activate",
-  map: "Map",
+  prepare: "Prepare",
   encode: "Encode",
+  interrogate: "Interrogate",
   retrieve: "Retrieve",
-  connect: "Connect",
-  consolidate: "Consolidate",
+  refine: "Refine",
+  overlearn: "Overlearn",
 };

@@ -331,3 +331,50 @@
 - Regenerated all runtime bundles (6 knowledge files + runtime_prompt.md + custom_instructions.md) at v9.5.
 - Frontend rebuilt and synced to `brain/static/dist/`.
 - All 56 tests pass.
+
+## 2026-02-08 - Brain Page Redesign + Anki Fix + Concept Map Editor
+
+### Anki Sync Fix (Critical Bug)
+- Backend `/anki/sync` now returns HTTP 500 on subprocess failure (was always 200)
+- Added `logger.error()` for failed syncs in `api_adapter.py`
+- Frontend `api.anki.sync` now checks `success` field and throws on failure
+- Added `onError` handler with destructive toast, loading spinner on sync button
+- Added inline error display with retry button when sync fails
+- Added missing `deleteDraft` and `updateDraft` to `api.ts` anki client
+- `AnkiIntegration` now supports `compact?: boolean` prop for embedded use
+
+### Brain Page 3-Column Layout
+- Replaced 4-tab Brain page (342 lines) with persistent 3-column workspace (107 lines)
+- New files: `components/brain/useBrainWorkspace.ts`, `BrainWorkspaceTopBar.tsx`, `VaultSidebar.tsx`, `CenterColumn.tsx`, `RightColumn.tsx`, `VaultEditor.tsx`, `BrainModals.tsx`
+- Left column: Vault file browser with search + course quick-nav (always visible)
+- Center column: toggle EDIT (vault editor) / CHAT (BrainChat embedded mode)
+- Right column: toggle MAP (ConceptMapEditor) / ANKI (compact integration)
+- Top bar: compact flow status, Import/Graph modal buttons, Obsidian/Anki status badges
+- Mobile: single column with bottom tab bar fallback
+- Panel sizes persist via `autoSaveId="brain-workspace"` (react-resizable-panels)
+- `BrainChat` now supports `embedded?: boolean` prop (fills parent height, no Card wrapper)
+
+### Concept Map Editor (New Feature)
+- Installed `@xyflow/react`, `dagre`, `@types/dagre`, `html-to-image`
+- New `lib/mermaid-to-reactflow.ts`: regex-based parser for Mermaid flowchart syntax, round-trip export, dagre auto-layout
+- New `components/ConceptMapEditor.tsx`: React Flow canvas with arcade-themed nodes
+  - Import Mermaid code → interactive drag-and-drop graph
+  - Toolbar: add/delete nodes, auto-layout (TB/LR), export PNG, copy Mermaid, save to vault
+  - Save as `.md` with Mermaid code block (Obsidian renders natively)
+- Frontend rebuilt and synced to `brain/static/dist/`
+- All 56 tests pass
+
+- 2026-02-08: PEIRRO-Aligned Method Library Restructure
+  - Categories renamed from ad-hoc (activate/map/encode/retrieve/connect/consolidate) to PEIRRO phases (prepare/encode/interrogate/retrieve/refine/overlearn)
+  - Added `evidence` column to `method_blocks` table (research citations per block)
+  - Added `migrate_method_categories()` to `db_setup.py` for existing DB migration
+  - Expanded from 25 to 30 method blocks (new: Pre-Test, Self-Explanation Protocol, Variable Retrieval, Illness Script Builder, Mechanism Trace)
+  - Expanded from 8 to 12 template chains (new: Dense Anatomy Intake, Pathophysiology Intake, Clinical Reasoning Intake, Quick First Exposure)
+  - Reordered "First Exposure (Core)" chain: retrieval before generative encoding per Potts & Shanks (2022)
+  - Added `--migrate` flag to `seed_methods.py` for category migration without data loss
+  - Updated API (`api_methods.py`): evidence field in create/update
+  - Updated all frontend types, colors, and filter buttons for 6 PEIRRO phases
+  - Updated SOP doc (`15-method-library.md`) with full block catalog and evidence citations
+  - Fixed pre-existing test isolation issue (hardcoded IDs → dynamic IDs)
+  - Frontend rebuilt and synced to `brain/static/dist/`
+  - All 57 tests pass

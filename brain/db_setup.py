@@ -1192,6 +1192,16 @@ def init_database():
         ON method_ratings(chain_id)
     """)
 
+    # Add evidence column to method_blocks if missing (PEIRRO v2 migration)
+    cursor.execute("PRAGMA table_info(method_blocks)")
+    mb_cols = {col[1] for col in cursor.fetchall()}
+    if "evidence" not in mb_cols:
+        try:
+            cursor.execute("ALTER TABLE method_blocks ADD COLUMN evidence TEXT")
+            print("[INFO] Added 'evidence' column to method_blocks table")
+        except sqlite3.OperationalError:
+            pass
+
     # Add method_chain_id to sessions table if missing
     cursor.execute("PRAGMA table_info(sessions)")
     session_cols = {col[1] for col in cursor.fetchall()}
@@ -1207,6 +1217,52 @@ def init_database():
 
     print(f"[OK] Database initialized at: {DB_PATH}")
     print("[OK] Schema version: 9.4 + planning/RAG/methods extensions")
+
+
+def migrate_method_categories():
+    """
+    Migrate method_blocks categories from ad-hoc names to PEIRRO phases.
+    Idempotent — only updates rows that still use old category names.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    category_map = {
+        "activate": "prepare",
+        "map": "prepare",
+        "connect": "interrogate",
+    }
+
+    # Consolidate split: Error Autopsy + Mastery Loop → refine, rest → overlearn
+    refine_blocks = ("Error Autopsy", "Mastery Loop")
+
+    total = 0
+    for old_cat, new_cat in category_map.items():
+        cursor.execute(
+            "UPDATE method_blocks SET category = ? WHERE category = ?",
+            (new_cat, old_cat),
+        )
+        total += cursor.rowcount
+
+    # Split consolidate
+    cursor.execute(
+        "UPDATE method_blocks SET category = 'refine' WHERE category = 'consolidate' AND name IN (?, ?)",
+        refine_blocks,
+    )
+    total += cursor.rowcount
+
+    cursor.execute(
+        "UPDATE method_blocks SET category = 'overlearn' WHERE category = 'consolidate'",
+    )
+    total += cursor.rowcount
+
+    conn.commit()
+    conn.close()
+
+    if total > 0:
+        print(f"[OK] Migrated {total} method block(s) to PEIRRO categories")
+    else:
+        print("[INFO] Method categories already use PEIRRO phases (no migration needed)")
 
 
 def migrate_from_v8():

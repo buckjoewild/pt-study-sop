@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Star, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 interface RatingDialogProps {
   open: boolean;
@@ -58,6 +58,7 @@ export default function RatingDialog({ open, onClose, onSubmit, targetName, targ
           <DialogTitle className="font-arcade text-xs text-primary">
             RATE {targetType.toUpperCase()}
           </DialogTitle>
+          <DialogDescription className="sr-only">Rate the effectiveness and engagement of this method</DialogDescription>
           <button onClick={onClose}>
             <X className="w-4 h-4 text-muted-foreground" />
           </button>

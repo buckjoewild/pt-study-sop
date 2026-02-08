@@ -22,6 +22,7 @@ Basic alignment is enforced by `python scripts/check_docs_sync.py` (CI).
 | Data Contracts | `docs/contracts/INDEX.md` |
 | Tutor/SOP Explorer | `docs/dashboard/TUTOR_PAGE_SOP_EXPLORER_v1.0.md` |
 | Brain System | `docs/root/PROJECT_ARCHITECTURE.md` (Brain section) |
+| Composable Methods | `sop/library/15-method-library.md` |
 | Release Process | `docs/release/RELEASE_PROCESS.md` |
 
 ## Project Hub

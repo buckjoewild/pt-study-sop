@@ -499,6 +499,208 @@ def get_audit_summary(days: int = 7) -> Dict[str, Any]:
     return summary
 
 
+def get_method_effectiveness_summary() -> Optional[Dict[str, Any]]:
+    """
+    Fetch method library summary: block/chain/rating counts, top/bottom performers.
+
+    Returns:
+        Dict with total_blocks, total_chains, total_ratings, avg_effectiveness,
+        category_breakdown, top_performers, bottom_performers.
+        None if method tables don't exist.
+    """
+    with _get_connection() as conn:
+        if conn is None:
+            return None
+
+        required_tables = ("method_blocks", "method_chains", "method_ratings")
+        for table in required_tables:
+            if not _table_exists(conn, table):
+                return None
+
+        # Total counts
+        total_blocks = conn.execute("SELECT COUNT(*) as c FROM method_blocks").fetchone()["c"]
+        total_chains = conn.execute("SELECT COUNT(*) as c FROM method_chains").fetchone()["c"]
+        total_ratings = conn.execute("SELECT COUNT(*) as c FROM method_ratings").fetchone()["c"]
+
+        if total_ratings == 0:
+            return {
+                "total_blocks": total_blocks,
+                "total_chains": total_chains,
+                "total_ratings": 0,
+                "avg_effectiveness": None,
+                "category_breakdown": {},
+                "top_performers": [],
+                "bottom_performers": [],
+            }
+
+        avg_eff_row = conn.execute(
+            "SELECT AVG(effectiveness) as avg_eff FROM method_ratings"
+        ).fetchone()
+        avg_effectiveness = round(avg_eff_row["avg_eff"], 2) if avg_eff_row["avg_eff"] else None
+
+        # Category breakdown
+        cat_rows = conn.execute(
+            "SELECT category, COUNT(*) as count FROM method_blocks GROUP BY category ORDER BY count DESC"
+        ).fetchall()
+        category_breakdown = {row["category"]: row["count"] for row in cat_rows}
+
+        # Top 5 performers (blocks with highest avg effectiveness, min 1 rating)
+        top_rows = conn.execute("""
+            SELECT mb.id, mb.name, mb.category,
+                   AVG(mr.effectiveness) as avg_eff,
+                   COUNT(mr.id) as rating_count
+            FROM method_blocks mb
+            JOIN method_ratings mr ON mb.id = mr.method_block_id
+            GROUP BY mb.id
+            HAVING rating_count >= 1
+            ORDER BY avg_eff DESC
+            LIMIT 5
+        """).fetchall()
+        top_performers = [
+            {"id": r["id"], "name": r["name"], "category": r["category"],
+             "avg_effectiveness": round(r["avg_eff"], 2), "rating_count": r["rating_count"]}
+            for r in top_rows
+        ]
+
+        # Bottom 5 performers (blocks with lowest avg effectiveness, min 1 rating)
+        bottom_rows = conn.execute("""
+            SELECT mb.id, mb.name, mb.category,
+                   AVG(mr.effectiveness) as avg_eff,
+                   COUNT(mr.id) as rating_count
+            FROM method_blocks mb
+            JOIN method_ratings mr ON mb.id = mr.method_block_id
+            GROUP BY mb.id
+            HAVING rating_count >= 1
+            ORDER BY avg_eff ASC
+            LIMIT 5
+        """).fetchall()
+        bottom_performers = [
+            {"id": r["id"], "name": r["name"], "category": r["category"],
+             "avg_effectiveness": round(r["avg_eff"], 2), "rating_count": r["rating_count"]}
+            for r in bottom_rows
+        ]
+
+        return {
+            "total_blocks": total_blocks,
+            "total_chains": total_chains,
+            "total_ratings": total_ratings,
+            "avg_effectiveness": avg_effectiveness,
+            "category_breakdown": category_breakdown,
+            "top_performers": top_performers,
+            "bottom_performers": bottom_performers,
+        }
+
+
+def get_method_anomalies() -> Optional[Dict[str, List[Dict[str, Any]]]]:
+    """
+    Detect anomalies in the method library (read-only).
+
+    Returns:
+        Dict with lists: never_rated, underused, low_performers, high_variance.
+        None if method tables don't exist.
+    """
+    with _get_connection() as conn:
+        if conn is None:
+            return None
+
+        required_tables = ("method_blocks", "method_chains", "method_ratings")
+        for table in required_tables:
+            if not _table_exists(conn, table):
+                return None
+
+        anomalies: Dict[str, List[Dict[str, Any]]] = {
+            "never_rated": [],
+            "underused": [],
+            "low_performers": [],
+            "high_variance": [],
+        }
+
+        # Never-rated blocks
+        nr_blocks = conn.execute("""
+            SELECT id, name, category FROM method_blocks
+            WHERE id NOT IN (
+                SELECT DISTINCT method_block_id FROM method_ratings
+                WHERE method_block_id IS NOT NULL
+            )
+        """).fetchall()
+        for r in nr_blocks:
+            anomalies["never_rated"].append(
+                {"type": "block", "id": r["id"], "name": r["name"], "category": r["category"]}
+            )
+
+        # Never-rated chains
+        nr_chains = conn.execute("""
+            SELECT id, name FROM method_chains
+            WHERE id NOT IN (
+                SELECT DISTINCT chain_id FROM method_ratings
+                WHERE chain_id IS NOT NULL
+            )
+        """).fetchall()
+        for r in nr_chains:
+            anomalies["never_rated"].append(
+                {"type": "chain", "id": r["id"], "name": r["name"]}
+            )
+
+        # Underused high performers (< 2 ratings but avg >= 4)
+        underused_rows = conn.execute("""
+            SELECT mb.id, mb.name, mb.category,
+                   AVG(mr.effectiveness) as avg_eff,
+                   COUNT(mr.id) as usage_count
+            FROM method_blocks mb
+            JOIN method_ratings mr ON mb.id = mr.method_block_id
+            GROUP BY mb.id
+            HAVING usage_count < 2 AND avg_eff >= 4
+        """).fetchall()
+        for r in underused_rows:
+            anomalies["underused"].append({
+                "id": r["id"], "name": r["name"], "category": r["category"],
+                "avg_effectiveness": round(r["avg_eff"], 2), "usage_count": r["usage_count"]
+            })
+
+        # Low performers (avg effectiveness <= 2, min 3 ratings)
+        low_rows = conn.execute("""
+            SELECT mb.id, mb.name, mb.category,
+                   AVG(mr.effectiveness) as avg_eff,
+                   COUNT(mr.id) as rating_count
+            FROM method_blocks mb
+            JOIN method_ratings mr ON mb.id = mr.method_block_id
+            GROUP BY mb.id
+            HAVING rating_count >= 3 AND avg_eff <= 2
+        """).fetchall()
+        for r in low_rows:
+            anomalies["low_performers"].append({
+                "id": r["id"], "name": r["name"], "category": r["category"],
+                "avg_effectiveness": round(r["avg_eff"], 2), "rating_count": r["rating_count"]
+            })
+
+        # High variance (std dev > 1.5, min 3 ratings)
+        hv_rows = conn.execute("""
+            SELECT method_block_id, GROUP_CONCAT(effectiveness) as ratings
+            FROM method_ratings
+            WHERE method_block_id IS NOT NULL
+            GROUP BY method_block_id
+            HAVING COUNT(*) >= 3
+        """).fetchall()
+        for r in hv_rows:
+            ratings = [float(x) for x in r["ratings"].split(",")]
+            if len(ratings) >= 3:
+                from statistics import stdev as _stdev
+                sd = _stdev(ratings)
+                if sd > 1.5:
+                    block_row = conn.execute(
+                        "SELECT name, category FROM method_blocks WHERE id = ?",
+                        (r["method_block_id"],)
+                    ).fetchone()
+                    anomalies["high_variance"].append({
+                        "id": r["method_block_id"],
+                        "name": block_row["name"] if block_row else "Unknown",
+                        "category": block_row["category"] if block_row else "Unknown",
+                        "std_dev": round(sd, 2),
+                    })
+
+        return anomalies
+
+
 def get_session_count() -> int:
     """Return total number of sessions in the database."""
     with _get_connection() as conn:

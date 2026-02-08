@@ -561,6 +561,7 @@ def serialize_session_row(row):
         "issues": issues_val,
         "sourceLock": row["source_lock"] if "source_lock" in row.keys() else None,
         "createdAt": row["created_at"] if "created_at" in row.keys() else final_date,
+        "methodChainId": row["method_chain_id"] if "method_chain_id" in row.keys() else None,
     }
 
 
@@ -604,7 +605,8 @@ def get_sessions():
                 gaps_identified,
                 subtopics,
                 what_needs_fixing,
-                created_at
+                created_at,
+                method_chain_id
             FROM sessions
             WHERE 1=1
         """
@@ -687,7 +689,8 @@ def get_single_session(session_id):
                 gaps_identified,
                 subtopics,
                 what_needs_fixing,
-                created_at
+                created_at,
+                method_chain_id
             FROM sessions
             WHERE id = ?
         """,
@@ -722,6 +725,7 @@ def create_session():
     concepts = normalize_list_value(data.get("concepts"))
     issues = normalize_list_value(data.get("issues"))
     source_lock = normalize_list_value(data.get("sourceLock"))
+    method_chain_id = data.get("methodChainId")
 
     date_str = datetime.now().strftime("%Y-%m-%d")
     time_str = datetime.now().strftime("%H:%M:%S")
@@ -737,8 +741,9 @@ def create_session():
                 session_date, session_time, main_topic, study_mode,
                 created_at, time_spent_minutes, duration_minutes,
                 anki_cards_count, notes_insights,
-                confusions, weak_anchors, concepts, issues, source_lock
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                confusions, weak_anchors, concepts, issues, source_lock,
+                method_chain_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
             (
                 date_str,
@@ -755,6 +760,7 @@ def create_session():
                 concepts,
                 issues,
                 source_lock,
+                method_chain_id,
             ),
         )
         conn.commit()
@@ -774,6 +780,7 @@ def create_session():
             "mode": mode,
             "minutes": minutes,
             "cards": cards,
+            "methodChainId": method_chain_id,
         }
     ), 201
 
@@ -995,6 +1002,9 @@ def update_session(session_id):
         if "sourceLock" in data:
             fields.append("source_lock = ?")
             values.append(normalize_list_value(data["sourceLock"]))
+        if "methodChainId" in data:
+            fields.append("method_chain_id = ?")
+            values.append(data["methodChainId"])
 
         if not fields:
             return jsonify({"success": True})
@@ -1028,7 +1038,8 @@ def update_session(session_id):
                 gaps_identified,
                 subtopics,
                 what_needs_fixing,
-                created_at
+                created_at,
+                method_chain_id
             FROM sessions
             WHERE id = ?
         """,
@@ -5455,7 +5466,8 @@ def get_sessions_today():
                 gaps_identified,
                 subtopics,
                 what_needs_fixing,
-                created_at
+                created_at,
+                method_chain_id
             FROM sessions WHERE session_date = ?
             ORDER BY session_time DESC
         """,

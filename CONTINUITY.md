@@ -378,3 +378,12 @@
   - Fixed pre-existing test isolation issue (hardcoded IDs → dynamic IDs)
   - Frontend rebuilt and synced to `brain/static/dist/`
   - All 57 tests pass
+
+- 2026-02-08: Method Integration Gap Fixes
+  - Wired `method_chain_id` into session create/update/get in `api_adapter.py` (was DB-only, never persisted via API)
+  - Added `get_method_effectiveness_summary()` and `get_method_anomalies()` to `scholar/brain_reader.py`
+  - Created `scholar/weekly_digest.py` with optional methods section (top/bottom performers, anomalies)
+  - Added Composable Methods row to `docs/README.md` Feature→Doc table
+  - Added 3 method tables to `docs/root/PROJECT_ARCHITECTURE.md` schema section
+  - Updated `MEMORY.md` counts: 34 blocks, 13 chains (was 30/12)
+  - All 57 tests pass

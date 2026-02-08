@@ -219,6 +219,9 @@ SQLite database with 17+ tables. Key tables:
 | `tutor_turns` | Chat history logs from the Tutor interface. |
 | `scraped_events` | Staged Blackboard items waiting for approval. |
 | `ingested_files` | Tracking checksums of ingested logs to prevent dupes. |
+| `method_blocks` | 34 evidence-backed study method blocks (PEIRRO categories). |
+| `method_chains` | Pre-built and custom method sequences with context tags. |
+| `method_ratings` | Post-session effectiveness and engagement ratings. |
 
 ### 4.2 Core Ingestion Scripts
 

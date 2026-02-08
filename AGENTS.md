@@ -17,6 +17,7 @@ Applies to all work under `C:/pt-study-sop`. A nearer `AGENTS.md` overrides this
 - Auto-commit after changes with a conventional commit message if none is provided.
 - Explore the project first (key files/paths), then invoke any skill.
 - For SwiftUI tasks, prefer retrieval-led reasoning over pre-training-led reasoning.
+- Shell: PowerShell by default. Bash/WSL when the tool or command requires it.
 - Prompt suffix defaults: treat every request as if it ends with `use subagents; use bq when asked; explain why; include ASCII diagram when helpful` unless the user says "no suffix" or "no subagents".
 
 ## When to Ask
@@ -41,4 +42,21 @@ Add or maintain a Table of Contents for documentation.
 
 ## Continuity
 
-Maintain `CONTINUITY.md` at repo root. Append after every significant change — never delete history.
+Maintain `CONTINUITY.md` at repo root. Append after every significant change — never delete.
+
+Format:
+```
+## YYYY-MM-DD - Brief Title
+- HH:MM: What changed. Files affected if non-obvious.
+```
+
+Group same-day entries under one date header.
+
+## Conductor Workflow
+
+The `conductor/` directory contains the project's product definition, tech stack, active tracks, and workflow rules. When starting major work:
+
+1. Read `conductor/tracks.md` to check for active tracks and their priority.
+2. Follow the task lifecycle defined in `conductor/workflow.md` (TDD phases, git notes, checkpointing).
+3. Respect constraints in `conductor/product-guidelines.md` (local-first, no data invention, preview-first for external writes).
+4. If a change deviates from `conductor/tech-stack.md`, update the tech stack doc before implementing.

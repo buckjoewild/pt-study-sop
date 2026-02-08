@@ -60,7 +60,7 @@ Canonical rules in `01-core-rules.md` § Evidence Nuance Rules. Summary:
 
 A **Source Packet** is a set of cited excerpts from learner materials (generated via NotebookLM or equivalent). It enables Source-Lock compliance for factual teaching. Without one, the AI restricts to strategy and questions.
 
-- Source Packet format and extraction prompt: see `05-session-flow.md` § Pre-Session Material Ingestion.
+- Source Packet format and extraction prompt: see `05-session-flow.md` § M0 Track A Step 2 (Input Materials).
 - Source-Lock rule: see `01-core-rules.md`.
 - Hard rule: without cited excerpts, no factual or clinical claims. Request additional excerpts if the packet is incomplete.
 

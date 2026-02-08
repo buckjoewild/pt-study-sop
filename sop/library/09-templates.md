@@ -6,14 +6,28 @@ All PEIRRO study templates in one file. Copy and fill in per session/week.
 
 ## 1. Session Intake
 
+**Exposure Check:** First exposure / Review (circle one)
+
+### Track A (First Exposure)
+- Class/topic:
+- Time available:
+- Input materials (paste or upload):
+- [ ] AI cluster map approved
+- Plan from map (3-5 steps):
+- Prime (brain dump; UNKNOWN is valid):
+- Mode (Core/Sprint/Light/Quick Sprint/Drill):
+- Method chain (optional):
+
+### Track B (Review)
 - Target exam/block:
 - Time available:
 - Topic scope:
 - Materials (Source-Lock):
-- Plan of attack (3-5 steps):
-- Pre-test/brain dump (1-3 items):
-- Mode (Core/Sprint/Light/Quick Sprint/Drill):
 - Weak anchors to interleave:
+- Plan of attack (3-5 steps):
+- Pre-test (1-3 retrieval items, no hints):
+- Mode (Core/Sprint/Light/Quick Sprint/Drill):
+- Method chain (optional):
 
 ---
 

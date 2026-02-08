@@ -4,12 +4,12 @@
 This document outlines the core technologies and frameworks used in the PT Study OS project.
 
 ## Programming Languages
-- **Python**: Primarily used for the backend logic, data processing, and API (Flask).
-- **TypeScript/JavaScript**: Used for the frontend development, including the React-based dashboard.
+- **Python**: Backend logic, data processing, and API (Flask).
+- **TypeScript/JavaScript**: Frontend development, including the React-based dashboard.
 
 ## Frontend Technologies
 - **Framework:** React (via Vite for building)
-- **UI Libraries:** Radix UI, Tailwind CSS, Shadcn/ui (implied by Radix usage and common patterns)
+- **UI Libraries:** Shadcn/ui (Radix UI primitives), Tailwind CSS
 - **State Management/Data Fetching:** TanStack Query
 - **Routing:** Wouter
 - **Drag and Drop:** Dnd Kit
@@ -18,27 +18,29 @@ This document outlines the core technologies and frameworks used in the PT Study
 
 ## Backend Technologies
 - **Framework:** Flask (Python)
-- **Database ORM:** Drizzle ORM (used for database interactions and schema definition)
-- **API Communication:** Express.js (potentially used for some aspects of the frontend build pipeline or as a local dev server intermediary)
+- **Database Access:** Raw `sqlite3` Python module with parameterized queries (no ORM)
+- **Templating:** Jinja2 (minimal usage; most UI is React)
 
 ## Database
-- **Primary Database:** SQLite (`pt_study.db`)
-- **Potential (Secondary) Database:** PostgreSQL (indicated by `pg` dependency, possibly for future scaling or specific integrations)
+- **Database:** SQLite (`brain/data/pt_study.db`) — sole database, no secondary DB
+
+## Build & Deployment
+- **Frontend Build:** `npm run build` in `dashboard_rebuild/`, output copied to `brain/static/dist/`
+- **Serving:** Flask serves the built React app as static files on port 5000
+- **No dev server:** The app is never served via `npm run dev` or `vite dev`
 
 ## Development Tools & Ecosystem
 - **Version Control:** Git
-- **Package Managers:** npm (for frontend), pip (for Python backend)
-- **Build Tool:** Vite (for frontend)
-- **Environment Management:** Python virtual environments
-- **Code Editors:** Codex CLI / Claude Code (as per `CLAUDE.md`)
+- **Package Managers:** npm (frontend), pip (Python backend)
+- **Build Tool:** Vite (frontend)
+- **Code Editors:** Claude Code, Codex CLI
 - **Knowledge Management:** Obsidian, Anki
-- **External Integrations:** Google Calendar/Tasks API, OpenAI API (for LLM interactions)
+
+## External Integrations
+- **Google Calendar/Tasks API:** OAuth-based calendar and task management
+- **OpenAI API:** LLM interactions for Scholar and study processing
+- **AnkiConnect:** Syncs card drafts to Anki Desktop
+- **Obsidian REST API:** Vault integration for note management
 
 ## Architecture Style
-The project follows a **Monorepo** structure, housing both the Python Flask backend (`brain/`) and the React frontend (`dashboard_rebuild/`) within the same repository. This setup facilitates cohesive development and deployment of tightly coupled components.
-
-## Key Observations
-- The `CLAUDE.md` file indicates a clear separation of concerns between the frontend (`dashboard_rebuild/`) and backend (`brain/`).
-- The use of Drizzle ORM for both frontend and backend dependencies suggests a type-safe approach to database interactions.
-- Extensive use of AI tools for content ingestion, processing, and management is a core aspect of the system.
-- The project emphasizes a structured study approach, integrating various tools for learning and personal development.
+The project follows a **Monorepo** structure, housing both the Python Flask backend (`brain/`) and the React frontend (`dashboard_rebuild/`) within the same repository. Flask serves the built frontend from `brain/static/dist/`. There is no separate API server or Express layer.

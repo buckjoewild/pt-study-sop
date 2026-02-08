@@ -1,6 +1,6 @@
 # PT Study OS -- Overview
 
-**Version:** v9.4
+**Version:** v9.5
 **Owner:** Trey Tucker
 
 ## What This Is
@@ -27,7 +27,7 @@ A structured AI study operating system for DPT coursework. It enforces an end-to
 ## Quick-Start: Study Session
 
 1. Paste `sop/runtime/runtime_prompt.md` at session start.
-2. Complete M0 Planning: declare target, sources, plan, pre-test.
+2. Complete M0 Planning: Exposure Check → Track A (first exposure) or Track B (review). See `05-session-flow.md`.
 3. Run the session through M1-M6.
 4. At Wrap, output **Exit Ticket + Session Ledger** (no JSON, no spacing schedule).
 5. Copy Exit Ticket + Session Ledger into Brain ingestion prompts (see `10-deployment.md`) to produce JSON logs.
@@ -79,6 +79,10 @@ A structured AI study operating system for DPT coursework. It enforces an end-to
 - Version plans (e.g., v9.2) may adjust scope but cannot violate invariants/contracts.
 - New fields must be additive and documented; DB migrations must be provided when schemas change.
 - PR checklist: Does this break an invariant/contract? If yes, update Master Plan or reject.
+
+### Version History
+- **v9.5** (2026-02-07): M0 split-track. Material Ingestion folded into Track A (first exposure). No schema changes.
+- **v9.4** (2026-01-15): Lite Wrap, Session Ledger, No Phantom Outputs, Composable Method Library.
 
 ---
 

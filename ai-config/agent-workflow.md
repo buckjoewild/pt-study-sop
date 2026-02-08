@@ -23,6 +23,9 @@
 - If a decision changes direction, add a note explaining why.
 - When a file becomes outdated, update it or mark deprecated with a pointer.
 
+## Project Workflow
+For ongoing work, follow `conductor/workflow.md`. Check `conductor/tracks.md` for active tracks.
+
 ## Extra Notes
 
 - If unsure, label it `UNCONFIRMED` and ask a targeted question.

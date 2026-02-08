@@ -11,6 +11,7 @@ Tutor (Custom GPT) -> WRAP output -> Brain ingests + stores -> Dashboard surface
 - Dashboard: Flask-served UI for ingest, metrics, issues, proposals.
 - Scholar: Manual-run auditor that proposes improvements based on evidence.
 - Calendar/Tasks: Downstream projection of Brain state into Google Calendar/Tasks (preview-first).
+- Methods: Composable study method blocks and chains. Library of 18 blocks across 6 categories, chainable into session workflows. Ratings feed into Scholar for optimization.
 
 ## Canonical docs
 

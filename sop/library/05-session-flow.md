@@ -4,62 +4,12 @@ A single linear walkthrough of a complete study session. For mode-specific behav
 
 ---
 
-## Pre-Session: Material Ingestion
-
-Run this when materials are new, scattered, or you feel lost. Timebox: 15 min (hard stop: 25 min).
-
-**Protocol:**
-1. Select 1-3 LOs that define session scope.
-2. Source-lock: list exact slides, pages, timestamps.
-3. Quick scan: headings, figures, summaries; draft 2-4 buckets.
-4. Extract: definitions (function-first), key mechanisms, 1 example + 1 boundary case.
-5. Capture 1 diagram/figure with labels.
-6. Draft 5-10 retrieval prompts.
-7. Format into a Tutor-Ready Packet and hand off.
-
-**Tutor-Ready Packet:**
-- LOs (numbered)
-- Source-lock list (exact files/pages/timestamps)
-- Buckets (2-4 groups)
-- Glossary (function-first definitions)
-- Key mechanisms (input > process > output)
-- 1 diagram/figure with labels
-- 5-10 retrieval prompts
-- Confusions / boundary cases
-
-**Triggers for ingestion:**
-1. Materials are new/unseen.
-2. Sources are scattered across multiple files.
-3. You feel lost or underprepared.
-4. Tutor requests a Source Packet and you don't have one.
-
-**Source types:** Syllabus/LO docs, slides/handouts, lecture recordings, textbook chapters, lab/practical notes, practice questions. NotebookLM is the source of truth for raw materials.
-
-**Timebox:** 15 min default, 25 min hard stop.
-
-**NotebookLM Workflow:**
-1. Upload source materials to NotebookLM.
-2. Run the LLM extraction prompt (below).
-3. Format output into a Tutor-Ready Packet.
-4. Hand off to session.
-
-**LLM Extraction Prompt:**
-```
-From my sources only: extract learning objectives, key definitions,
-mechanisms/steps, differentiators, and 5-10 practice questions;
-include citations.
-```
-
-**Guardrails:** No teaching during ingestion. Mark unsourced claims UNVERIFIED.
-
----
-
 ## 60-Second Quick Start
 
 If you need to skip the full protocol:
 1. Check progress tracker: last session + next action.
 2. Pick 1 LO or micro-target.
-3. Materials ready? Yes → proceed. No → run Material Ingestion (15 min).
+3. Materials ready? Yes → proceed. No → start M0 Track A (paste materials).
 4. Choose mode (Core/Sprint/Drill/Light/Quick Sprint).
 5. Begin M1 Entry.
 
@@ -69,16 +19,56 @@ If you need to skip the full protocol:
 
 ## M0: Planning
 
-> No teaching until we have: target, sources, a 3-5 step plan, and a pre-test.
+> No teaching until M0 is complete. The gate differs by exposure level.
 
-**Session Inputs Checklist:**
-1. Target exam/block
-2. Time available
-3. Materials (LOs, slides, labs)
-4. Source-lock list
-5. Mode selection
-6. Weak anchors to interleave
-7. Pre-test items
+### Exposure Check (First Step)
+
+Ask: **"Have you seen this material before?"**
+- **No / first time** → Track A (First Exposure)
+- **Yes / review / drill** → Track B (Review)
+
+---
+
+### Track A: First Exposure
+
+You can't plan what you haven't mapped. Materials come first, then the AI maps structure, then you plan from the map.
+
+**Steps:**
+1. **Context** -- class, topic, time available.
+2. **Input Materials** -- paste slides, LOs, handouts, or upload to NotebookLM. Pasted materials satisfy Source-Lock.
+3. **AI Maps Structure** -- AI reads the materials and produces a concept/cluster map (3-5 clusters). Learner approves the map before proceeding.
+4. **Plan from Map** -- 3-5 steps derived from the approved cluster map.
+5. **Prime** -- 60-120s brain dump. UNKNOWN is a valid answer (you haven't learned this yet).
+6. **Method Chain** (optional) -- select from library or build ad-hoc (see `15-method-library.md`).
+
+**Optional NotebookLM Workflow:**
+1. Upload source materials to NotebookLM.
+2. Run the extraction prompt: `From my sources only: extract learning objectives, key definitions, mechanisms/steps, differentiators, and 5-10 practice questions; include citations.`
+3. Format output into a Tutor-Ready Packet (LOs, source-lock list, buckets, glossary, mechanisms, diagram, retrieval prompts, confusions).
+4. Hand off to session.
+
+**Track A Exit:** Context, materials pasted, cluster map approved, plan locked, prime done.
+
+---
+
+### Track B: Review
+
+You've seen this before. Test what you retained, then plan around the gaps.
+
+**Steps:**
+1. **Target** -- exam/block + time available.
+2. **Position** -- covered vs remaining; known weak spots.
+3. **Materials + Source-Lock** -- LOs, slides, labs, practice Qs, notes. List specific pages/files for today. NotebookLM packet satisfies Source-Lock.
+4. **Interleave** -- review 1-2 weak anchors from prior Wrap Watchlist.
+5. **Plan** -- 3-5 steps.
+6. **Pre-test** -- 1-3 retrieval items (no hints). Establishes baseline before instruction.
+7. **Method Chain** (optional) -- select from library or build ad-hoc (see `15-method-library.md`).
+
+**Track B Exit:** Target, sources, plan, and pre-test confirmed.
+
+---
+
+### Shared M0 Rules
 
 **Confusables list:** Identify items likely to interfere with each other (similar names, overlapping actions, adjacent regions). Feed these to interleaving in M4.
 
@@ -86,20 +76,7 @@ If you need to skip the full protocol:
 
 **Mode alignment:** Mode selected in M1 must match the learner's state. If focus is low (1-4), default to Light or Sprint. If material is new, default to Core.
 
-**Source-lock guardrail:** No factual teaching without source-lock. If sources are missing, run Material Ingestion first.
-
-**Steps:**
-1. **Target** -- exam/block + time available.
-2. **Position** -- covered vs remaining; known weak spots.
-3. **Materials** -- LOs, slides, labs, practice Qs, notes.
-4. **Source-Lock** -- specific pages/files for today. NotebookLM packet satisfies this.
-5. **Interleave** -- review 1-2 weak anchors from prior Wrap Watchlist.
-6. **Plan** -- 3-5 steps.
-7. **Glossary Scan** -- top 5 terms defined at L2.
-8. **Prime** -- 1-3 pre-questions or 60-120s brain dump.
-
-**Method Chain Selection (optional):**
-If using Composable Methods (see `15-method-library.md`), select or build a chain during M0. The chain determines which method blocks run in M1–M5.
+**Source-lock guardrail:** No factual teaching without source-lock. Track A: pasted materials satisfy this. Track B: explicit source list required.
 
 **Quick Plan Templates:**
 
@@ -107,8 +84,6 @@ If using Composable Methods (see `15-method-library.md`), select or build a chai
 |--------|------|
 | Standard (30-60 min) | Goal + 5-10 min pre-test + 2-3 active chunks + midpoint check + 5-10 min wrap |
 | Micro (10-15 min) | Micro-goal + 1-2 min recall + 5-8 min work + 2-3 min re-recall + 1 min next step |
-
-**Exit:** Target, sources, plan, and pre-test confirmed.
 
 ---
 
@@ -155,7 +130,9 @@ For full mode descriptions, selection heuristics, and switching rules, see [06-m
 
 Build the structural map. Do not teach details yet.
 
-**Protocol:**
+**Track A note:** Cluster map was already approved in M0. Select the first bucket and proceed directly — no H1 Scan needed.
+
+**Track B protocol:**
 1. **H1 Scan** -- System > Subsystem > Component > Element (6 bullets max).
 2. **Bucket** -- learner groups into 2-4 buckets (spatial, mechanism, compare, workflow, etc.).
 3. **Select** first bucket to encode.
@@ -165,7 +142,7 @@ Build the structural map. Do not teach details yet.
 
 **Guardrails:** Map only -- no detail. 2-3 buckets max per session. Mark unverified if no source.
 
-**Exit:** Scan done, buckets chosen, first bucket selected, pre-questions answered and corrected.
+**Exit:** Scan done (or map carried from M0), buckets chosen, first bucket selected, pre-questions answered and corrected.
 
 ---
 
@@ -301,13 +278,17 @@ Update the tracker during or immediately after Wrap.
 ## Quick Reference: Session Flow
 
 ```
-Material Ingestion (pre-session, if needed)
+M0 Planning -- Exposure Check
   |
-M0 Planning -- target, sources, plan, pre-test
+  ├── Track A (First Exposure)           ├── Track B (Review)
+  │   context → materials → AI map →     │   target → position → sources →
+  │   plan from map → prime (brain dump) │   interleave → plan → pre-test
+  │   → method chain (opt)               │   → method chain (opt)
   |
 M1 Entry -- state check, scope, mode selection
   |
-M2 Prime -- H1 scan, bucket, select first bucket
+M2 Prime -- Track A: use M0 map, select bucket
+            Track B: H1 scan, bucket, select first bucket
   |
 M3 Encode -- KWIK flow, generation, hooks locked
   |

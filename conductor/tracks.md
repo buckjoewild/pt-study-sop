@@ -4,5 +4,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Refactor the existing frontend and backend to align with the defined tech stack and coding guidelines, focusing on modularity and code quality.**
+- [ ] **Track: Refactor the existing frontend and backend to align with the defined tech stack and coding guidelines, focusing on modularity and code quality.** (paused — methods feature shipped first on v9.4 branch)
   *Link: [./tracks/refactor_frontend_backend_20260204/](./tracks/refactor_frontend_backend_20260204/)*

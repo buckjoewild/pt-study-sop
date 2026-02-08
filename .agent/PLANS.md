@@ -2,6 +2,10 @@
 
 This document describes the requirements for an execution plan ("ExecPlan"), a design document that a coding agent can follow to deliver a working feature or system change. Treat the reader as a complete beginner to this repository: they have only the current working tree and the single ExecPlan file you provide. There is no memory of prior plans and no external context.
 
+## Relationship to Conductor
+ExecPlans are for focused features. For major multi-phase work, use a Conductor track
+(conductor/tracks.md). If an ExecPlan grows beyond 2-3 sessions, promote to a track.
+
 ## How to use ExecPlans and PLANS.md
 
 When authoring an executable specification (ExecPlan), follow PLANS.md to the letter. If it is not in your context, refresh your memory by reading the entire PLANS.md file. Be thorough in reading (and re-reading) source material to produce an accurate specification. When creating a spec, start from the skeleton and flesh it out as you do your research.

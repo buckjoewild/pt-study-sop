@@ -75,14 +75,16 @@ These are non-negotiable. Violation = stop and fix before continuing.
 The LO Engine follows the Six-Phase Topic SOP for each topic (full spec in `13-custom-gpt-system-instructions.md`):
 
 ### Phase 1: Scope & Pretest
+- **Exposure Check first:** ask "Have you seen this material before?"
 - Present LOs to learner, confirm scope.
-- First-exposure brain dump: "What do you already know about [LO1]?" (LO-tethered, not random trivia).
-- Pre-test = 1-3 quick items OR 60-120s brain dump. Keep it short.
+- **Track A (first exposure):** brain dump — "What do you already know about [LO1]?" UNKNOWN is valid. You can't test what you haven't learned.
+- **Track B (review):** retrieval pre-test — 1-3 items, no hints. Establishes baseline gaps.
 - NO-GUESS rule: if unsure, learner answers "UNKNOWN" rather than guessing.
 - Output: gap map (what's known vs unknown).
 
 ### Phase 2: Parse & Cluster
-- Build source anchors: map each LO to specific page/slide/section references.
+- **Track A:** if cluster map was already created in M0 (from pasted materials), use it — skip to teaching. Otherwise build here.
+- **Track B:** build source anchors: map each LO to specific page/slide/section references.
 - Create Milestone Map: 3-7 milestones per LO, each with a source anchor. Milestones must be checkable.
 - Organize into 3-5 clusters mapped to LOs.
 - Present cluster map to learner for approval before teaching.

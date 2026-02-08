@@ -1,18 +1,25 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 from __future__ import annotations
 
 import re
+import shutil
 import sys
 from pathlib import Path
 from typing import Iterable, List
+
+import yaml
 
 VERSION = "9.5.2"
 
 ROOT = Path(__file__).resolve().parents[2]
 SOP_DIR = ROOT / "sop"
 LIB_DIR = SOP_DIR / "library"
+METHODS_DIR = LIB_DIR / "methods"
+CHAINS_DIR = LIB_DIR / "chains"
+META_DIR = LIB_DIR / "meta"
 RUNTIME_DIR = SOP_DIR / "runtime"
 UPLOAD_DIR = RUNTIME_DIR / "knowledge_upload"
+GOLDEN_DIR = SOP_DIR / "tests" / "golden"
 
 
 def rel(path: Path) -> str:
@@ -430,6 +437,415 @@ def build_custom_instructions() -> str:
     return header + blocks[0].strip() + "\n"
 
 
+# ---------------------------------------------------------------------------
+# YAML-based method library generation
+# ---------------------------------------------------------------------------
+
+# Category display order (PEIRRO sequence)
+CATEGORY_ORDER = ["prepare", "encode", "retrieve", "interrogate", "refine", "overlearn"]
+
+# Category labels for markdown headings
+CATEGORY_LABELS = {
+    "prepare": "Prepare",
+    "encode": "Encode",
+    "retrieve": "Retrieve",
+    "interrogate": "Interrogate",
+    "refine": "Refine",
+    "overlearn": "Overlearn",
+}
+
+# Chain name→number mapping (preserves original numbering)
+CHAIN_NUMBERS = {
+    "First Exposure (Core)": 1,
+    "Review Sprint": 2,
+    "Quick Drill": 3,
+    "Anatomy Deep Dive": 4,
+    "Low Energy": 5,
+    "Exam Prep": 6,
+    "Clinical Reasoning": 7,
+    "Mastery Review": 8,
+    "Dense Anatomy Intake": 9,
+    "Pathophysiology Intake": 10,
+    "Clinical Reasoning Intake": 11,
+    "Quick First Exposure": 12,
+    "Visual Encoding": 13,
+}
+
+# Chain groupings for section headers
+CHAIN_GROUPS = {
+    "Core Chains": [
+        "First Exposure (Core)", "Review Sprint", "Quick Drill",
+        "Anatomy Deep Dive", "Low Energy", "Exam Prep",
+        "Clinical Reasoning", "Mastery Review",
+    ],
+    "Intake-Focused Chains": [
+        "Dense Anatomy Intake", "Pathophysiology Intake",
+        "Clinical Reasoning Intake", "Quick First Exposure",
+    ],
+    "Visualization Chains": ["Visual Encoding"],
+}
+
+
+def _yaml_has_methods() -> bool:
+    """Check if YAML method specs exist (auto-detection)."""
+    return METHODS_DIR.exists() and any(METHODS_DIR.glob("*.yaml"))
+
+
+def _load_yaml_methods() -> list[dict]:
+    """Load all method YAML files sorted by ID."""
+    methods = []
+    for path in sorted(METHODS_DIR.glob("*.yaml")):
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        if data:
+            methods.append(data)
+    return methods
+
+
+def _load_yaml_chains() -> list[dict]:
+    """Load all chain YAML files sorted by ID."""
+    chains = []
+    for path in sorted(CHAINS_DIR.glob("*.yaml")):
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        if data:
+            chains.append(data)
+    return chains
+
+
+def _method_id_to_name(methods: list[dict]) -> dict[str, str]:
+    """Build {method_id: name} lookup."""
+    return {m["id"]: m["name"] for m in methods}
+
+
+def _format_evidence_short(method: dict) -> str:
+    """Format evidence for the compact block catalog table."""
+    ev = method.get("evidence")
+    raw = method.get("evidence_raw", "")
+    if ev and isinstance(ev, dict):
+        citation = ev.get("citation", "")
+        finding = ev.get("finding", "")
+        if citation and finding:
+            return f"{citation}; {finding}"
+    if raw:
+        return raw
+    return ""
+
+
+def _render_block_catalog(methods: list[dict]) -> str:
+    """Render §2.1 Block Catalog section matching the hand-written format."""
+    # Group by category
+    by_cat: dict[str, list[dict]] = {}
+    for m in methods:
+        cat = m["category"]
+        by_cat.setdefault(cat, []).append(m)
+
+    total = len(methods)
+    lines = [f"## §2.1 Block Catalog ({total} blocks)", ""]
+
+    for cat in CATEGORY_ORDER:
+        cat_methods = by_cat.get(cat, [])
+        if not cat_methods:
+            continue
+        label = CATEGORY_LABELS.get(cat, cat.title())
+        lines.append(f"### {label} ({len(cat_methods)} blocks)")
+        lines.append("| Block | Duration | Energy | Evidence |")
+        lines.append("|-------|----------|--------|----------|")
+        for m in cat_methods:
+            name = m["name"]
+            dur = f"{m['default_duration_min']} min"
+            energy = m["energy_cost"]
+            evidence = _format_evidence_short(m)
+            lines.append(f"| {name} | {dur} | {energy} | {evidence} |")
+        lines.append("")
+
+    return "\n".join(lines).rstrip()
+
+
+def _format_context_tags(tags: dict) -> str:
+    """Format context_tags dict into a readable string."""
+    parts = []
+    if "class_type" in tags:
+        parts.append(tags["class_type"].replace("_", " ").title())
+    if "stage" in tags:
+        parts.append(tags["stage"].replace("_", " "))
+    if "energy" in tags:
+        parts.append(f"{tags['energy']} energy")
+    if "time_available" in tags:
+        parts.append(f"{tags['time_available']} min")
+    return ", ".join(parts) if parts else ""
+
+
+def _render_template_chains(chains: list[dict], id_to_name: dict[str, str]) -> str:
+    """Render §4 Template Chains section matching the hand-written format."""
+    total = len(chains)
+    lines = [f"## §4 Template Chains ({total} chains)", ""]
+
+    # Build name→chain lookup
+    chain_by_name: dict[str, dict] = {c["name"]: c for c in chains}
+
+    for group_title, chain_names in CHAIN_GROUPS.items():
+        lines.append(f"### {group_title}")
+        lines.append("")
+        for cname in chain_names:
+            chain = chain_by_name.get(cname)
+            if not chain:
+                continue
+            num = CHAIN_NUMBERS.get(cname, "?")
+            # Resolve block IDs to names
+            block_names = []
+            for bid in chain.get("blocks", []):
+                block_names.append(id_to_name.get(bid, bid))
+            blocks_str = " → ".join(block_names)
+            context_str = _format_context_tags(chain.get("context_tags", {}))
+            desc = chain.get("description", "")
+
+            lines.append(f"#### {num}. {cname}")
+            lines.append(f"**Blocks:** {blocks_str}")
+            lines.append(f"**Context:** {context_str}")
+            lines.append(f"**Use for:** {desc}")
+            # Special note for First Exposure chain
+            if cname == "First Exposure (Core)":
+                lines.append(
+                    "**Note:** Retrieval (Free Recall) comes before generative "
+                    "encoding (KWIK Hook) per Potts & Shanks (2022) — lower "
+                    "cognitive load, higher gains."
+                )
+            lines.append("")
+
+    return "\n".join(lines).rstrip()
+
+
+def build_methods_from_yaml() -> str:
+    """Generate 15-method-library.md content from YAML specs.
+
+    Returns the full markdown string. Preserves the exact heading structure
+    required by build_methods() (the generator contract).
+    """
+    methods = _load_yaml_methods()
+    chains = _load_yaml_chains()
+    id_to_name = _method_id_to_name(methods)
+
+    # Load taxonomy for category descriptions
+    taxonomy_path = META_DIR / "taxonomy.yaml"
+    taxonomy = {}
+    if taxonomy_path.exists():
+        taxonomy = yaml.safe_load(taxonomy_path.read_text(encoding="utf-8")) or {}
+    categories = taxonomy.get("categories", {})
+
+    # Build category description lines
+    cat_descriptions = []
+    for i, cat in enumerate(CATEGORY_ORDER, 1):
+        info = categories.get(cat, {})
+        label = info.get("label", cat.title())
+        desc = info.get("description", "")
+        # List method names for this category
+        cat_methods = [m["name"].lower() for m in methods if m["category"] == cat]
+        methods_str = ", ".join(cat_methods)
+        cat_descriptions.append(
+            f"{i}. **{label}** — {desc} (e.g., {methods_str})"
+        )
+
+    sections = []
+
+    # §1 Purpose
+    sections.append("""# 15 — Composable Method Library
+
+## §1 Purpose
+
+The Composable Method Library provides reusable, evidence-backed method blocks and pre-built chains for study sessions. Method blocks are atomic study activities (e.g., brain dump, teach-back, retrieval drill). Chains are ordered sequences of blocks designed for specific contexts (e.g., first exposure, exam prep, low energy).
+
+**Goals:**
+- **Consistency** — Apply proven methods across sessions
+- **Adaptability** — Select chains based on context (class type, stage, energy, time)
+- **Evidence** — Every block cites research backing its effectiveness
+- **Data** — Rate effectiveness to improve recommendations over time
+
+---""")
+
+    # §2 Method Block Schema
+    cat_block = "\n".join(cat_descriptions)
+    sections.append(f"""## §2 Method Block Schema
+
+Each method block represents a single study activity.
+
+**Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Block name (e.g., "Brain Dump", "Teach-Back") |
+| `category` | enum | One of 6 PEIRRO phases (see below) |
+| `description` | string | What the block does |
+| `duration` | number | Typical minutes required |
+| `energy_cost` | enum | `low` / `medium` / `high` |
+| `best_stage` | enum | `first_exposure` / `review` / `exam_prep` / `consolidation` |
+| `tags` | array | Descriptors (e.g., `["retrieval", "active"]`) |
+| `evidence` | string | Research citation (Author, Year; brief finding) |
+
+**Categories (PEIRRO phases):**
+
+{cat_block}
+
+**Evidence citation format:** `Author (Year); brief finding`
+
+---""")
+
+    # §2.1 Block Catalog
+    sections.append(_render_block_catalog(methods))
+    sections.append("---")
+
+    # §3 Chain Schema
+    sections.append("""## §3 Chain Schema
+
+A chain is an ordered sequence of method blocks with context tags.
+
+**Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `chain_id` | string | Unique identifier |
+| `name` | string | Chain name (e.g., "First Exposure Core") |
+| `blocks` | array | Ordered list of block names |
+| `context_tags` | object | Recommended context (see §6) |
+| `description` | string | When to use this chain |
+
+---""")
+
+    # §4 Template Chains
+    sections.append(_render_template_chains(chains, id_to_name))
+    sections.append("---")
+
+    # §5 Rating Protocol
+    sections.append("""## §5 Rating Protocol
+
+After each session using a method chain, rate its effectiveness.
+
+**Post-Session Rating (captured during Wrap):**
+
+| Field | Scale | Description |
+|-------|-------|-------------|
+| `effectiveness` | 1-5 | How well did the chain work for this material? |
+| `engagement` | 1-5 | How engaged/focused were you? |
+| `context_tags` | object | Actual context (class_type, stage, energy, time_available) |
+| `notes` | string | Optional free text (e.g., "KWIK worked well; Teach-Back felt rushed") |
+
+**Rating Scale:**
+
+- **1** — Ineffective / disengaged
+- **2** — Somewhat ineffective / low engagement
+- **3** — Neutral / moderate engagement
+- **4** — Effective / high engagement
+- **5** — Highly effective / fully engaged
+
+**Capture in Session Ledger:**
+
+Add to `artifacts_created` if a method chain was used:
+```
+method_chain: [chain_id]; effectiveness: [1-5]; engagement: [1-5]
+```
+
+---""")
+
+    # §6 Context Dimensions
+    sections.append("""## §6 Context Dimensions
+
+Context tags describe when a chain is appropriate.
+
+| Dimension | Values | Description |
+|-----------|--------|-------------|
+| `class_type` | `anatomy` / `physiology` / `pathology` / `pharmacology` / `clinical` / `general` | Subject type |
+| `stage` | `first_exposure` / `review` / `exam_prep` | Learning stage |
+| `energy` | `low` / `medium` / `high` | Focus/motivation level (1-10 scale mapped to low=1-4, medium=5-7, high=8-10) |
+| `time_available` | number | Minutes available for session |
+
+**Matching Logic:**
+
+Brain recommends chains where context tags align with current session context. Exact matches preferred; partial matches allowed.
+
+---""")
+
+    # §7 Brain Integration
+    sections.append("""## §7 Brain Integration
+
+Brain stores and analyzes method chain data.
+
+**Tables:**
+
+1. **method_blocks** — All available blocks (with evidence citations)
+2. **method_chains** — Pre-built and custom chains
+3. **method_ratings** — Post-session ratings per block and chain
+
+**Analytics:**
+
+- **Effectiveness stats** — Average rating per chain, per context
+- **Usage frequency** — Which chains are used most often
+- **Anomaly detection** — Flag chains with low ratings in specific contexts
+- **Recommendations** — Suggest chains based on session context and historical performance
+
+---""")
+
+    # §8 Scholar Integration
+    sections.append("""## §8 Scholar Integration
+
+Scholar questions chain effectiveness and proposes improvements.
+
+**Research Questions:**
+
+1. Which blocks correlate with high retention (from RSR data)?
+2. Do certain chains work better for specific class types?
+3. Are there context patterns where effectiveness is consistently low?
+4. Can we predict optimal chain selection based on past sessions?
+
+**Outputs:**
+
+- **Chain Optimization Proposals** — Reorder blocks, swap blocks, adjust durations
+- **New Chain Designs** — Propose chains for underserved contexts
+- **A/B Test Plans** — Compare variant chains in similar contexts
+
+---""")
+
+    # Cross-References
+    sections.append("""## Cross-References
+
+- **Core Rules:** `01-core-rules.md` (planning, source-lock, seed-lock gates apply during method execution)
+- **Session Flow:** `05-session-flow.md` (method chains run inside M2-M4; selection occurs during M0 Planning)
+- **Modes:** `06-modes.md` (chains can be mode-specific; e.g., Sprint chains use retrieval-first blocks)
+- **Logging:** `08-logging.md` (method_chain field added to Session Ledger and Enhanced JSON)
+- **Templates:** `09-templates.md` (method_chain added to Session Ledger template)
+
+---""")
+
+    # Implementation Notes
+    sections.append("""## Implementation Notes
+
+- Method chains are **optional**. Sessions can proceed without selecting a chain.
+- Chains are **composable** — blocks can be reordered or omitted as needed.
+- **Ad-hoc chains** can be built during M0 Planning if no template fits.
+- Rating is **opt-in** but recommended for data-driven improvement.
+- All blocks include evidence citations. Use `--force` re-seed to update.
+- Use `--migrate` flag to update categories on an existing database without wiping data.""")
+
+    return "\n\n".join(sections) + "\n"
+
+
+def _write_generated_method_library() -> None:
+    """Generate 15-method-library.md from YAML and write to disk."""
+    content = build_methods_from_yaml()
+    write_output(LIB_DIR / "15-method-library.md", content)
+    print(f"  [OK] Generated {rel(LIB_DIR / '15-method-library.md')} from YAML")
+
+
+def _update_golden_files() -> None:
+    """Copy current generated outputs to golden test baselines."""
+    GOLDEN_DIR.mkdir(parents=True, exist_ok=True)
+    src_lib = LIB_DIR / "15-method-library.md"
+    src_runtime = UPLOAD_DIR / "06_METHODS.md"
+    if src_lib.exists():
+        shutil.copy2(src_lib, GOLDEN_DIR / "15-method-library.golden.md")
+        print(f"  [OK] Updated golden: 15-method-library.golden.md")
+    if src_runtime.exists():
+        shutil.copy2(src_runtime, GOLDEN_DIR / "06_METHODS.golden.md")
+        print(f"  [OK] Updated golden: 06_METHODS.golden.md")
+
+
 def build_runtime_bundle() -> None:
     required = {
         "00-overview.md",
@@ -510,8 +926,22 @@ def build_runtime_bundle() -> None:
 
 
 if __name__ == "__main__":
+    update_golden = "--update-golden" in sys.argv
+
     try:
+        # Auto-detect: if YAML method specs exist, generate 15-method-library.md from them
+        if _yaml_has_methods():
+            print("[YAML] Generating 15-method-library.md from YAML specs...")
+            _write_generated_method_library()
+        else:
+            print("[MD] Using hand-written 15-method-library.md (no YAML specs found)")
+
         build_runtime_bundle()
+
+        if update_golden:
+            print("[GOLDEN] Updating golden test baselines...")
+            _update_golden_files()
+
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         sys.exit(1)

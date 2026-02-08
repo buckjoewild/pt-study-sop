@@ -46,7 +46,8 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
-brain/data/
+brain/data/*
+!brain/data/seed_methods.py
 brain/output/
 scholar/outputs/
 

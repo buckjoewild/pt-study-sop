@@ -1202,6 +1202,20 @@ def init_database():
         except sqlite3.OperationalError:
             pass
 
+    # ------------------------------------------------------------------
+    # Library Meta table (tracks YAML library version + source SHA)
+    # ------------------------------------------------------------------
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS library_meta (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            library_version TEXT NOT NULL,
+            source_sha TEXT,
+            seeded_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            method_count INTEGER,
+            chain_count INTEGER
+        )
+    """)
+
     # Add method_chain_id to sessions table if missing
     cursor.execute("PRAGMA table_info(sessions)")
     session_cols = {col[1] for col in cursor.fetchall()}

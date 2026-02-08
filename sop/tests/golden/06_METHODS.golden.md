@@ -39,10 +39,10 @@ Each method block represents a single study activity.
 
 **Categories (PEIRRO phases):**
 
-1. **Prepare** — Prime attention, surface prior knowledge, build structure (e.g., brain dump, prediction questions, prior knowledge scan, AI skeleton review, concept cluster, three-layer chunk, pre-test)
-2. **Encode** — Attach meaning to material (e.g., KWIK hook, seed-lock generation, draw-label, teach-back, why-chain, think-aloud protocol, self-explanation protocol, mechanism trace, concept map, comparison table, process flowchart, clinical decision tree)
-3. **Interrogate** — Link to other content, apply, compare (e.g., analogy bridge, clinical application, cross-topic link, side-by-side comparison, case walkthrough, illness script builder)
-4. **Retrieve** — Test recall without cues (e.g., free recall blurt, sprint quiz, fill-in-blank, mixed practice, variable retrieval)
+1. **Prepare** — Prime attention, surface prior knowledge, build structure (e.g., brain dump, prediction questions, prior knowledge scan, ai skeleton review, concept cluster, three-layer chunk, pre-test)
+2. **Encode** — Attach meaning to material (e.g., kwik hook, seed-lock generation, draw-label, teach-back, why-chain, think-aloud protocol, self-explanation protocol, mechanism trace, concept map, comparison table, process flowchart, clinical decision tree)
+3. **Retrieve** — Test recall without cues (e.g., free recall blurt, sprint quiz, fill-in-blank, mixed practice, variable retrieval)
+4. **Interrogate** — Link to other content, apply, compare (e.g., analogy bridge, clinical application, cross-topic link, side-by-side comparison, case walkthrough, illness script builder)
 5. **Refine** — Analyze errors and relearn (e.g., error autopsy, mastery loop)
 6. **Overlearn** — Close loop, capture artifacts (e.g., exit ticket, anki card draft)
 
@@ -55,60 +55,60 @@ Each method block represents a single study activity.
 ### Prepare (7 blocks)
 | Block | Duration | Energy | Evidence |
 |-------|----------|--------|----------|
-| Brain Dump | 3 min | low | Brod et al. (2013); prior knowledge activation improves encoding |
+| Brain Dump | 3 min | low | Brod et al. (2013); prior knowledge activation improves encoding of new information |
 | Prediction Questions | 3 min | low | Pressley et al. (1990); question-generation primes elaborative processing |
-| Prior Knowledge Scan | 3 min | low | Ausubel (1968); meaningful learning requires anchoring to schemas |
+| Prior Knowledge Scan | 3 min | low | Ausubel (1968); meaningful learning requires anchoring to existing schemas |
 | AI Skeleton Review | 5 min | low | Lorch & Lorch (1996); advance organizers improve text comprehension |
-| Concept Cluster | 5 min | medium | Bower et al. (1969); conceptual organization improves recall 2-3x |
+| Concept Cluster | 5 min | medium | Bower et al. (1969); conceptual organization improves recall by 2-3x |
 | Three-Layer Chunk | 5 min | medium | Miller (1956); Gobet et al. (2001); chunking manages cognitive load |
-| Pre-Test | 5 min | low | Richland et al. (2009); Kornell et al. (2009); pre-testing primes encoding |
+| Pre-Test | 5 min | low | Richland et al. (2009); Kornell et al. (2009); pre-testing primes encoding even when initial answers are wrong |
 
 ### Encode (12 blocks)
 | Block | Duration | Energy | Evidence |
 |-------|----------|--------|----------|
-| KWIK Hook | 3 min | medium | Paivio (1991); dual-coding improves retention |
-| Seed-Lock Generation | 3 min | medium | Slamecka & Graf (1978); generation effect |
-| Draw-Label | 10 min | high | Wammes et al. (2016); drawing effect |
-| Teach-Back | 5 min | high | Nestojko et al. (2014); expecting to teach enhances encoding |
-| Why-Chain | 5 min | medium | Dunlosky et al. (2013); elaborative interrogation |
-| Think-Aloud Protocol | 5 min | medium | Chi et al. (1994); self-explanation |
-| Self-Explanation Protocol | 7 min | medium | Chi et al. (1994); Dunlosky et al. (2013); moderate-high utility |
-| Mechanism Trace | 10 min | high | Kulasegaram et al. (2013); causal reasoning supports transfer |
-| Concept Map | 10 min | high | Nesbit & Adesope (2006) d=0.82; self-constructed > provided |
-| Comparison Table | 7 min | medium | Alfieri et al. (2013); comparison improves discrimination |
+| KWIK Hook | 3 min | medium | Paivio (1991); dual-coding theory — combining verbal + visual improves retention |
+| Seed-Lock Generation | 3 min | medium | Slamecka & Graf (1978); generation effect — self-generated items remembered better than read items |
+| Draw-Label | 10 min | high | Wammes et al. (2016); drawing effect — drawing produces superior memory compared to writing |
+| Teach-Back | 5 min | high | Nestojko et al. (2014); expecting to teach enhances encoding and organization |
+| Why-Chain | 5 min | medium | Dunlosky et al. (2013); elaborative interrogation rated moderate utility for learning |
+| Think-Aloud Protocol | 5 min | medium | Chi et al. (1994); self-explanation leads to deeper understanding and better problem-solving |
+| Self-Explanation Protocol | 7 min | medium | Chi et al. (1994); Dunlosky et al. (2013); self-explanation rated moderate-high utility across domains |
+| Mechanism Trace | 10 min | high | Kulasegaram et al. (2013); causal reasoning with biomedical mechanisms supports diagnostic transfer |
+| Concept Map | 10 min | high | Nesbit & Adesope (2006) d=0.82; self-constructed > provided (d=1.00 vs 0.37) |
+| Comparison Table | 7 min | medium | Alfieri et al. (2013); comparison improves discrimination and concept formation |
 | Process Flowchart | 10 min | high | Winn (1991); spatial-sequential diagrams improve procedural understanding |
 | Clinical Decision Tree | 10 min | high | Charlin et al. (2000); decision trees scaffold clinical reasoning |
 
 ### Retrieve (5 blocks)
 | Block | Duration | Energy | Evidence |
 |-------|----------|--------|----------|
-| Free Recall Blurt | 5 min | medium | Roediger & Karpicke (2006); testing effect |
-| Sprint Quiz | 5 min | medium | McDaniel et al. (2007); quiz-based retrieval |
-| Fill-in-Blank | 5 min | low | Dunlosky et al. (2013); cloze-based retrieval |
-| Mixed Practice | 10 min | high | Rohrer et al. (2015); interleaved practice |
-| Variable Retrieval | 10 min | medium | Morris et al. (1977); PNAS 2024; varied > constant retrieval |
+| Free Recall Blurt | 5 min | medium | Roediger & Karpicke (2006); testing effect — retrieval practice > re-reading for long-term retention |
+| Sprint Quiz | 5 min | medium | McDaniel et al. (2007); quiz-based retrieval enhances later exam performance |
+| Fill-in-Blank | 5 min | low | Dunlosky et al. (2013); cloze-based retrieval is effective for factual knowledge |
+| Mixed Practice | 10 min | high | Rohrer et al. (2015); interleaved practice improves discrimination and transfer |
+| Variable Retrieval | 10 min | medium | Morris et al. (1977); PNAS 2024; varied retrieval practice produces more durable and transferable knowledge than constant retrieval |
 
 ### Interrogate (6 blocks)
 | Block | Duration | Energy | Evidence |
 |-------|----------|--------|----------|
-| Analogy Bridge | 3 min | medium | Gentner (1983); analogical reasoning |
-| Clinical Application | 5 min | high | Schmidt & Rikers (2007); illness script formation |
-| Cross-Topic Link | 3 min | medium | Pugh & Bergin (2006); cross-domain connections |
-| Side-by-Side Comparison | 7 min | medium | Alfieri et al. (2013); comparison-based learning |
-| Case Walkthrough | 10 min | high | Thistlethwaite et al. (2012); case-based learning |
-| Illness Script Builder | 10 min | high | Schmidt & Rikers (2007); illness scripts |
+| Analogy Bridge | 3 min | medium | Gentner (1983); analogical reasoning supports structural mapping and transfer |
+| Clinical Application | 5 min | high | Schmidt & Rikers (2007); clinical application strengthens illness script formation |
+| Cross-Topic Link | 3 min | medium | Pugh & Bergin (2006); interest deepens when learners see cross-domain connections |
+| Side-by-Side Comparison | 7 min | medium | Alfieri et al. (2013); comparison-based learning improves discrimination and concept formation |
+| Case Walkthrough | 10 min | high | Thistlethwaite et al. (2012); case-based learning improves clinical reasoning in health professions |
+| Illness Script Builder | 10 min | high | Schmidt & Rikers (2007); illness scripts are the cognitive structure underlying expert clinical reasoning |
 
 ### Refine (2 blocks)
 | Block | Duration | Energy | Evidence |
 |-------|----------|--------|----------|
-| Error Autopsy | 5 min | medium | Metcalfe (2017); error correction with feedback |
-| Mastery Loop | 10 min | medium | Rawson & Dunlosky (2011); successive relearning |
+| Error Autopsy | 5 min | medium | Metcalfe (2017); error correction with feedback is more effective than errorless learning |
+| Mastery Loop | 10 min | medium | Rawson & Dunlosky (2011); successive relearning combines testing + spacing for durable retention |
 
 ### Overlearn (2 blocks)
 | Block | Duration | Energy | Evidence |
 |-------|----------|--------|----------|
-| Exit Ticket | 3 min | low | Tanner (2012); metacognitive reflection |
-| Anki Card Draft | 5 min | low | Kornell (2009); Cepeda et al. (2006); spaced retrieval |
+| Exit Ticket | 3 min | low | Tanner (2012); metacognitive reflection improves self-regulated learning |
+| Anki Card Draft | 5 min | low | Kornell (2009); Cepeda et al. (2006); spaced retrieval via flashcards is high-utility |
 
 ---
 
@@ -118,73 +118,73 @@ Each method block represents a single study activity.
 
 #### 1. First Exposure (Core)
 **Blocks:** Brain Dump → AI Skeleton Review → Free Recall Blurt → KWIK Hook → Analogy Bridge → Exit Ticket
-**Context:** First exposure, high energy, 45 min
-**Use for:** New material requiring full learning cycle
+**Context:** first exposure, high energy, 45 min
+**Use for:** Full PEIRRO cycle for new material. Prepare → Encode → Retrieve → Interrogate → Overlearn. Retrieval before generative encoding per Potts & Shanks (2022).
 **Note:** Retrieval (Free Recall) comes before generative encoding (KWIK Hook) per Potts & Shanks (2022) — lower cognitive load, higher gains.
 
 #### 2. Review Sprint
 **Blocks:** Prediction Questions → Sprint Quiz → Cross-Topic Link → Exit Ticket
-**Context:** Review, medium energy, 25 min
-**Use for:** Fast review loop, gap-finding
+**Context:** review, medium energy, 25 min
+**Use for:** Fast review loop. Prepare → Retrieve → Interrogate → Overlearn. Skips encode for known material.
 
 #### 3. Quick Drill
 **Blocks:** Brain Dump → Sprint Quiz → Exit Ticket
-**Context:** Review, medium energy, 15 min
-**Use for:** Quick review between classes, spacing reviews
+**Context:** review, medium energy, 15 min
+**Use for:** Minimal time investment. Prepare → Retrieve → Overlearn. Good for spacing reviews.
 
 #### 4. Anatomy Deep Dive
 **Blocks:** Prior Knowledge Scan → Three-Layer Chunk → Draw-Label → Free Recall Blurt → Anki Card Draft
 **Context:** Anatomy, first exposure, high energy, 40 min
-**Use for:** Regional anatomy sessions with drawing
+**Use for:** Anatomy-focused chain with drawing. Prepare → Encode (Draw-Label) → Retrieve → Overlearn.
 
 #### 5. Low Energy
 **Blocks:** Brain Dump → AI Skeleton Review → Exit Ticket
-**Context:** Low energy, 15 min
-**Use for:** Low-focus days, maintaining streak
+**Context:** low energy, 15 min
+**Use for:** Low-effort chain for tired days. Prepare → Overlearn. Maintain streak without burning out.
 
 #### 6. Exam Prep
 **Blocks:** Prediction Questions → Mixed Practice → Side-by-Side Comparison → Error Autopsy → Anki Card Draft
-**Context:** Exam prep, high energy, 35 min
-**Use for:** Final exam preparation with interleaving and error analysis
+**Context:** exam prep, high energy, 35 min
+**Use for:** Exam-focused chain with interleaving and error analysis. Prepare → Retrieve → Interrogate → Refine → Overlearn.
 
 #### 7. Clinical Reasoning
 **Blocks:** Prior Knowledge Scan → Three-Layer Chunk → Case Walkthrough → Side-by-Side Comparison → Error Autopsy → Anki Card Draft
-**Context:** Clinical/pathology, exam prep, high energy, 45 min
-**Use for:** Building clinical reasoning chains, differential diagnosis practice
+**Context:** Clinical, exam prep, high energy, 45 min
+**Use for:** Build clinical reasoning chains. Prepare → Interrogate → Refine → Overlearn.
 
 #### 8. Mastery Review
 **Blocks:** Free Recall Blurt → Error Autopsy → Mastery Loop → Anki Card Draft
-**Context:** Consolidation, medium energy, 30 min
-**Use for:** Deep consolidation with successive relearning
+**Context:** consolidation, medium energy, 30 min
+**Use for:** Deep consolidation with successive relearning. Retrieve → Refine → Overlearn.
 
 ### Intake-Focused Chains
 
 #### 9. Dense Anatomy Intake
 **Blocks:** Pre-Test → Draw-Label → Free Recall Blurt → KWIK Hook → Anki Card Draft
 **Context:** Anatomy, first exposure, high energy, 40 min
-**Use for:** High-detail anatomy first exposure with spatial encoding
+**Use for:** High-detail anatomy first exposure. Pre-Test primes encoding, Draw-Label for spatial memory, retrieval before generative steps.
 
 #### 10. Pathophysiology Intake
 **Blocks:** Pre-Test → Self-Explanation Protocol → Concept Cluster → Free Recall Blurt → Error Autopsy
 **Context:** Pathology, first exposure, high energy, 45 min
-**Use for:** Pathology first exposure with mechanism tracing and self-explanation
+**Use for:** Pathology first exposure with mechanism tracing. Pre-Test → Self-Explanation → Concept Cluster → Retrieve → Refine.
 
 #### 11. Clinical Reasoning Intake
 **Blocks:** Pre-Test → Illness Script Builder → Side-by-Side Comparison → Free Recall Blurt → Anki Card Draft
 **Context:** Clinical, first exposure, high energy, 45 min
-**Use for:** Clinical first exposure with illness script construction
+**Use for:** Clinical first exposure with illness scripts. Pre-Test → Illness Script → Compare → Retrieve → Overlearn.
 
 #### 12. Quick First Exposure
 **Blocks:** Pre-Test → AI Skeleton Review → Free Recall Blurt → Exit Ticket
-**Context:** First exposure, medium energy, 20 min
-**Use for:** Minimal intake chain when time is limited
+**Context:** first exposure, medium energy, 20 min
+**Use for:** Minimal intake chain when time is limited. Pre-Test → AI Skeleton → Retrieve → Overlearn.
 
 ### Visualization Chains
 
 #### 13. Visual Encoding
 **Blocks:** Brain Dump → Concept Map → Comparison Table → Free Recall Blurt → Exit Ticket
-**Context:** First exposure, high energy, 40 min
-**Use for:** Visualization-first encoding for topics with confusable concepts
+**Context:** first exposure, high energy, 40 min
+**Use for:** Visualization-first encoding for topics with confusable concepts. Build visual representations before retrieval.
 
 ---
 

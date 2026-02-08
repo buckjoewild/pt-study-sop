@@ -25,10 +25,10 @@ const NAV_ITEMS = [
 
 type NoteCategory = "notes" | "planned" | "ideas";
 
-const NOTE_CATEGORIES: { value: NoteCategory; label: string }[] = [
-  { value: "notes", label: "NOTES" },
-  { value: "planned", label: "PLANNED IMPLEMENTATIONS" },
-  { value: "ideas", label: "IDEAS" },
+const NOTE_CATEGORIES: { value: NoteCategory; label: string; tabLabel: string }[] = [
+  { value: "notes", label: "NOTES", tabLabel: "NOTES" },
+  { value: "planned", label: "PLANNED IMPLEMENTATIONS", tabLabel: "PLANNED" },
+  { value: "ideas", label: "IDEAS", tabLabel: "IDEAS" },
 ];
 
 const resolveNoteType = (note: Note): NoteCategory => {
@@ -44,6 +44,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const currentPath = location === "/" ? "/" : "/" + location.split("/")[1];
   const [newNote, setNewNote] = useState("");
   const [newNoteType, setNewNoteType] = useState<NoteCategory>("notes");
+  const [activeTab, setActiveTab] = useState<"all" | NoteCategory>("all");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingContent, setEditingContent] = useState("");
   const [draggedNote, setDraggedNote] = useState<{ id: number; type: NoteCategory } | null>(null);
@@ -142,6 +143,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (notesLoading || createNoteMutation.isPending) return;
+    if (localStorage.getItem("planned-seeds-v1")) return;
 
     const plannedSeeds = [
       "Scholar update: migrate multi-agent orchestration to LangGraph (local-first).",
@@ -155,7 +157,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const missing = plannedSeeds.filter(
       (content) => !existing.has(content.toLowerCase())
     );
-    if (!missing.length) return;
+    if (!missing.length) {
+      localStorage.setItem("planned-seeds-v1", "done");
+      return;
+    }
 
     missing.forEach((content, idx) => {
       createNoteMutation.mutate({
@@ -164,6 +169,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         noteType: "planned",
       });
     });
+    localStorage.setItem("planned-seeds-v1", "done");
   }, [notes, notesLoading, createNoteMutation, notesByType.planned.length]);
 
   const handleSaveNote = () => {
@@ -350,21 +356,34 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <SheetDescription className="sr-only">Quick notes panel</SheetDescription>
                 <div className="flex flex-col gap-4">
                   <div className="space-y-2">
-                    <div className="grid grid-cols-3 gap-1">
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant={activeTab === "all" ? "default" : "ghost"}
+                        className={cn(
+                          "font-arcade rounded-none text-[9px] h-7 px-3 whitespace-nowrap",
+                          activeTab === "all"
+                            ? "bg-primary text-primary-foreground"
+                            : "border border-secondary text-muted-foreground hover:text-primary"
+                        )}
+                        onClick={() => setActiveTab("all")}
+                      >
+                        ALL
+                      </Button>
                       {NOTE_CATEGORIES.map((category) => (
                         <Button
                           key={category.value}
                           size="sm"
-                          variant={newNoteType === category.value ? "default" : "ghost"}
+                          variant={activeTab === category.value ? "default" : "ghost"}
                           className={cn(
-                            "font-arcade rounded-none text-[9px] leading-tight h-auto py-1 whitespace-normal text-center",
-                            newNoteType === category.value
+                            "font-arcade rounded-none text-[9px] h-7 px-3 whitespace-nowrap",
+                            activeTab === category.value
                               ? "bg-primary text-primary-foreground"
                               : "border border-secondary text-muted-foreground hover:text-primary"
                           )}
-                          onClick={() => setNewNoteType(category.value)}
+                          onClick={() => { setActiveTab(category.value); setNewNoteType(category.value); }}
                         >
-                          {category.label}
+                          {category.tabLabel}
                         </Button>
                       ))}
                     </div>
@@ -390,7 +409,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     <div className="font-arcade text-xs text-muted-foreground mb-2">SAVED NOTES ({notes.length})</div>
                     <ScrollArea className="h-[calc(100vh-280px)]">
                       <div className="space-y-6 pr-2">
-                        {NOTE_CATEGORIES.map((category) => {
+                        {NOTE_CATEGORIES.filter((c) => activeTab === "all" || c.value === activeTab).map((category) => {
                           const sectionNotes = sortedNotesByType[category.value];
                           return (
                             <div

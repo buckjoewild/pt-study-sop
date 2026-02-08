@@ -94,10 +94,15 @@
     display: inline-flex;
   }
 
+  .dialog-overlay {
+    z-index: 100004;
+  }
+
   .dialog-center {
     left: 50%;
     top: 50%;
     translate: -50% -50%;
+    z-index: 100005;
   }
 
   .text-glow {

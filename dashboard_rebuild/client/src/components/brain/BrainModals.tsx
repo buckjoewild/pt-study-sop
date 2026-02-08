@@ -45,7 +45,6 @@ export function BrainModals({ workspace }: BrainModalsProps) {
         <DialogContent
           data-modal="brain-import"
           className="max-w-2xl bg-black border-2 border-primary rounded-none"
-          style={{ zIndex: 100005 }}
         >
           <DialogHeader>
             <DialogTitle className="font-arcade text-sm text-primary flex items-center gap-2">
@@ -67,7 +66,6 @@ export function BrainModals({ workspace }: BrainModalsProps) {
         <DialogContent
           data-modal="brain-graph"
           className="max-w-[95vw] w-full h-[85vh] bg-black border-2 border-primary rounded-none p-0"
-          style={{ zIndex: 100005 }}
         >
           <DialogHeader className="p-3 border-b border-primary/30">
             <DialogTitle className="font-arcade text-sm text-primary flex items-center gap-2">

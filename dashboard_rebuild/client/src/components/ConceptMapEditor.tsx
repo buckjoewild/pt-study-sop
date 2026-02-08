@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -100,6 +100,15 @@ export function ConceptMapEditor({ initialMermaid, onSave, className }: ConceptM
   const [showColorPicker, setShowColorPicker] = useState<"node" | "edge" | null>(null);
   const reactFlowRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsFullscreen(false);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isFullscreen]);
 
   const onConnect = useCallback(
     (connection: Connection) => {

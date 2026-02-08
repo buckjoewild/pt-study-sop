@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ObsidianRenderer } from "@/components/ObsidianRenderer";
-import { Save, ExternalLink, FileText } from "lucide-react";
+import { Save, ExternalLink, FileText, Maximize2, Minimize2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { BrainWorkspace } from "./useBrainWorkspace";
 
 interface VaultEditorProps {
@@ -8,6 +10,17 @@ interface VaultEditorProps {
 }
 
 export function VaultEditor({ workspace }: VaultEditorProps) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsFullscreen(false);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isFullscreen]);
+
   if (!workspace.currentFile) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground font-terminal text-xs gap-2">
@@ -19,7 +32,10 @@ export function VaultEditor({ workspace }: VaultEditorProps) {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className={cn(
+      "flex flex-col",
+      isFullscreen ? "fixed inset-0 z-[100010] bg-black" : "h-full"
+    )}>
       {/* File toolbar */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-secondary/30 bg-black/40">
         <div className="flex items-center gap-2 min-w-0">
@@ -60,6 +76,15 @@ export function VaultEditor({ workspace }: VaultEditorProps) {
           >
             <Save className="w-3 h-3 mr-1" />
             {workspace.isSaving ? "Saving..." : "Save"}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-5 px-1.5 text-[10px] font-terminal"
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+          >
+            {isFullscreen ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
           </Button>
         </div>
       </div>

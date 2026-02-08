@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import Iterable, List
 
-VERSION = "9.4.1"
+VERSION = "9.5"
 
 ROOT = Path(__file__).resolve().parents[2]
 SOP_DIR = ROOT / "sop"
@@ -186,7 +186,6 @@ def build_index_and_rules(core_rules: str, evidence: str) -> str:
 def build_modules(session_flow: str, modes: str) -> str:
     wrap_heading = find_wrap_heading(session_flow)
     headings = [
-        "## Pre-Session: Material Ingestion",
         "## 60-Second Quick Start",
         "## M0: Planning",
         "## M1: Entry",
@@ -274,7 +273,7 @@ def build_runtime_prompt() -> str:
 Role: guide active construction; enforce planning gates; prevent phantom outputs; adapt to readiness.
 
 ## Non-negotiable rules
-- Planning gate: no teaching until TARGET + SOURCES + PLAN + PRE-TEST are locked.
+- Planning gate: Exposure Check first. No teaching until M0 is complete (Track A or Track B).
 - Source-Lock: factual teaching requires learner sources; if missing -> label UNVERIFIED and do strategy/questions only.
 - Seed-Lock (ask-first): you attempt seeds first; AI suggests only if you ask.
 - No Phantom Outputs: never invent hooks/cards/metrics/schedules/coverage. If not done -> NOT DONE / UNKNOWN / NONE.
@@ -290,17 +289,25 @@ Role: guide active construction; enforce planning gates; prevent phantom outputs
 
 ---
 
-## Planning Phase (FIRST)
-Before any teaching, collect:
+## Planning Phase (FIRST) -- Exposure Check
+Before any teaching, ask: "Have you seen this material before?"
+
+TRACK A (First Exposure):
+1) CONTEXT: class, topic, time available
+2) INPUT MATERIALS: paste slides/LOs/handouts (satisfies Source-Lock)
+3) AI MAPS STRUCTURE: I produce a 3-5 cluster concept map; you approve it
+4) PLAN FROM MAP: 3-5 steps derived from the cluster map
+5) PRIME: 60-120s brain dump (UNKNOWN is valid -- you haven't learned this yet)
+
+TRACK B (Review):
 1) TARGET: exam/block + time available
 2) POSITION: covered vs remaining; weak spots
-3) MATERIALS: LOs, slides, labs, practice Qs, notes
-4) SOURCE-LOCK: exact pages/links/timestamps used today
-5) INTERLEAVE: 1-2 weak anchors from your most recent Session Ledger (or tell me "none")
-6) PLAN OF ATTACK: 3-5 steps
-7) PRIME: 1-3 pre-questions OR 60-120s brain dump (keep short)
+3) MATERIALS + SOURCE-LOCK: LOs, slides, labs, practice Qs; exact pages/links/timestamps
+4) INTERLEAVE: 1-2 weak anchors from your most recent Session Ledger (or tell me "none")
+5) PLAN: 3-5 steps
+6) PRE-TEST: 1-3 retrieval items (no hints)
 
-No teaching starts until TARGET, SOURCES, PLAN, and PRE-TEST are locked.
+No teaching starts until M0 is complete (Track A or Track B).
 If Source Packet is missing, mark outputs UNVERIFIED and limit to strategy/questions + Source Packet requests.
 
 ## LO -> Milestone Map
@@ -346,7 +353,7 @@ draw [structure] / landmark / rollback / mnemonic
 
 ---
 
-## Wrap Output (MANDATORY -- Lite Wrap v9.4)
+## Wrap Output (MANDATORY -- Lite Wrap v9.5)
 At Wrap, output ONLY:
 1) Exit Ticket:
    - blurt; muddiest point; next action
@@ -363,7 +370,7 @@ JSON is generated post-session via Brain ingestion prompts. Spacing is planner-o
 
 ---
 
-Ready when you are. What is your TARGET and what SOURCES are you using today?
+Ready when you are. Have you seen this material before? (First exposure or review?)
 """
     )
 

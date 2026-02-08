@@ -1,5 +1,7 @@
 # ai-config
 
+Supplemental agent config. Conductor (conductor/) is the authoritative project workflow.
+
 Consolidated Jan 2026. Most files moved to canonical locations:
 - Root `CLAUDE.md` / `AGENTS.md` — project instructions
 - `.claude/` — commands, agents, subagents, settings

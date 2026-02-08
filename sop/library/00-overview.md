@@ -1,6 +1,6 @@
 # PT Study OS -- Overview
 
-**Version:** v9.4
+**Version:** v9.5
 **Owner:** Trey Tucker
 
 ## What This Is
@@ -27,7 +27,7 @@ A structured AI study operating system for DPT coursework. It enforces an end-to
 ## Quick-Start: Study Session
 
 1. Paste `sop/runtime/runtime_prompt.md` at session start.
-2. Complete M0 Planning: declare target, sources, plan, pre-test.
+2. Complete M0 Planning: Exposure Check → Track A (first exposure) or Track B (review). See `05-session-flow.md`.
 3. Run the session through M1-M6.
 4. At Wrap, output **Exit Ticket + Session Ledger** (no JSON, no spacing schedule).
 5. Copy Exit Ticket + Session Ledger into Brain ingestion prompts (see `10-deployment.md`) to produce JSON logs.
@@ -62,10 +62,11 @@ A structured AI study operating system for DPT coursework. It enforces an end-to
 | 12 | `12-evidence.md` | Evidence base, NotebookLM bridge, research backlog |
 | 13 | `13-custom-gpt-system-instructions.md` | Custom GPT system instructions (v9.4 Lite Wrap) |
 | 14 | `14-lo-engine.md` | Learning Objective Engine (LO Engine) protocol pack + outputs |
+| 15 | `15-method-library.md` | Composable Method Library: blocks, chains, ratings, context matching |
 
 ## Schemas / Contracts
 
-- **Session Log v9.4:** date, topic, mode, duration_min, understanding, retention, calibration_gap, rsr_percent, cognitive_load, transfer_check, anchors, what_worked, what_needs_fixing, error_classification, error_severity, error_recurrence, notes (Tracker); plus source_lock, plan_of_attack, frameworks_used, buckets, anki_cards, exit_ticket fields, spaced_reviews, etc. (Enhanced). JSON is produced via Brain ingestion, not by the tutor at Wrap. Additive-only changes unless Master Plan is updated.
+- **Session Log v9.4:** Tracker + Enhanced JSON schemas. Full field reference in `08-logging.md`. JSON produced via Brain ingestion, not at Wrap. Additive-only changes unless Master Plan is updated.
 - **RAG Doc v1:** `{id, source_path, course, module, doc_type, created_at, checksum, text_chunks[], image_captions[], metadata{}}`.
 - **Card v1:** `{deck, guid, front, back, tags[], source_refs[], created_at, updated_at}`.
 - **Resume v1:** `{generated_at, readiness_score, recent_sessions[], topic_coverage[], gaps[], recommendations[]}`.
@@ -78,6 +79,10 @@ A structured AI study operating system for DPT coursework. It enforces an end-to
 - Version plans (e.g., v9.2) may adjust scope but cannot violate invariants/contracts.
 - New fields must be additive and documented; DB migrations must be provided when schemas change.
 - PR checklist: Does this break an invariant/contract? If yes, update Master Plan or reject.
+
+### Version History
+- **v9.5** (2026-02-07): M0 split-track. Material Ingestion folded into Track A (first exposure). No schema changes.
+- **v9.4** (2026-01-15): Lite Wrap, Session Ledger, No Phantom Outputs, Composable Method Library.
 
 ---
 
@@ -105,8 +110,8 @@ A structured AI study operating system for DPT coursework. It enforces an end-to
 
 ## Program Goals
 
-- **Near-term (Dec 2025 finals):** Zero missing session logs; each session logs what worked/what didn't; draft cards in ≥30% of sessions.
-- **Next semester start:** Stable loop (plan → learn → log → card draft); off-source drift <5%; weekly readiness/test-score trend.
+- **Current semester:** Zero missing session logs; each session logs what worked/what didn't; draft cards in ≥30% of sessions.
+- **Semester midpoint:** Stable loop (plan → learn → log → card draft); off-source drift <5%; weekly readiness/test-score trend.
 - **Calendar sync:** Design only; build after semester ends (lowest priority).
 
 ---

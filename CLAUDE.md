@@ -11,8 +11,6 @@ Also read `AGENTS.md` for agent behavior rules.
 
 ## Environment
 - Repo root: C:\pt-study-sop
-- Shell: PowerShell
-- Shell preference: PowerShell by default; use WSL/Git Bash when required.
 - Obsidian vault: C:\Users\treyt\Desktop\PT School Semester 2
 - Editor: Codex CLI / Claude Code (no default GUI editor).
 
@@ -39,6 +37,7 @@ Canonical run/build/test commands live in `docs/root/GUIDE_DEV.md`.
 - Architecture doc: docs/root/PROJECT_ARCHITECTURE.md
 - SOP manifest: (archived — replaced by sop/library/00-overview.md file map)
 - Google Calendar credentials: GoogleCalendarTasksAPI.json (handle as sensitive; do not modify unless asked).
+- Conductor: conductor/ (product def, tech stack, tracks, workflow)
 
 ## System Modules
 - Dashboard, Brain, Calendar (Flask): brain/
@@ -58,21 +57,24 @@ Canonical run/build/test commands live in `docs/root/GUIDE_DEV.md`.
 - Components: 2px solid red borders; semi-transparent black backgrounds.
 
 ## Post-Implementation Checklist (MANDATORY after any code change)
-1. **Build frontend**: `cd dashboard_rebuild; npm run build`
-2. **Copy to Flask (PowerShell)**: `Remove-Item -Recurse -Force brain/static/dist; Copy-Item -Recurse -Force dashboard_rebuild/dist/public brain/static/dist`
-3. **Never use dev server**: Do NOT run `npm run dev` or `vite dev`. The dashboard is served only via `Start_Dashboard.bat` on port **5000**.
-4. Run relevant tests: `pytest brain/tests/`
-5. **Update relevant docs**: If the change affects a feature, update its doc (see Feature→Doc table in `docs/README.md`). For new features, create a doc and add it to the table.
-6. **Verify docs match code**: Spot-check that the updated doc accurately reflects the implementation.
 
-Skip steps 1-2 only if the change is backend-only (brain/ Python files).
+Canonical steps: `docs/root/GUIDE_DEV.md` section "Frontend Build + Sync".
+
+Quick summary:
+1. Build: `cd dashboard_rebuild && npm run build`
+2. Sync: `robocopy dashboard_rebuild/dist/public brain/static/dist /MIR`
+3. Never use dev server. Dashboard served via Start_Dashboard.bat on port 5000.
+4. Tests: `pytest brain/tests/`
+5. Update relevant docs (see Feature->Doc table in docs/README.md).
+
+Skip 1-2 for backend-only changes.
 
 ## Rules
 1. Plan before coding for any non-trivial change.
 2. dashboard_rebuild is frontend-only; API lives in brain/.
 3. Only serve the dashboard via Start_Dashboard.bat on port 5000. Do not run a separate dev server or python brain/dashboard_web.py directly.
 4. After frontend changes: rebuild and copy dist/public -> brain/static/dist. (See Post-Implementation Checklist above.)
-5. Check permissions.json before executing new shell commands.
+5. Check `permissions.json` (repo root) before executing new shell commands.
 6. Update CONTINUITY.md after every significant change (append only).
 7. Push to remote after every change (auto).
 8. After code changes, run relevant checks by default (pytest brain/tests/; frontend build already required).
@@ -81,6 +83,7 @@ Skip steps 1-2 only if the change is backend-only (brain/ Python files).
 11. No destructive commands (e.g., reset --hard, clean, rm) unless explicitly requested.
 12. Auto-commit after changes; use a conventional commit message if none is provided.
 13. Safe-by-default git: check status/diff before edits.
+14. Check conductor/tracks.md before starting major work — active tracks take priority.
 
 ## Learnings
 
@@ -122,3 +125,5 @@ Codex MCP's `ask-codex` ignores full diff/code embedded in the prompt and asks f
 
 ## Detailed Guidelines
 - Agent Workflow: ai-config/agent-workflow.md
+- Project Workflow: conductor/workflow.md
+- Conductor Tracks: conductor/tracks.md

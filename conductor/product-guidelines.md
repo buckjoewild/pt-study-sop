@@ -18,9 +18,9 @@ These guidelines constrain decisions, implementation, and manual verification pl
 
 ## Dashboard build/serve constraints
 
-- The dashboard is served via `Start_Dashboard.bat` on port 5000.
-- Do not run a separate frontend dev server (`npm run dev` / Vite dev server).
-- After frontend changes: `npm run build` in `dashboard_rebuild/`, then copy `dashboard_rebuild/dist/public` -> `brain/static/dist/`.
+See `docs/root/GUIDE_DEV.md` for canonical build + sync workflow.
+- Dashboard served via `Start_Dashboard.bat` on port 5000.
+- Do not run a separate frontend dev server.
 
 ## Verification expectations
 

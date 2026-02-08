@@ -858,8 +858,6 @@ export default function Scholar() {
               </Card>
             </TabsContent>
 
-
-
             {/* HISTORY TAB */}
             <TabsContent value="history" className="flex-1 overflow-auto mt-4">
               <Card className="bg-black/40 border-2 border-secondary rounded-none">

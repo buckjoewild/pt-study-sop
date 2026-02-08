@@ -1,4 +1,4 @@
-﻿# CONTINUITY\n
+# CONTINUITY\n
 
 - 2026-01-21 18:47:42: Replaced C:\pt-study-sop\brain\data\pt_study.db with C:\Users\treyt\Downloads\pt_study.db after backup (pt_study.db.bak_20260121_184637). Counts: sessions=2, wheel_courses=5, quick_notes=4, courses=0.
 
@@ -52,13 +52,11 @@
 - 2026-01-23 09:10:22: Enhanced Google Calendar auth flow to load stored OAuth token credentials, refresh expired tokens, and return re-auth required errors when tokens are missing or invalid.
 - 2026-01-23 10:05:00: Expanded calendar assistant CRUD to search all calendars and added update event support with calendar/event IDs in responses.
 
-
 - 2026-01-23 10:23:48: Expanded AI permissions allowlist to include broad PowerShell/cmd execution for on-demand inspection and troubleshooting.
 
 - 2026-01-23 10:36:14: Added Ralph.bat session health check (status option + stale warning) to detect likely stuck runs.
 - 2026-01-23 11:22:00: Updated calendar Google event API calls to use backend routes, refresh queries after AI edits, and normalize recurrence defaults for UI.
 - 2026-01-23 12:05:00: Refreshed Calendar Assistant connection status on open, hid not-connected label when linked, and updated CTA copy to "Connect Google Calendar".
-
 
 - 2026-01-23 10:25:10: Cleared stale Ralph session state by archiving .ralph-tui lock/session files and restarted Ralph TUI in a new console window.
 
@@ -115,7 +113,6 @@
 - 2026-01-24 01:57:59: Backfilled session minutes (time_spent_minutes from duration_minutes) via PT_BRAIN_BACKFILL_MINUTES and updated study-wheel session insert + metrics minutes fallback; added Vite route-level code-splitting/manualChunks to resolve chunk-size warning.
 - 2026-01-25 12:45:16: Installed oh-my-opencode in WSL (Ubuntu) using Node 20 via nvm and ran the installer to configure Claude max20, OpenAI, Gemini, and Copilot; configs written to /home/treyt/.config/opencode/opencode.json and /home/treyt/.config/opencode/oh-my-opencode.json.
 
-
 - 2026-01-25 14:40:10: Added docs/project Project Hub (INDEX, ROADMAP, CURRENT_MILESTONE, DECISIONS, STATUS, REFERENCES, README), linked entrypoints in README and docs/README, and added scripts/validate_project_hub.py.
 
 - 2026-01-25 14:54:04: Added DOCS_INDEX.md entrypoint and linked it from README.md and docs/README.md.
@@ -159,11 +156,14 @@
 - 2026-01-26 00:39:55: Mirrored schedule section buttons to Check All, Delete, Save and per-row Save/Delete only.
 - 2026-01-26 00:44:52: Updated docs to reference Start_Dashboard.bat instead of Run_Brain_All.bat.
 - 2026-01-26 00:46:38: Updated permissions allowlist to Start_Dashboard.bat.
--   2 0 2 6 - 0 1 - 2 6   1 4 : 0 0 : 0 9 :   U p d a t e d   c a l e n d a r   m a n a g e   U I   t o   s u p p o r t   d r a g - a n d - d r o p   o r d e r i n g ,   l o c a l   c a l e n d a r   s e l e c t i o n ,   a n d   s e l e c t i o n - o n l y   f i l t e r i n g ;   p e r s i s t e d   c a l e n d a r   o r d e r / s e l e c t i o n   i n   l o c a l S t o r a g e .  
- -   2 0 2 6 - 0 1 - 2 6   1 4 : 1 4 : 2 3 :   R e b u i l t   d a s h b o a r d _ r e b u i l d   a n d   c o p i e d   d i s t / p u b l i c   t o   b r a i n / s t a t i c / d i s t   f o r   c a l e n d a r   M a n a g e   o r d e r i n g   +   s e l e c t i o n - o n l y   f i l t e r i n g .  
- - 2026-01-26 15:07:33: Backed up uncommitted files to _codex_backups and reverted Brain session filter/query UI changes in dashboard_rebuild/client/src/pages/brain.tsx.
--   2 0 2 6 - 0 1 - 2 6   1 5 : 1 0 : 0 2 :   U p d a t e d   A G E N T S . m d   t o   r e q u i r e   a   g i t   c o m m i t   a f t e r   c h a n g e s ;   s y n c e d   m i r r o r s .  
- - 2026-01-26 21:11:43: Rebuilt dashboard_rebuild and copied dist/public to brain/static/dist for updated Brain UI.
+- 2026-01-26 14:00:09: Updated calendar manage UI to support drag-and-drop ordering, local calendar selection, and selection-only filtering; persisted calendar order/selection in localStorage.
+
+- 2026-01-26 14:14:23: Rebuilt dashboard_rebuild and copied dist/public to brain/static/dist for calendar Manage ordering + selection-only filtering.
+
+- 2026-01-26 15:07:33: Backed up uncommitted files to _codex_backups and reverted Brain session filter/query UI changes in dashboard_rebuild/client/src/pages/brain.tsx.
+- 2026-01-26 15:10:02: Updated AGENTS.md to require a git commit after changes; synced mirrors.
+
+- 2026-01-26 21:11:43: Rebuilt dashboard_rebuild and copied dist/public to brain/static/dist for updated Brain UI.
 - 2026-01-26 22:23:50: Updated permissions allowlist to run Windows test commands (pytest, Flask, ingest script).
 \n## 2026-01-27
 - Added `bash -lc` to `permissions.json` allowlist to permit WSL package install commands for jq.
@@ -200,34 +200,33 @@
 - 2026-01-28 15:51:00: Marked Anki/AnkiConnect as active use.
 - 2026-01-28 15:52:00: Marked Google Calendar/Tasks as active use.
 - 2026-01-28 17:30:00: Added PRD for calendar month view and event management improvements.
--   2 0 2 6 - 0 1 - 2 9   1 8 : 2 9 : 3 0 :   A d d e d   d e v e l o p e r   w o r k f l o w   d i s c o v e r y   e x a m p l e   a n d   r e v i e w - l o o p   p r o m p t   t o   C L A U D E _ C O D E X _ R E V I E W _ L O O P . m d .  
- 
+- 2026-01-29 18:29:30: Added developer workflow discovery example and review-loop prompt to CLAUDE_CODEX_REVIEW_LOOP.md.
+
 - 2026-01-29: Calendar page fixes — (1) selectedCalendars now persists to localStorage with SAVE button, initializes from localStorage on mount with try/catch + Array.isArray guard. (2) New LocalEventEditModal.tsx with 4-tab interface (DETAILS, TIME, TYPE, REPEAT) covering all 10 editable DB fields, replacing the old 4-field inline dialog. Updated mutation to send all fields. (3) Added Post-Implementation Checklist section to CLAUDE.md to enforce build+copy workflow.
 
 - 2026-01-29: Added end-of-session hookify rule (.claude/hookify.end-of-session-checklist.local.md) that prompts 5-step cleanup checklist when session-ending phrases detected. Added calendar SAVE dirty/saved indicator dot and toast feedback. Captured 4 session learnings to CLAUDE.md.
 
- -   2 0 2 6 - 0 1 - 2 9 :   U n i f i e d   l o c a l / G o o g l e   e v e n t   e d i t   o p t i o n s ,   w i r e d   l o c a l   e v e n t   f i e l d s   t o   D B / A P I ,   a n d   f i x e d   G o o g l e   u p d a t e / d e l e t e   +   m e t a d a t a   p e r s i s t e n c e   f o r   e v e n t T y p e / c o u r s e / w e i g h t .   R e b u i l t   d a s h b o a r d   a n d   s y n c e d   d i s t . 
-  
- 
- -   2 0 2 6 - 0 1 - 2 9 :   R a i s e d   S e l e c t   m e n u   z - i n d e x   t o   s h o w   d r o p d o w n s   a b o v e   c a l e n d a r   e d i t   d i a l o g s ;   r e b u i l t   a n d   s y n c e d   d a s h b o a r d . 
-  
- 
- -   2 0 2 6 - 0 1 - 2 9 :   A d d e d   z - i n d e x   o v e r r i d e s   o n   c a l e n d a r   S e l e c t   m e n u s   t o   k e e p   d r o p d o w n s   a b o v e   e d i t   d i a l o g s ;   r e b u i l t   a n d   s y n c e d   d a s h b o a r d . 
-  
- 
- -   2 0 2 6 - 0 1 - 2 9 :   R e p l a c e d   t i m e z o n e   i n p u t s   w i t h   d r o p d o w n s   ( l o c a l   +   G o o g l e ) ,   p e r s i s t i n g   s e l e c t i o n   v i a   l o c a l   t i m e _ z o n e   a n d   G o o g l e   e x t e n d e d P r o p e r t i e s ;   r e b u i l t   a n d   s y n c e d   d a s h b o a r d . 
-  
- - 2026-01-29: Fixed calendar edit modal hook ordering (timezone useMemo now before null guard) to prevent black-screen crash when opening events; rebuilt and synced dashboard.
+- 2026-01-29: Unified local/Google event edit options, wired local event fields to DB/API, and fixed Google update/delete + metadata persistence for eventType/course/weight. Rebuilt dashboard and synced dist.
+
+- 2026-01-29: Raised Select menu z-index to show dropdowns above calendar edit dialogs; rebuilt and synced dashboard.
+
+- 2026-01-29: Added z-index overrides on calendar Select menus to keep dropdowns above edit dialogs; rebuilt and synced dashboard.
+
+- 2026-01-29: Replaced timezone inputs with dropdowns (local + Google), persisting selection via local time_zone and Google extendedProperties; rebuilt and synced dashboard.
+
+- 2026-01-29: Fixed calendar edit modal hook ordering (timezone useMemo now before null guard) to prevent black-screen crash when opening events; rebuilt and synced dashboard.
 - 2026-01-29: Restored local event color rendering by applying calendarColor inline styles for all events; moved edit modals down to avoid header clipping; rebuilt and synced dashboard.
 - 2026-01-29: Limited timezone dropdowns to America zones and added course dropdowns backed by study wheel courses in calendar edit modals; rebuilt and synced dashboard.
 - 2026-01-29: Linked study wheel courses to canonical courses (course_id + code), updated course APIs to return canonical IDs, and wired calendar course dropdowns to store courseId/courseCode; restricted timezones to America-only; rebuilt and synced dashboard.
 - 2026-01-29: Added course number input for new Study Wheel courses (no retroactive edits); wired to course create API; rebuilt and synced dashboard.
 - 2026-01-29: Anchored dashboard dialogs (add/edit course, add deadline, edit task, delete course) to top offset to prevent off-screen modal overlay; rebuilt and synced dashboard.
 - 2026-01-29: Added course number field to edit course dialog (Study Wheel) and update payload; render calendar edit modals only when selected events exist to avoid black-screen overlay; rebuilt and synced dashboard.
--   2 0 2 6 - 0 1 - 2 9 :   U p d a t e d   A G E N T S . m d   w i t h   p r o j e c t - e x p l o r a t i o n - b e f o r e - s k i l l s   g u i d a n c e ,   S w i f t U I   r e t r i e v a l - f i r s t   r u l e ,   a n d   d o c s   T a b l e   o f   C o n t e n t s   r e q u i r e m e n t .  
- - 2026-01-29: Fixed calendar edit modal crash by rendering course dropdown options as course names/ids (not raw objects) in local + Google edit modals; rebuilt and synced dashboard.
--   2 0 2 6 - 0 1 - 2 9 :   N o t e d   i n   C L A U D E . m d   t o   r e a d   A G E N T S . m d   f o r   a g e n t   b e h a v i o r   r u l e s .  
- - 2026-01-29: Strengthened Calendar Sync button to refresh Google status, calendar list, and events; auto-resets calendar selection if it no longer matches current Google calendars; added sync success/failure toasts; rebuilt and synced dashboard.
+- 2026-01-29: Updated AGENTS.md with project-exploration-before-skills guidance, SwiftUI retrieval-first rule, and docs Table of Contents requirement.
+
+- 2026-01-29: Fixed calendar edit modal crash by rendering course dropdown options as course names/ids (not raw objects) in local + Google edit modals; rebuilt and synced dashboard.
+- 2026-01-29: Noted in CLAUDE.md to read AGENTS.md for agent behavior rules.
+
+- 2026-01-29: Strengthened Calendar Sync button to refresh Google status, calendar list, and events; auto-resets calendar selection if it no longer matches current Google calendars; added sync success/failure toasts; rebuilt and synced dashboard.
 - 2026-01-29: Sync now forces Google calendar selection to all current calendars and clears hidden calendars so the dashboard mirrors Google after sync; rebuilt and synced dashboard.
 - 2026-01-29: Updated repo instructions (AGENTS.md, CLAUDE.md) to explicitly require reading global C:\\Users\\treyt\\.claude\\CLAUDE.md first.
 - 2026-01-29: Calendar create now writes to Google when a Google calendar is selected; local events are restricted to calendarId=local, and local events assigned to Google calendars are hidden when Google is connected to prevent duplicate listings.
@@ -245,11 +244,12 @@
 - 2026-01-30: Added ExecPlan for SOP runtime bundle build in .agent/context/plans/SOP_RUNTIME_V9_3_CUSTOM_GPT_EXECPLAN.md.
 - 2026-01-30: Updated sop/library/10-deployment.md with multi-domain prefixes, UNVERIFIED summary, anki_cards encoding, and canonical source note.
 - 2026-01-31: Updated M6 Wrap heading compatibility in session flow and made build_runtime_bundle wrap heading detection flexible with a wrap-found message.
--   2 0 2 6 - 0 1 - 3 1 :   A d d e d   L i t e   W r a p   e x a m p l e   h e a d i n g   i n   1 1 - e x a m p l e s   a n d   m a d e   e x a m p l e   e x t r a c t i o n   t o l e r a n t   t o   m i s s i n g   h e a d i n g s   i n   b u i l d _ r u n t i m e _ b u n d l e .  
- - 2026-01-31: Added v9.4 Custom GPT system instructions to SOP library and linked in overview.
+- 2026-01-31: Added Lite Wrap example heading in 11-examples and made example extraction tolerant to missing headings in build_runtime_bundle.
+
+- 2026-01-31: Added v9.4 Custom GPT system instructions to SOP library and linked in overview.
 - 2026-01-31: Updated v9.4 Custom GPT system instructions with pre-test guardrail (NO-GUESS), first exposure vs review rule, and LO relabel restriction.
--   2 0 2 6 - 0 1 - 3 1 :   B u i l t   d a s h b o a r d   f r o n t e n d   a n d   s y n c e d   b r a i n / s t a t i c / d i s t   f r o m   d a s h b o a r d _ r e b u i l d / d i s t / p u b l i c   f o r   l i v e   d e p l o y .  
- 
+- 2026-01-31: Built dashboard frontend and synced brain/static/dist from dashboard_rebuild/dist/public for live deploy.
+
 ## 2026-01-31
 
 - 2026-01-31 22:10:00: Completed UI Overhaul v9.4.2 boulder work - all core features delivered (11 commits total):
@@ -262,19 +262,25 @@
   - Documentation and plan completion (07ee0e64, 55989154, e7e5e1e4, 26cbf75b)
   - Calendar view separation deferred to v9.4.3 (documented in .sisyphus/notepads/ui-overhaul-v9.4.2/calendar-deferred.md)
   - **Action required:** 4 commits need manual push (26cbf75b, 55989154, 2f05a0da, 1d320047) - git push failed due to WSL auth
--   2 0 2 6 - 0 1 - 3 1 :   R e b u i l t   d a s h b o a r d   a n d   r e - s y n c e d   b r a i n / s t a t i c / d i s t   f r o m   d a s h b o a r d _ r e b u i l d / d i s t / p u b l i c .  
- -   2 0 2 6 - 0 1 - 3 1 :   F i x e d   D a s h b o a r d / S c h o l a r   b l a c k   s c r e e n s   ( p l a n n e r   q u e u e   +   c l u s t e r i n g   m u t a t i o n   r e f s ) ;   r e b u i l t   a n d   s y n c e d   d a s h b o a r d   a s s e t s .  
- -   2 0 2 6 - 0 1 - 3 1 :   F i x e d   S c h o l a r   r u n   b u t t o n   p a y l o a d   ( s e n d   J S O N   b o d y )   a n d   r e b u i l t / s y n c e d   d a s h b o a r d   a s s e t s .  
- -   2 0 2 6 - 0 1 - 3 1 :   W i r e d   / a p i / s c h o l a r / r u n   t o   t r i g g e r   t h e   C o d e x - b a s e d   o r c h e s t r a t o r   ( p r e v e n t s   n o - o p   r u n s ) .  
- - 2026-02-01: Added /api/health/db alias and DB health payload fields for smoke test.
+- 2026-01-31: Rebuilt dashboard and re-synced brain/static/dist from dashboard_rebuild/dist/public.
+
+- 2026-01-31: Fixed Dashboard/Scholar black screens (planner queue + clustering mutation refs); rebuilt and synced dashboard assets.
+
+- 2026-01-31: Fixed Scholar run button payload (send JSON body) and rebuilt/synced dashboard assets.
+
+- 2026-01-31: Wired /api/scholar/run to trigger the Codex-based orchestrator (prevents no-op runs).
+
+- 2026-02-01: Added /api/health/db alias and DB health payload fields for smoke test.
 - 2026-02-01: Removed deprecated web_search_request flag from Codex config to silence warning.
--   2 0 2 6 - 0 2 - 0 1 :   A d d e d   a g e n t   s t r a t e g y   d o c s ,   p r o m p t   p a t t e r n s ,   a n d   s y n c   s c r i p t ;   a l i g n e d   C l a u d e / C o d e x / O p e n C o d e   c o n f i g s   a n d   c o m m a n d s .  
- - 2026-02-01: Made /api/scholar/digest DB-first, added /api/scholar/proposals alias, fixed duplicate obsidian patch, and ignored scholar outputs.
+- 2026-02-01: Added agent strategy docs, prompt patterns, and sync script; aligned Claude/Codex/OpenCode configs and commands.
+
+- 2026-02-01: Made /api/scholar/digest DB-first, added /api/scholar/proposals alias, fixed duplicate obsidian patch, and ignored scholar outputs.
 - 2026-02-01: Added Custom GPT deployment pack doc and print helper script.
 - 2026-02-01: Moved planning docs into tasks/ and stopped ignoring curated planning files in .gitignore.
 - 2026-02-01: Refined Custom GPT deployment pack content and print script for acceptance test and run history.
--   2 0 2 6 - 0 2 - 0 1 :   E n a b l e d   a u t o - a p p e n d   p r o m p t   s u f f i x   d e f a u l t s   a c r o s s   C l a u d e / C o d e x / O p e n C o d e   s t r a t e g y   d o c s   a n d   r u l e s .  
- - 2026-02-01: Added LO Engine protocol pack doc, routing, and templates.
+- 2026-02-01: Enabled auto-append prompt suffix defaults across Claude/Codex/OpenCode strategy docs and rules.
+
+- 2026-02-01: Added LO Engine protocol pack doc, routing, and templates.
 - 2026-02-03: Appended raw input notes to Obsidian study session sync for Brain chat.
 - 2026-02-03: Added organize-preview flow with destination picker and raw+organized Obsidian sync for Brain ingest.
 
@@ -285,7 +291,6 @@
 
 2026-02-06 - Fix dashboard Brain Tools black screen by adding missing Obsidian API client methods (getConfig/getVaultIndex/getGraph) and rebuilding brain/static/dist.
 
-
 ## 2026-02-06 - Safer UI Sync in Start_Dashboard
 
 - Prevent Start_Dashboard.bat from overwriting brain/static/dist with an older dashboard_rebuild/dist/public build.
@@ -294,28 +299,23 @@
 
 2026-02-06 - Added jules-sdk local smoke test (smoke.ts) and README instructions for running via tsx.
 
-
 ## 2026-02-06 - MCP Presets + User Troubleshooting
 
 - Add github + memory MCP server presets to .mcp.json and .claude/mcp.json (GitHub requires GITHUB_PERSONAL_ACCESS_TOKEN).
 - Document the MCP presets in docs/AI_CONFIG.md.
 - Add a quick black-screen troubleshooting note to docs/root/GUIDE_USER.md.
 
-
 ## 2026-02-06 - Align Dashboard Build/Run Docs
 
 - Update dashboard_rebuild and brain READMEs to match the canonical workflow: build via npm run build, sync dist/public -> brain/static/dist, run via Start_Dashboard.bat (no Vite dev server).
-
 
 ## 2026-02-06 - Allow Codex CLI in Repo Permissions
 
 - Permit codex exec / codex resume in permissions.json (and .claude/permissions.json) so the codex-subagent workflow isn't blocked by the repo allowlist.
 
-
 ## 2026-02-06 - Fix CI Calendar Assistant Typing Import
 
 - Import Any in brain/dashboard/calendar_assistant.py to prevent NameError during pytest collection on Ubuntu GitHub Actions.
-
 
 ## 2026-02-06 - Make CI Tests Self-Contained
 

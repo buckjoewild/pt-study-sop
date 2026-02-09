@@ -28,7 +28,7 @@ export function VaultEditor({ workspace }: VaultEditorProps) {
         <img
           src={brainBg}
           alt=""
-          className="absolute inset-0 w-full h-full object-contain opacity-20 pointer-events-none select-none"
+          className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none select-none"
         />
         <div className="relative z-10 flex flex-col items-center gap-2">
           <FileText className="w-8 h-8 opacity-30" />

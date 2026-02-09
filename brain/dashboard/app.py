@@ -1,4 +1,4 @@
-from flask import Flask, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory
 
 from dashboard.routes import dashboard_bp
 from dashboard.v3_routes import dashboard_v3_bp, dashboard_v3_api_bp
@@ -45,13 +45,14 @@ def create_app():
         print(f"  {rule.rule} -> {rule.endpoint} [{', '.join(rule.methods - {'OPTIONS', 'HEAD'})}]")
     print("=========================\n")
 
-    # Serve React App (catch-all for non-API routes)
-    @app.route("/", defaults={"path": ""})
-    @app.route("/<path:path>")
-    def serve_react(path):
-        # Skip API paths - they're handled by blueprints
+    # Serve React App — use 404 handler so blueprint routes always take priority
+    @app.errorhandler(404)
+    def serve_react_or_404(e):
+        path = request.path.lstrip("/")
+
+        # API paths should return JSON 404
         if path.startswith("api/"):
-            return "API route not found", 404
+            return jsonify({"error": "API route not found"}), 404
 
         if path:
             # Serve files directly from /static when they exist
@@ -65,7 +66,7 @@ def create_app():
                 return send_from_directory(
                     os.path.join(app.static_folder or "", "dist"), path
                 )
-            
+
             # Handle /assets/* requests - serve from /static/dist/assets/
             if path.startswith("assets/"):
                 assets_candidate = os.path.join(app.static_folder or "", "dist", path)

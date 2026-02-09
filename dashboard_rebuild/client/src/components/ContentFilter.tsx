@@ -266,10 +266,10 @@ export function ContentFilter({
                       : "border-muted-foreground/30 text-foreground/80 hover:border-muted-foreground/50 hover:text-foreground hover:bg-black/30"
                   }`}
                 >
-                  <div className="font-arcade text-xs leading-tight">
+                  <div className="font-arcade text-xs leading-tight truncate">
                     {m.label}
                   </div>
-                  <div className={`${TEXT_MUTED} leading-tight`}>
+                  <div className={`${TEXT_MUTED} leading-tight truncate`}>
                     {m.desc}
                   </div>
                 </button>
@@ -277,7 +277,7 @@ export function ContentFilter({
             </div>
 
             <div className={`${TEXT_MUTED} mt-1`}>
-              Mode auto-picks a chain template (Methods → Chains). Override below.
+              Auto-picks a chain template. Override below.
             </div>
 
             {LEGACY_MODES.includes(mode) && (

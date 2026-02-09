@@ -183,7 +183,7 @@ export default function Tutor() {
     <Layout>
       <div className="h-[calc(100vh-140px)] flex gap-2">
         {/* Left: Content Filter */}
-        <Card className="w-64 shrink-0 bg-black/40 border-2 border-primary rounded-none overflow-y-auto">
+        <Card className="w-72 shrink-0 bg-black/40 border-2 border-primary rounded-none overflow-y-auto">
           <ContentFilter
             courseId={courseId}
             setCourseId={setCourseId}
@@ -216,7 +216,7 @@ export default function Tutor() {
         </Card>
 
         {/* Right: Artifacts */}
-        <Card className="w-64 shrink-0 bg-black/40 border-2 border-primary/40 rounded-none overflow-y-auto">
+        <Card className="w-72 shrink-0 bg-black/40 border-2 border-primary/40 rounded-none overflow-y-auto">
           <TutorArtifacts
             sessionId={activeSessionId}
             artifacts={artifacts}

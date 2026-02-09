@@ -24,7 +24,7 @@ export function VaultEditor({ workspace }: VaultEditorProps) {
 
   if (!workspace.currentFile) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-muted-foreground font-terminal text-sm gap-2 relative overflow-hidden">
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground font-terminal text-sm gap-2 relative overflow-hidden">
         <img
           src={brainBg}
           alt=""

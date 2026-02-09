@@ -64,7 +64,7 @@ export function MainContent({ workspace }: MainContentProps) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         {workspace.mainMode === "edit" && <VaultEditor workspace={workspace} />}
         {workspace.mainMode === "chat" && <BrainChat />}
         {workspace.mainMode === "graph" && <GraphPanel />}

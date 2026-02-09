@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Pencil, MessageSquare, Network, Table2, Layers } from "lucide-react";
 import { BrainChat } from "@/components/BrainChat";
 import { VaultEditor } from "./VaultEditor";
@@ -19,6 +20,20 @@ interface MainContentProps {
 }
 
 export function MainContent({ workspace }: MainContentProps) {
+  // Alt+1..5 keyboard shortcuts for tab switching
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (!e.altKey || e.ctrlKey || e.metaKey) return;
+      const idx = parseInt(e.key, 10) - 1;
+      if (idx >= 0 && idx < TABS.length) {
+        e.preventDefault();
+        workspace.setMainMode(TABS[idx].id);
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [workspace]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Tab bar */}
@@ -51,7 +66,7 @@ export function MainContent({ workspace }: MainContentProps) {
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
         {workspace.mainMode === "edit" && <VaultEditor workspace={workspace} />}
-        {workspace.mainMode === "chat" && <BrainChat embedded />}
+        {workspace.mainMode === "chat" && <BrainChat />}
         {workspace.mainMode === "graph" && <GraphPanel />}
         {workspace.mainMode === "table" && <ComparisonTableEditor />}
         {workspace.mainMode === "anki" && (

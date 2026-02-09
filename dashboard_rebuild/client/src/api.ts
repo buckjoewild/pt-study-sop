@@ -1120,4 +1120,5 @@ export interface TutorSSEChunk {
   citations?: TutorCitation[];
   artifacts?: unknown[];
   summary?: string;
+  model?: string;
 }

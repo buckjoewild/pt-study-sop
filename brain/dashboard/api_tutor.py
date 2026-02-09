@@ -502,6 +502,7 @@ Remember: cite source documents using [Source: filename] when you use them."""
                 # Primary: stream via ChatGPT backend API (fast)
                 use_streaming = True
                 try:
+                    api_model = None
                     for chunk in stream_chatgpt_responses(
                         system_prompt, user_prompt,
                         model=codex_model or "gpt-5.1",
@@ -513,7 +514,7 @@ Remember: cite source documents using [Source: filename] when you use them."""
                         elif chunk.get("type") == "error":
                             raise RuntimeError(chunk.get("error", "ChatGPT API failed"))
                         elif chunk.get("type") == "done":
-                            pass
+                            api_model = chunk.get("model")
                 except Exception as stream_err:
                     # Fallback: Codex CLI (slower but reliable)
                     if not full_response:
@@ -535,7 +536,7 @@ Remember: cite source documents using [Source: filename] when you use them."""
                         raise stream_err
 
                 citations = extract_citations(full_response)
-                yield format_sse_done(citations=citations)
+                yield format_sse_done(citations=citations, model=api_model)
 
             except Exception as e:
                 yield format_sse_error(str(e))

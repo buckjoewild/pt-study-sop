@@ -845,9 +845,10 @@ def stream_chatgpt_responses(
             elif evt_type == "response.completed":
                 r = evt.get("response", {})
                 usage = r.get("usage")
+                model_id = r.get("model")
 
         conn.close()
-        yield {"type": "done", "usage": usage}
+        yield {"type": "done", "usage": usage, "model": model_id}
 
     except Exception as e:
         yield {"type": "error", "error": f"ChatGPT API error: {e}"}

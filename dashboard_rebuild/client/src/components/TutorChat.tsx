@@ -20,6 +20,7 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   citations?: TutorCitation[];
+  model?: string;
   isStreaming?: boolean;
 }
 
@@ -102,6 +103,7 @@ export function TutorChat({
       let buffer = "";
       let fullText = "";
       let citations: TutorCitation[] = [];
+      let modelId: string | undefined;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -148,6 +150,7 @@ export function TutorChat({
 
             if (parsed.type === "done") {
               citations = parsed.citations ?? [];
+              modelId = parsed.model;
             }
           } catch {
             /* skip malformed */
@@ -162,6 +165,7 @@ export function TutorChat({
           role: "assistant",
           content: fullText,
           citations,
+          model: modelId,
           isStreaming: false,
         };
         return updated;
@@ -305,10 +309,10 @@ export function TutorChat({
                 <div>{msg.content}</div>
               )}
 
-              {/* Citations */}
-              {msg.citations && msg.citations.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-primary/20">
-                  {msg.citations.map((c) => (
+              {/* Citations + Model */}
+              {(msg.citations?.length || msg.model) && !msg.isStreaming ? (
+                <div className="flex flex-wrap items-center gap-1 mt-2 pt-2 border-t border-primary/20">
+                  {msg.citations?.map((c) => (
                     <Badge
                       key={c.index}
                       variant="outline"
@@ -317,8 +321,13 @@ export function TutorChat({
                       [{c.index}] {c.source}
                     </Badge>
                   ))}
+                  {msg.model && (
+                    <Badge variant="outline" className="text-sm rounded-none text-muted-foreground/60 ml-auto">
+                      {msg.model}
+                    </Badge>
+                  )}
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         ))}

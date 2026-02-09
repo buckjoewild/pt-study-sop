@@ -9,6 +9,7 @@ Automation utilities for the PT Study SOP repo.
 - `sync_ai_config.ps1` - Deprecated wrapper (kept for backwards compatibility).
 - `sync_portable_agent_config.ps1` - Convenience wrapper to sync portable vault agent config to home tool locations.
 - `launch_codex_session.ps1` / `launch_opencode_session.ps1` - Start agent sessions.
+- `agent_worktrees.ps1` - Create/manage named persistent worktrees (integrate/ui/brain[/docs]) for parallel agents.
 - `run_scholar.bat` - Run Scholar workflows.
 
 ## Notes

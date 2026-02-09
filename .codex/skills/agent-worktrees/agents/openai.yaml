@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Worktrees"
+  short_description: "Run coding agents in parallel with worktrees"
+  default_prompt: "Set up integrate/ui/brain worktrees and open Codex/Claude/OpenCode in the right one."

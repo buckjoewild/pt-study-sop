@@ -419,6 +419,8 @@
 
 - 02:04: Added Agents Conductor track, clarified workflow + track pointers for Claude compatibility, vendored `x-research` skill for Codex, expanded allowlists, and ignored repo-root planning artifacts/scratch. Files: `conductor/tracks/agents_setup_cleanup_20260209/`, `conductor/tracks.md`, `AGENTS.md`, `CLAUDE.md`, `.claude/AGENTS.md`, `.claude/CLAUDE.md`, `.claude/settings.local.json`, `.codex/skills/x-research/`, `.gitignore`, `permissions.json`.
 - 23:46: Added persistent named worktree tooling and a Codex skill for routing parallel agents to integrate/ui/brain worktrees. Files: `scripts/agent_worktrees.ps1`, `scripts/README.md`, `.codex/skills/agent-worktrees/`.
+- 02:12: Switched Tutor chat to use Codex CLI (ChatGPT login) by default (no API key), added safe JSON-mode Codex runner, and used keyword-only RAG retrieval for Codex mode. Files: `brain/llm_provider.py`, `brain/dashboard/api_tutor.py`, `brain/tutor_rag.py`, `dashboard_rebuild/client/src/pages/tutor.tsx`, `dashboard_rebuild/client/src/components/ContentFilter.tsx`, `docs/root/PROJECT_ARCHITECTURE.md`.
+- 04:38: Updated Tutor Content Filter: simplified modes (Learn/Review/Quick/Light/Fix) with recommended chains + auto-pick, added OpenRouter model gating, and ensured the method library auto-seeds on startup when missing. Files: `brain/db_setup.py`, `brain/data/seed_methods.py`, `brain/dashboard/api_tutor.py`, `brain/tutor_prompt_builder.py`, `dashboard_rebuild/client/src/components/ContentFilter.tsx`, `dashboard_rebuild/client/src/api.ts`, `docs/dashboard/DASHBOARD_WINDOW_INVENTORY.md`, `docs/dashboard/TUTOR_PAGE_SOP_EXPLORER_v1.0.md`.
 
 ## 2026-02-08 - Adaptive Tutor Learning System (Phase 1 MVP)
 

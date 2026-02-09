@@ -1,8 +1,11 @@
 """
 Tutor RAG Pipeline — LangChain + ChromaDB vector search for Adaptive Tutor.
 
-Handles: document chunking, OpenAI embeddings, ChromaDB storage, retrieval.
-Falls back to keyword search from tutor_engine when ChromaDB is empty.
+Supports two named collections:
+  - "tutor_materials"    — user-uploaded study materials
+  - "tutor_instructions" — SOP library teaching rules/methods/frameworks
+
+Falls back to keyword search when ChromaDB is empty.
 """
 
 from __future__ import annotations
@@ -10,7 +13,6 @@ from __future__ import annotations
 import pydantic_v1_patch  # noqa: F401  — must be first (fixes PEP 649 on Python 3.14)
 
 import os
-import json
 import sqlite3
 from pathlib import Path
 from typing import Optional
@@ -19,9 +21,11 @@ from config import DB_PATH, load_env
 
 load_env()
 
-# LangChain imports (lazy to avoid import cost when unused)
-_vectorstore = None
-_CHROMA_DIR = Path(__file__).parent / "data" / "chroma_tutor"
+_CHROMA_BASE = Path(__file__).parent / "data" / "chroma_tutor"
+_vectorstores: dict[str, object] = {}
+
+COLLECTION_MATERIALS = "tutor_materials"
+COLLECTION_INSTRUCTIONS = "tutor_instructions"
 
 
 def _get_openai_api_key() -> str:
@@ -33,16 +37,15 @@ def _get_openai_api_key() -> str:
     )
 
 
-def init_vectorstore(persist_dir: Optional[str] = None):
-    """Initialize or return cached ChromaDB vectorstore with OpenAI embeddings."""
-    global _vectorstore
-    if _vectorstore is not None:
-        return _vectorstore
+def init_vectorstore(collection_name: str = COLLECTION_MATERIALS, persist_dir: Optional[str] = None):
+    """Initialize or return cached ChromaDB vectorstore for a named collection."""
+    if collection_name in _vectorstores:
+        return _vectorstores[collection_name]
 
     from langchain_openai import OpenAIEmbeddings
     from langchain_community.vectorstores import Chroma
 
-    persist = persist_dir or str(_CHROMA_DIR)
+    persist = persist_dir or str(_CHROMA_BASE / collection_name.replace("tutor_", ""))
     os.makedirs(persist, exist_ok=True)
 
     api_key = _get_openai_api_key()
@@ -57,12 +60,13 @@ def init_vectorstore(persist_dir: Optional[str] = None):
 
     embeddings = OpenAIEmbeddings(**embed_kwargs)
 
-    _vectorstore = Chroma(
-        collection_name="tutor_rag",
+    vs = Chroma(
+        collection_name=collection_name,
         embedding_function=embeddings,
         persist_directory=persist,
     )
-    return _vectorstore
+    _vectorstores[collection_name] = vs
+    return vs
 
 
 def chunk_document(
@@ -74,6 +78,7 @@ def chunk_document(
     course_id: Optional[int] = None,
     folder_path: Optional[str] = None,
     rag_doc_id: Optional[int] = None,
+    corpus: Optional[str] = None,
 ):
     """Split document content into LangChain Documents with metadata."""
     from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -99,6 +104,8 @@ def chunk_document(
             metadata["folder_path"] = folder_path
         if rag_doc_id is not None:
             metadata["rag_doc_id"] = rag_doc_id
+        if corpus:
+            metadata["corpus"] = corpus
 
         docs.append(Document(page_content=chunk_text, metadata=metadata))
 
@@ -108,9 +115,11 @@ def chunk_document(
 def embed_rag_docs(
     course_id: Optional[int] = None,
     folder_path: Optional[str] = None,
+    corpus: Optional[str] = None,
 ) -> dict:
     """
     Embed rag_docs from SQLite into ChromaDB. Tracks chunks in rag_embeddings table.
+    Routes to correct collection based on corpus.
     Returns {embedded: int, skipped: int, total_chunks: int}.
     """
     conn = sqlite3.connect(DB_PATH)
@@ -120,6 +129,9 @@ def embed_rag_docs(
     conditions = ["COALESCE(enabled, 1) = 1"]
     params: list = []
 
+    if corpus:
+        conditions.append("corpus = ?")
+        params.append(corpus)
     if course_id is not None:
         conditions.append("(course_id = ? OR course_id IS NULL)")
         params.append(course_id)
@@ -129,12 +141,11 @@ def embed_rag_docs(
 
     where = " AND ".join(conditions)
     cur.execute(
-        f"SELECT id, source_path, content, course_id, folder_path FROM rag_docs WHERE {where}",
+        f"SELECT id, source_path, content, course_id, folder_path, corpus FROM rag_docs WHERE {where}",
         params,
     )
     docs = cur.fetchall()
 
-    vs = init_vectorstore()
     embedded = 0
     skipped = 0
     total_chunks = 0
@@ -154,19 +165,24 @@ def embed_rag_docs(
             skipped += 1
             continue
 
+        doc_corpus = doc["corpus"] or "materials"
+        collection = COLLECTION_INSTRUCTIONS if doc_corpus == "instructions" else COLLECTION_MATERIALS
+
         chunks = chunk_document(
             content,
             doc["source_path"] or "",
             course_id=doc["course_id"],
             folder_path=doc["folder_path"],
             rag_doc_id=doc["id"],
+            corpus=doc_corpus,
         )
 
         if not chunks:
             skipped += 1
             continue
 
-        # Add to ChromaDB
+        # Add to correct ChromaDB collection
+        vs = init_vectorstore(collection)
         ids = [f"rag-{doc['id']}-{i}" for i in range(len(chunks))]
         vs.add_documents(chunks, ids=ids)
 
@@ -174,7 +190,6 @@ def embed_rag_docs(
         for i, chunk in enumerate(chunks):
             try:
                 import tiktoken
-
                 enc = tiktoken.encoding_for_model("text-embedding-3-small")
                 token_count = len(enc.encode(chunk.page_content))
             except Exception:
@@ -199,21 +214,24 @@ def search_with_embeddings(
     query: str,
     course_id: Optional[int] = None,
     folder_paths: Optional[list[str]] = None,
+    material_ids: Optional[list[int]] = None,
+    collection_name: str = COLLECTION_MATERIALS,
     k: int = 6,
 ):
     """
     Vector search via ChromaDB. Returns list of LangChain Documents.
     Falls back to keyword search if vectorstore is empty.
     """
-    vs = init_vectorstore()
+    vs = init_vectorstore(collection_name)
 
-    # Check if vectorstore has documents
     try:
         collection = vs._collection
         if collection.count() == 0:
-            return _keyword_fallback(query, course_id, folder_paths, k)
+            return _keyword_fallback(query, course_id, folder_paths, material_ids, k,
+                                     corpus="instructions" if collection_name == COLLECTION_INSTRUCTIONS else None)
     except Exception:
-        return _keyword_fallback(query, course_id, folder_paths, k)
+        return _keyword_fallback(query, course_id, folder_paths, material_ids, k,
+                                 corpus="instructions" if collection_name == COLLECTION_INSTRUCTIONS else None)
 
     # Build metadata filter
     where_filter = None
@@ -222,6 +240,8 @@ def search_with_embeddings(
         conditions.append({"course_id": course_id})
     if folder_paths:
         conditions.append({"folder_path": {"$in": folder_paths}})
+    if material_ids:
+        conditions.append({"rag_doc_id": {"$in": material_ids}})
 
     if len(conditions) == 1:
         where_filter = conditions[0]
@@ -239,14 +259,17 @@ def search_with_embeddings(
     except Exception:
         pass
 
-    return _keyword_fallback(query, course_id, folder_paths, k)
+    return _keyword_fallback(query, course_id, folder_paths, material_ids, k,
+                             corpus="instructions" if collection_name == COLLECTION_INSTRUCTIONS else None)
 
 
 def _keyword_fallback(
     query: str,
     course_id: Optional[int] = None,
     folder_paths: Optional[list[str]] = None,
+    material_ids: Optional[list[int]] = None,
     k: int = 6,
+    corpus: Optional[str] = None,
 ):
     """Fallback to SQL keyword search when ChromaDB is empty/unavailable."""
     from langchain_core.documents import Document
@@ -255,12 +278,15 @@ def _keyword_fallback(
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
-    # Extract keywords (simple)
     stop_words = {"the", "a", "an", "is", "are", "was", "were", "in", "on", "at", "to", "for", "of", "and", "or", "it"}
     keywords = [w for w in query.lower().split() if w not in stop_words and len(w) > 2]
 
     conditions = ["COALESCE(enabled, 1) = 1"]
     params: list = []
+
+    if corpus:
+        conditions.append("corpus = ?")
+        params.append(corpus)
 
     if course_id is not None:
         conditions.append("(course_id = ? OR course_id IS NULL)")
@@ -271,7 +297,11 @@ def _keyword_fallback(
         conditions.append(f"({' OR '.join(fp_conditions)})")
         params.extend(f"%{fp}%" for fp in folder_paths)
 
-    # Keyword matching — score by number of keyword hits
+    if material_ids:
+        placeholders = ",".join("?" * len(material_ids))
+        conditions.append(f"id IN ({placeholders})")
+        params.extend(material_ids)
+
     keyword_clauses = []
     for kw in keywords[:5]:
         keyword_clauses.append(
@@ -295,7 +325,6 @@ def _keyword_fallback(
     results = []
     for row in cur.fetchall():
         content = row["content"] or ""
-        # Truncate to ~1000 chars for context
         if len(content) > 1000:
             content = content[:1000] + "..."
         results.append(
@@ -317,6 +346,8 @@ def _keyword_fallback(
 def get_retriever(
     course_id: Optional[int] = None,
     folder_paths: Optional[list[str]] = None,
+    material_ids: Optional[list[int]] = None,
+    collection_name: str = COLLECTION_MATERIALS,
     k: int = 6,
 ):
     """Return a LangChain BaseRetriever wrapping our search logic."""
@@ -330,6 +361,8 @@ def get_retriever(
 
         course_id_filter: Optional[int] = Field(default=None)
         folder_paths_filter: Optional[list[str]] = Field(default=None)
+        material_ids_filter: Optional[list[int]] = Field(default=None)
+        collection: str = Field(default=COLLECTION_MATERIALS)
         top_k: int = Field(default=6)
 
         def _get_relevant_documents(
@@ -339,11 +372,93 @@ def get_retriever(
                 query,
                 course_id=self.course_id_filter,
                 folder_paths=self.folder_paths_filter,
+                material_ids=self.material_ids_filter,
+                collection_name=self.collection,
                 k=self.top_k,
             )
 
     return TutorRetriever(
         course_id_filter=course_id,
         folder_paths_filter=folder_paths,
+        material_ids_filter=material_ids,
+        collection=collection_name,
         top_k=k,
     )
+
+
+def get_dual_context(
+    query: str,
+    course_id: Optional[int] = None,
+    material_ids: Optional[list[int]] = None,
+    k_materials: int = 6,
+    k_instructions: int = 4,
+) -> dict:
+    """
+    Query both collections and return structured context.
+
+    Returns: {
+        materials: list[Document],
+        instructions: list[Document],
+    }
+    """
+    materials = search_with_embeddings(
+        query,
+        course_id=course_id,
+        material_ids=material_ids,
+        collection_name=COLLECTION_MATERIALS,
+        k=k_materials,
+    ) if material_ids else []
+
+    instructions = search_with_embeddings(
+        query,
+        collection_name=COLLECTION_INSTRUCTIONS,
+        k=k_instructions,
+    )
+
+    return {
+        "materials": materials,
+        "instructions": instructions,
+    }
+
+
+def keyword_search(
+    query: str,
+    course_id: Optional[int] = None,
+    folder_paths: Optional[list[str]] = None,
+    material_ids: Optional[list[int]] = None,
+    k: int = 6,
+    corpus: Optional[str] = None,
+):
+    """
+    Keyword-only RAG search (no embeddings).
+
+    Use this when you want to avoid embedding API calls (e.g. Codex/ChatGPT-login tutor).
+    Returns a list of LangChain `Document` objects (same shape as `search_with_embeddings`).
+    """
+    return _keyword_fallback(query, course_id, folder_paths, material_ids, k, corpus=corpus)
+
+
+def keyword_search_dual(
+    query: str,
+    course_id: Optional[int] = None,
+    material_ids: Optional[list[int]] = None,
+    k_materials: int = 6,
+    k_instructions: int = 4,
+) -> dict:
+    """
+    Keyword-only dual search (no embeddings). For Codex/ChatGPT provider.
+
+    Returns: { materials: list[Document], instructions: list[Document] }
+    """
+    materials = _keyword_fallback(
+        query, course_id, material_ids=material_ids, k=k_materials,
+    ) if material_ids else []
+
+    instructions = _keyword_fallback(
+        query, k=k_instructions, corpus="instructions",
+    )
+
+    return {
+        "materials": materials,
+        "instructions": instructions,
+    }

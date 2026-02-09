@@ -187,11 +187,25 @@ Source: `dashboard_rebuild/client/src/pages/scholar.tsx`
 ## Page: Tutor (/tutor)
 Source: `dashboard_rebuild/client/src/pages/tutor.tsx`
 
-### SOP EXPLORER window
-- Purpose: browse SOP tree and render markdown content.
-- UI/Components: left tree navigator, right markdown renderer, footer path bar.
-- Reads: `api.sop.getIndex`, `api.sop.getFile`.
-- Backend: `brain/dashboard/routes.py` routes `/api/sop/index`, `/api/sop/file`.
+### Adaptive Tutor (3-panel)
+- Purpose: run an interactive study session with optional Method Chain guidance and RAG over uploaded materials.
+- UI/Components:
+  - Left: Content Filter (`dashboard_rebuild/client/src/components/ContentFilter.tsx`)
+  - Center: Chat (`dashboard_rebuild/client/src/components/TutorChat.tsx`)
+  - Right: Artifacts + resume (`dashboard_rebuild/client/src/components/TutorArtifacts.tsx`)
+- Reads: `api.tutor.getContentSources`, `api.tutor.getTemplateChains`, `api.tutor.getMaterials`, `api.tutor.listSessions`.
+- Writes: `api.tutor.createSession`, `api.tutor.sendTurn` (SSE), `api.tutor.advanceBlock`, `api.tutor.createArtifact`, `api.tutor.endSession`, `api.tutor.uploadMaterial`.
+- Backend: `brain/dashboard/api_tutor.py` routes `/api/tutor/*` (plus `brain/tutor_rag.py`, `brain/tutor_chains.py`, `brain/tutor_streaming.py`).
+
+## Page: Library (/library)
+Source: `dashboard_rebuild/client/src/pages/library.tsx`
+
+### Materials Library
+- Purpose: upload and manage study materials used by Tutor RAG.
+- UI/Components: materials table (rename, enable/disable, delete) and upload widget.
+- Reads: `api.tutor.getMaterials`.
+- Writes: `api.tutor.uploadMaterial`, `api.tutor.updateMaterial`, `api.tutor.deleteMaterial`.
+- Backend: `brain/dashboard/api_tutor.py` routes `/api/tutor/materials/*`.
 
 ## Page: Not Found (fallback)
 Source: `dashboard_rebuild/client/src/pages/not-found.tsx`

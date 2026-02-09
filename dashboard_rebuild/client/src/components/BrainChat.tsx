@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -9,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObsidianRenderer } from "@/components/ObsidianRenderer";
-import { Send, Image, ChevronDown, ChevronUp, X, Loader2, Layers, BrainCircuit, MessageSquare, BookOpen, FileText, CheckCircle } from "lucide-react";
+import { Send, Image, X, Loader2, Layers, BrainCircuit, MessageSquare, BookOpen, FileText, CheckCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { BrainOrganizePreviewResponse, BrainChatPayload } from "@/lib/api";
@@ -82,12 +81,7 @@ const buildDiffLines = (rawNotes: string, organizedNotes: string) => {
   return diff;
 };
 
-interface BrainChatProps {
-  embedded?: boolean;
-}
-
-export function BrainChat({ embedded }: BrainChatProps = {}) {
-  const [open, setOpen] = useState(false);
+export function BrainChat() {
   const [mode, setMode] = useState<Mode>("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -411,21 +405,6 @@ export function BrainChat({ embedded }: BrainChatProps = {}) {
     }
   };
 
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="w-full flex items-center justify-between bg-black/40 border-2 border-primary rounded-none px-4 py-2 mb-4 text-sm text-primary hover:bg-primary/10 transition-colors"
-      >
-        <span className="font-arcade text-xs tracking-widest uppercase flex items-center gap-2">
-          <div className="w-2 h-2 bg-primary inline-block"></div>
-          BRAIN CHAT
-        </span>
-        <ChevronDown className="w-4 h-4" />
-      </button>
-    );
-  }
-
   return (
     <>
       <Dialog open={previewOpen} onOpenChange={handlePreviewClose}>
@@ -572,31 +551,31 @@ export function BrainChat({ embedded }: BrainChatProps = {}) {
         const chatBody = (
           <>
             {/* Mode toggle + description */}
-            <div className="px-3 py-1 border-b border-border flex items-center justify-between gap-2 shrink-0">
-              <div className="flex bg-secondary/40 border border-secondary/60 rounded overflow-hidden mr-2">
+            <div className="px-3 py-1 border-b border-primary/30 flex items-center justify-between gap-2 shrink-0">
+              <div className="flex bg-black/40 border border-primary/40 rounded-none overflow-hidden mr-2">
                 <button
                   onClick={() => setMode("chat")}
-                  className={`flex items-center gap-1 px-2 py-0.5 text-[10px] transition-colors ${mode === "chat" ? "bg-primary/30 text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                  className={`flex items-center gap-1 px-2 py-0.5 text-xs font-arcade transition-colors ${mode === "chat" ? "bg-primary text-black" : "text-muted-foreground hover:text-foreground"}`}
                 >
                   <MessageSquare className="w-3 h-3" /> CHAT
                 </button>
                 <button
                   onClick={() => setMode("ingest")}
-                  className={`flex items-center gap-1 px-2 py-0.5 text-[10px] transition-colors ${mode === "ingest" ? "bg-primary/30 text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                  className={`flex items-center gap-1 px-2 py-0.5 text-xs font-arcade transition-colors ${mode === "ingest" ? "bg-primary text-black" : "text-muted-foreground hover:text-foreground"}`}
                 >
                   <BrainCircuit className="w-3 h-3" /> INGEST
                 </button>
               </div>
-              <p className="text-[10px] text-muted-foreground truncate flex-1">
+              <p className="text-xs text-muted-foreground truncate flex-1">
                 {mode === "chat" ? "Chat with Gemini Flash" : "Paste notes to create cards & save sessions"}
               </p>
               {mode === "ingest" && (
-                <div className="flex bg-secondary/40 border border-secondary/60 rounded overflow-hidden shrink-0">
+                <div className="flex bg-black/40 border border-primary/40 rounded-none overflow-hidden shrink-0">
                   {(["anki", "obsidian", "both"] as const).map((t) => (
                     <button
                       key={t}
                       onClick={() => setIngestTarget(t)}
-                      className={`flex items-center gap-1 px-2 py-0.5 text-[10px] transition-colors ${ingestTarget === t ? "bg-primary/30 text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                      className={`flex items-center gap-1 px-2 py-0.5 text-xs font-arcade transition-colors ${ingestTarget === t ? "bg-primary text-black" : "text-muted-foreground hover:text-foreground"}`}
                     >
                       {t === "anki" && <><Layers className="w-3 h-3" /> ANKI</>}
                       {t === "obsidian" && <><BookOpen className="w-3 h-3" /> OBSIDIAN</>}
@@ -608,7 +587,7 @@ export function BrainChat({ embedded }: BrainChatProps = {}) {
               {mode === "ingest" && (
                 <button
                   type="button"
-                  className="bg-primary hover:bg-primary/80 px-2 py-0.5 rounded-none text-[10px] font-terminal shrink-0"
+                  className="bg-primary hover:bg-primary/80 px-2 py-0.5 rounded-none text-xs font-terminal shrink-0"
                   onClick={() => {
                     navigator.clipboard.writeText(CHATGPT_ANKI_PROMPT);
                     setPromptCopied(true);
@@ -621,9 +600,9 @@ export function BrainChat({ embedded }: BrainChatProps = {}) {
             </div>
 
             {/* Messages */}
-            <div ref={scrollRef} className={`${embedded ? "flex-1" : "h-80"} overflow-y-auto px-4 py-2 space-y-3`}>
+            <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-2 space-y-3">
               {messages.length === 0 && (
-                <p className="text-muted-foreground text-xs text-center py-8">
+                <p className="text-muted-foreground text-sm font-terminal text-center py-8">
                   {mode === "chat"
                     ? "Ask anything. Paste screenshots with Ctrl+V."
                     : "Paste your study notes to ingest into Brain."}
@@ -632,13 +611,13 @@ export function BrainChat({ embedded }: BrainChatProps = {}) {
               {messages.map((m, i) => (
                 <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div
-                    className={`max-w-[80%] rounded px-3 py-2 text-base whitespace-pre-wrap ${m.role === "user"
+                    className={`max-w-[80%] rounded-none px-3 py-2 text-sm font-terminal whitespace-pre-wrap ${m.role === "user"
                         ? "bg-primary/20 text-foreground border border-primary/30"
                         : "bg-secondary/40 text-foreground border border-secondary/60"
                       }`}
                   >
                     {m.images?.map((img, j) => (
-                      <img key={j} src={img} alt="attached" className="max-h-32 rounded mb-1" />
+                      <img key={j} src={img} alt="attached" className="max-h-32 rounded-none mb-1" />
                     ))}
                     {m.content}
                   </div>
@@ -646,7 +625,7 @@ export function BrainChat({ embedded }: BrainChatProps = {}) {
               ))}
               {loading && (
                 <div className="flex justify-start">
-                  <div className="bg-secondary/40 border border-secondary/60 rounded px-3 py-2">
+                  <div className="bg-secondary/40 border border-secondary/60 rounded-none px-3 py-2">
                     <Loader2 className="w-4 h-4 animate-spin text-primary" />
                   </div>
                 </div>
@@ -658,7 +637,7 @@ export function BrainChat({ embedded }: BrainChatProps = {}) {
               <div className="px-4 py-1 flex gap-2 flex-wrap shrink-0">
                 {pendingImages.map((img, i) => (
                   <div key={i} className="relative">
-                    <img src={img} alt="pending" className="h-12 rounded border border-primary/30" />
+                    <img src={img} alt="pending" className="h-12 rounded-none border border-primary/30" />
                     <button
                       onClick={() => setPendingImages((prev) => prev.filter((_, j) => j !== i))}
                       className="absolute -top-1 -right-1 bg-destructive rounded-full p-0.5"
@@ -671,7 +650,7 @@ export function BrainChat({ embedded }: BrainChatProps = {}) {
             )}
 
             {/* Input */}
-            <div className="flex items-end gap-2 px-4 py-2 border-t border-border shrink-0">
+            <div className="flex items-end gap-2 px-4 py-2 border-t border-primary/30 shrink-0">
               <input
                 ref={fileRef}
                 type="file"
@@ -697,7 +676,7 @@ export function BrainChat({ embedded }: BrainChatProps = {}) {
                 onPaste={handlePaste}
                 placeholder={mode === "chat" ? "Ask anything... (Ctrl+V to paste images)" : "Paste study notes to ingest..."}
                 rows={mode === "ingest" ? 3 : 1}
-                className="flex-1 bg-transparent border border-input rounded px-3 py-1.5 text-base resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+                className="flex-1 bg-black/60 border-2 border-muted-foreground/20 rounded-none px-3 py-1.5 text-sm font-terminal resize-none focus:outline-none focus:ring-1 focus:ring-ring"
               />
               <Button
                 variant="ghost"
@@ -712,23 +691,7 @@ export function BrainChat({ embedded }: BrainChatProps = {}) {
           </>
         );
 
-        if (embedded) {
-          return <div className="flex flex-col h-full">{chatBody}</div>;
-        }
-
-        return (
-          <Card className="bg-black/40 border-2 border-primary rounded-none mb-4">
-            <CardHeader className="py-2 px-4 flex flex-row items-center justify-between">
-              <CardTitle className="text-xs">BRAIN CHAT</CardTitle>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setOpen(false)}>
-                <ChevronUp className="w-4 h-4" />
-              </Button>
-            </CardHeader>
-            <CardContent className="p-0">
-              {chatBody}
-            </CardContent>
-          </Card>
-        );
+        return <div className="flex flex-col h-full">{chatBody}</div>;
       })()}
     </>
   );

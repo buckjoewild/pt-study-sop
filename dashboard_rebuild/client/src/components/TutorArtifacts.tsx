@@ -1,3 +1,18 @@
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import {
+  TEXT_PANEL_TITLE,
+  TEXT_SECTION_LABEL,
+  TEXT_BODY,
+  TEXT_MUTED,
+  TEXT_BADGE,
+  BTN_OUTLINE,
+  PANEL_PADDING,
+  ICON_SM,
+  ICON_MD,
+  ICON_LG,
+} from "@/lib/theme";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -8,9 +23,12 @@ import {
   Clock,
   MessageSquare,
   BookOpen,
-  Loader2,
+  Trash2,
+  FolderOpen,
+  Check,
+  X,
 } from "lucide-react";
-import { api } from "@/lib/api";
+import { toast } from "sonner";
 import type { TutorSessionSummary } from "@/lib/api";
 
 export interface TutorArtifact {
@@ -55,129 +73,256 @@ export function TutorArtifacts({
   recentSessions,
   onResumeSession,
 }: TutorArtifactsProps) {
+  const queryClient = useQueryClient();
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [savingSession, setSavingSession] = useState<string | null>(null);
+
+  const handleDelete = async (sid: string) => {
+    try {
+      await api.tutor.deleteSession(sid);
+      toast.success("Session deleted");
+      queryClient.invalidateQueries({ queryKey: ["tutor-sessions"] });
+      setDeleteConfirm(null);
+    } catch (err) {
+      toast.error(`Delete failed: ${err instanceof Error ? err.message : "Unknown"}`);
+    }
+  };
+
+  const handleSaveToObsidian = async (session: TutorSessionSummary) => {
+    setSavingSession(session.session_id);
+    try {
+      const full = await api.tutor.getSession(session.session_id);
+      if (!full.turns || full.turns.length === 0) {
+        toast.error("No turns to save");
+        return;
+      }
+
+      const lines: string[] = [
+        `# Tutor: ${session.topic || session.mode}`,
+        `**Date:** ${new Date(session.started_at).toLocaleDateString()}`,
+        `**Mode:** ${session.mode} | **Turns:** ${session.turn_count}`,
+        "",
+        "---",
+        "",
+      ];
+
+      for (const turn of full.turns) {
+        lines.push(`## Q${turn.turn_number}`);
+        lines.push(turn.question);
+        lines.push("");
+        if (turn.answer) {
+          lines.push(`**Answer:**`);
+          lines.push(turn.answer);
+          lines.push("");
+        }
+      }
+
+      const filename = `Tutor - ${(session.topic || session.mode).replace(/[^a-zA-Z0-9 ]/g, "").trim()}`;
+      const path = `Study Sessions/${filename}.md`;
+
+      await api.obsidian.append(path, lines.join("\n"));
+      toast.success(`Saved to Obsidian: ${path}`);
+    } catch (err) {
+      toast.error(`Save failed: ${err instanceof Error ? err.message : "Unknown"}`);
+    } finally {
+      setSavingSession(null);
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full gap-3 p-3">
-      <div className="font-arcade text-xs text-primary tracking-wider">
-        ARTIFACTS
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header */}
+      <div className={`shrink-0 ${PANEL_PADDING} pb-2 border-b-2 border-secondary/30`}>
+        <div className={TEXT_PANEL_TITLE}>ARTIFACTS</div>
       </div>
 
-      {/* Session info */}
-      {sessionId ? (
-        <div className="space-y-1 pb-2 border-b border-muted-foreground/20">
-          <div className="flex items-center gap-1">
-            <Badge variant="outline" className="text-[10px] rounded-none">
-              {mode}
-            </Badge>
-            <Badge variant="outline" className="text-[10px] rounded-none text-primary">
-              FIRST PASS
-            </Badge>
-          </div>
-          {topic && (
-            <div className="text-xs font-terminal text-foreground truncate">
-              {topic}
+      <ScrollArea className="flex-1 min-h-0">
+        <div className={`${PANEL_PADDING} space-y-3`}>
+          {/* Session info */}
+          {sessionId ? (
+            <div className="space-y-2 pb-3 border-b border-muted-foreground/20">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Badge variant="outline" className={`${TEXT_BADGE} h-5 px-1.5`}>
+                  {mode}
+                </Badge>
+                <Badge variant="outline" className={`${TEXT_BADGE} h-5 px-1.5 text-primary`}>
+                  FIRST PASS
+                </Badge>
+              </div>
+              {topic && (
+                <div className={`${TEXT_BODY} text-sm`}>{topic}</div>
+              )}
+              <div className={`flex items-center gap-3 ${TEXT_MUTED}`}>
+                <span className="flex items-center gap-1">
+                  <MessageSquare className={ICON_SM} />
+                  {turnCount} turns
+                </span>
+                {startedAt && (
+                  <span className="flex items-center gap-1">
+                    <Clock className={ICON_SM} />
+                    {new Date(startedAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className={`${TEXT_BODY} text-muted-foreground/50 py-3 text-center`}>
+              No active session
             </div>
           )}
-          <div className="flex items-center gap-3 text-[10px] font-terminal text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <MessageSquare className="w-3 h-3" />
-              {turnCount} turns
-            </span>
-            {startedAt && (
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {new Date(startedAt).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </span>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="text-xs font-terminal text-muted-foreground/50 py-4 text-center">
-          No active session
-        </div>
-      )}
 
-      {/* Artifacts list */}
-      {artifacts.length > 0 ? (
-        <ScrollArea className="flex-1">
-          <div className="space-y-2">
-            {artifacts.map((a, i) => {
-              const Icon = ARTIFACT_ICONS[a.type];
-              const color = ARTIFACT_COLORS[a.type];
-              return (
-                <div
-                  key={i}
-                  className="border-2 border-muted-foreground/20 p-2 hover:border-primary/30 transition-colors"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Icon className={`w-3.5 h-3.5 ${color}`} />
-                    <span className="text-[10px] font-terminal text-foreground truncate flex-1">
-                      {a.title || `${a.type} #${i + 1}`}
-                    </span>
-                  </div>
-                  {a.content && (
-                    <div className="text-[10px] font-terminal text-muted-foreground mt-1 line-clamp-2">
-                      {a.content.slice(0, 100)}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </ScrollArea>
-      ) : sessionId ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-1">
-            <BookOpen className="w-6 h-6 text-muted-foreground/30 mx-auto" />
-            <div className="text-[10px] font-terminal text-muted-foreground/50">
-              No artifacts yet
-            </div>
-            <div className="text-[10px] font-terminal text-muted-foreground/30">
-              Use /note, /card, or /map
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {/* Recent sessions */}
-      {recentSessions.length > 0 && (
-        <div className="space-y-1 pt-2 border-t border-muted-foreground/20">
-          <div className="text-[10px] font-terminal text-muted-foreground uppercase tracking-wider">
-            Recent Sessions
-          </div>
-          <div className="space-y-1">
-            {recentSessions.slice(0, 5).map((s) => (
-              <button
-                key={s.session_id}
-                onClick={() => onResumeSession(s.session_id)}
-                className="w-full text-left px-2 py-1.5 border-2 border-transparent hover:border-muted-foreground/30 transition-colors"
-              >
-                <div className="flex items-center gap-1.5">
-                  <Badge
-                    variant="outline"
-                    className={`text-[10px] rounded-none ${
-                      s.status === "active"
-                        ? "text-green-400 border-green-400/50"
-                        : "text-muted-foreground"
-                    }`}
+          {/* Artifacts list */}
+          {artifacts.length > 0 && (
+            <div className="space-y-2">
+              <div className={TEXT_SECTION_LABEL}>Artifacts</div>
+              {artifacts.map((a, i) => {
+                const Icon = ARTIFACT_ICONS[a.type];
+                const color = ARTIFACT_COLORS[a.type];
+                return (
+                  <div
+                    key={i}
+                    className="border-2 border-muted-foreground/20 p-2.5 hover:border-primary/30 transition-colors"
                   >
-                    {s.status === "active" ? "LIVE" : "DONE"}
-                  </Badge>
-                  <span className="text-[10px] font-terminal text-foreground truncate flex-1">
-                    {s.topic || s.mode}
-                  </span>
+                    <div className="flex items-center gap-1.5">
+                      <Icon className={`${ICON_MD} ${color}`} />
+                      <span className={`${TEXT_BODY} text-sm truncate flex-1`}>
+                        {a.title || `${a.type} #${i + 1}`}
+                      </span>
+                    </div>
+                    {a.content && (
+                      <div className={`${TEXT_MUTED} mt-1 line-clamp-2`}>
+                        {a.content.slice(0, 100)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {sessionId && artifacts.length === 0 && (
+            <div className="text-center space-y-1 py-4">
+              <BookOpen className={`${ICON_LG} text-muted-foreground/30 mx-auto`} />
+              <div className={`${TEXT_MUTED} text-muted-foreground/50`}>
+                No artifacts yet
+              </div>
+              <div className={`${TEXT_MUTED} text-muted-foreground/30`}>
+                Use /note, /card, or /map
+              </div>
+            </div>
+          )}
+
+          {/* Recent sessions */}
+          {recentSessions.length > 0 && (
+            <div className="space-y-2 pt-2 border-t border-muted-foreground/20">
+              <div className={TEXT_SECTION_LABEL}>Recent Sessions</div>
+              {recentSessions.slice(0, 8).map((s) => (
+                <div
+                  key={s.session_id}
+                  className="border-2 border-muted-foreground/10 hover:border-muted-foreground/30 transition-colors"
+                >
+                  {/* Clickable session info */}
+                  <button
+                    onClick={() => onResumeSession(s.session_id)}
+                    className="w-full text-left px-3 py-2.5"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className={`${TEXT_BADGE} h-5 px-1.5 shrink-0 ${
+                          s.status === "active"
+                            ? "text-green-400 border-green-400/50"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        {s.status === "active" ? "LIVE" : "DONE"}
+                      </Badge>
+                      <span className={`font-terminal text-sm truncate flex-1`}>
+                        {s.topic || s.mode}
+                      </span>
+                    </div>
+                    <div className={`flex items-center gap-2 mt-1.5 ${TEXT_MUTED}`}>
+                      <span className="flex items-center gap-1">
+                        <MessageSquare className={ICON_SM} />
+                        {s.turn_count}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className={ICON_SM} />
+                        {new Date(s.started_at).toLocaleDateString()}
+                      </span>
+                      <Badge variant="outline" className={`${TEXT_BADGE} h-4 px-1 ml-auto`}>
+                        {s.mode}
+                      </Badge>
+                    </div>
+                  </button>
+
+                  {/* Action buttons */}
+                  <div className="flex items-center border-t border-muted-foreground/10 px-2 py-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 rounded-none text-muted-foreground hover:text-primary font-terminal text-[10px]"
+                      disabled={savingSession === s.session_id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSaveToObsidian(s);
+                      }}
+                    >
+                      <FolderOpen className={`${ICON_SM} mr-1`} />
+                      {savingSession === s.session_id ? "SAVING..." : "SAVE"}
+                    </Button>
+
+                    <div className="ml-auto">
+                      {deleteConfirm === s.session_id ? (
+                        <div className="flex items-center gap-0.5">
+                          <span className="font-terminal text-[10px] text-red-400 mr-1">Delete?</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 rounded-none text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(s.session_id);
+                            }}
+                          >
+                            <Check className={ICON_SM} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 rounded-none text-muted-foreground hover:text-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirm(null);
+                            }}
+                          >
+                            <X className={ICON_SM} />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 rounded-none text-muted-foreground hover:text-red-400"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteConfirm(s.session_id);
+                          }}
+                        >
+                          <Trash2 className={ICON_SM} />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="text-[10px] font-terminal text-muted-foreground/50 mt-0.5">
-                  {s.turn_count} turns ·{" "}
-                  {new Date(s.started_at).toLocaleDateString()}
-                </div>
-              </button>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </ScrollArea>
     </div>
   );
 }

@@ -23,10 +23,10 @@ export function VaultEditor({ workspace }: VaultEditorProps) {
 
   if (!workspace.currentFile) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground font-terminal text-xs gap-2">
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground font-terminal text-sm gap-2">
         <FileText className="w-8 h-8 opacity-30" />
         <p>Select a file from the vault sidebar</p>
-        <p className="text-[10px]">or create a new note</p>
+        <p className="text-xs">or create a new note</p>
       </div>
     );
   }
@@ -34,12 +34,12 @@ export function VaultEditor({ workspace }: VaultEditorProps) {
   return (
     <div className={cn(
       "flex flex-col",
-      isFullscreen ? "fixed inset-0 z-[100010] bg-black" : "h-full"
+      isFullscreen ? "fixed inset-0 z-50 bg-black" : "h-full"
     )}>
       {/* File toolbar */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-secondary/30 bg-black/40">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="font-terminal text-xs text-primary truncate">
+          <span className="font-terminal text-sm text-primary truncate">
             {workspace.currentFile.split("/").pop()}
             {workspace.hasChanges && <span className="text-yellow-500 ml-1">*</span>}
           </span>
@@ -62,7 +62,7 @@ export function VaultEditor({ workspace }: VaultEditorProps) {
           <Button
             size="sm"
             variant="ghost"
-            className="h-5 px-2 text-[10px] font-terminal"
+            className="h-5 px-2 text-xs font-terminal"
             onClick={() => workspace.setPreviewMode(!workspace.previewMode)}
           >
             {workspace.previewMode ? "Edit" : "Preview"}
@@ -72,7 +72,7 @@ export function VaultEditor({ workspace }: VaultEditorProps) {
             variant="ghost"
             onClick={workspace.saveFile}
             disabled={!workspace.hasChanges || workspace.isSaving}
-            className="h-5 px-2 text-[10px] font-terminal"
+            className="h-5 px-2 text-xs font-terminal"
           >
             <Save className="w-3 h-3 mr-1" />
             {workspace.isSaving ? "Saving..." : "Save"}
@@ -80,7 +80,7 @@ export function VaultEditor({ workspace }: VaultEditorProps) {
           <Button
             size="sm"
             variant="ghost"
-            className="h-5 px-1.5 text-[10px] font-terminal"
+            className="h-5 px-1.5 text-xs font-terminal"
             onClick={() => setIsFullscreen(!isFullscreen)}
             title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
           >

@@ -244,6 +244,7 @@ These scripts populate the database:
 - Powers the "Tutor" tab in the dashboard.
 - Uses RAG to answer queries grounded in `rag_docs`.
 - Respects Source-Lock (only answers from approved docs).
+- LLM backend can be **Codex CLI (ChatGPT login; no API key)** or API-backed models (OpenRouter/OpenAI) depending on Tutor settings.
 
 **Resume Generator (`generate_resume.py`):**
 - Creates `brain/session_resume.md`.
@@ -272,7 +273,7 @@ Full map of the ~70 API endpoints defined in `routes.py`:
 |  | POST | `/api/syllabus/import` | Import course schedules. |
 | **Scholar** | POST | `/api/scholar/run` | Trigger Scholar orchestrator. |
 |  | GET | `/api/scholar/status` | Polling run status/logs. |
-| **Tutor** | POST | `/api/tutor/session/turn` | Chat turn with AI Tutor. |
+| **Tutor** | POST | `/api/tutor/session/<session_id>/turn` | Chat turn (SSE) with AI Tutor (Codex CLI by default; OpenRouter/OpenAI optional). |
 | **Cards** | POST | `/api/cards/sync` | Push drafts to Anki. |
 | **Sync** | POST | `/api/sync/scraper` | Trigger Blackboard scraper. |
 

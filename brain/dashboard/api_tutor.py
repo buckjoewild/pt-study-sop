@@ -7,19 +7,27 @@ Endpoints:
   POST   /api/tutor/session/<id>/turn     — Send message, SSE stream response
   POST   /api/tutor/session/<id>/end      — End session, create Brain record
   POST   /api/tutor/session/<id>/artifact — Create note/card/map mid-session
+  POST   /api/tutor/session/<id>/advance-block — Advance to next block in chain
   GET    /api/tutor/sessions              — List sessions
-  GET    /api/tutor/content-sources       — Get available courses + folders
+  GET    /api/tutor/content-sources       — Get available courses + materials
+  GET    /api/tutor/chains/templates      — Get template chains with resolved blocks
   POST   /api/tutor/chain                 — Create/extend session chain
   GET    /api/tutor/chain/<id>            — Get chain with linked sessions
   POST   /api/tutor/embed                 — Trigger embedding for rag_docs
+  POST   /api/tutor/materials/upload      — Upload study material
+  GET    /api/tutor/materials             — List materials library
+  PUT    /api/tutor/materials/<id>        — Update material metadata
+  DELETE /api/tutor/materials/<id>        — Delete material + file + embeddings
 """
 
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 from flask import Blueprint, Response, jsonify, request
@@ -27,6 +35,8 @@ from flask import Blueprint, Response, jsonify, request
 from db_setup import DB_PATH, get_connection
 
 tutor_bp = Blueprint("tutor", __name__, url_prefix="/api/tutor")
+
+UPLOADS_DIR = Path(__file__).parent.parent / "data" / "uploads"
 
 
 # ---------------------------------------------------------------------------
@@ -65,6 +75,102 @@ def _get_session_turns(conn, session_id: str, limit: int = 50) -> list[dict]:
     return [dict(r) for r in cur.fetchall()]
 
 
+def _resolve_chain_blocks(conn, chain_id: int) -> list[dict]:
+    """Resolve a method_chain's block_ids JSON into block detail dicts."""
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    cur.execute("SELECT block_ids FROM method_chains WHERE id = ?", (chain_id,))
+    row = cur.fetchone()
+    if not row or not row["block_ids"]:
+        return []
+
+    try:
+        block_ids = json.loads(row["block_ids"])
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+    if not block_ids:
+        return []
+
+    placeholders = ",".join("?" * len(block_ids))
+    cur.execute(
+        f"""SELECT id, name, category, description, default_duration_min, evidence
+            FROM method_blocks WHERE id IN ({placeholders})""",
+        block_ids,
+    )
+    block_map = {r["id"]: dict(r) for r in cur.fetchall()}
+
+    # Preserve chain order
+    return [block_map[bid] for bid in block_ids if bid in block_map]
+
+
+def _build_chain_info(conn, chain_id: int, current_index: int) -> tuple[Optional[dict], Optional[dict]]:
+    """
+    Build block_info and chain_info dicts for prompt builder.
+    Returns (block_info, chain_info) — either may be None.
+    """
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+
+    cur.execute("SELECT id, name, description FROM method_chains WHERE id = ?", (chain_id,))
+    chain_row = cur.fetchone()
+    if not chain_row:
+        return None, None
+
+    blocks = _resolve_chain_blocks(conn, chain_id)
+    if not blocks:
+        return None, None
+
+    # Current block info
+    block_info = None
+    if 0 <= current_index < len(blocks):
+        b = blocks[current_index]
+        block_info = {
+            "name": b["name"],
+            "description": b.get("description", ""),
+            "category": b.get("category", ""),
+            "evidence": b.get("evidence", ""),
+            "duration": b.get("default_duration_min", 5),
+        }
+
+    # Chain overview
+    chain_info = {
+        "name": chain_row["name"],
+        "blocks": [b["name"] for b in blocks],
+        "current_index": current_index,
+        "total": len(blocks),
+    }
+
+    return block_info, chain_info
+
+
+def _format_dual_context(dual: dict) -> tuple[str, str]:
+    """
+    Format dual context dicts into (material_context_text, instruction_context_text).
+    """
+    material_parts = []
+    for d in (dual.get("materials") or []):
+        source = (d.metadata or {}).get("source", "Unknown")
+        material_parts.append(f"[Source: {source}]\n{d.page_content}")
+    material_text = "\n\n---\n\n".join(material_parts) if material_parts else ""
+
+    instruction_parts = []
+    for d in (dual.get("instructions") or []):
+        source = (d.metadata or {}).get("source", "Unknown")
+        instruction_parts.append(f"[SOP: {source}]\n{d.page_content}")
+    instruction_text = "\n\n---\n\n".join(instruction_parts) if instruction_parts else ""
+
+    return material_text, instruction_text
+
+
+def _sanitize_filename(name: str) -> str:
+    """Make a filename safe for disk storage."""
+    import re
+    safe = re.sub(r'[^\w\s\-.]', '', name)
+    safe = re.sub(r'\s+', '_', safe)
+    return safe[:200]
+
+
 # ---------------------------------------------------------------------------
 # POST /api/tutor/session — Create a new tutor session
 # ---------------------------------------------------------------------------
@@ -78,6 +184,7 @@ def create_session():
     mode = data.get("mode", "Core")
     topic = data.get("topic", "")
     content_filter = data.get("content_filter")
+    method_chain_id = data.get("method_chain_id")
 
     session_id = _gen_session_id()
     now = datetime.now().isoformat()
@@ -86,8 +193,9 @@ def create_session():
     cur = conn.cursor()
     cur.execute(
         """INSERT INTO tutor_sessions
-           (session_id, course_id, phase, mode, topic, content_filter_json, status, turn_count, started_at)
-           VALUES (?, ?, ?, ?, ?, ?, 'active', 0, ?)""",
+           (session_id, course_id, phase, mode, topic, content_filter_json,
+            status, turn_count, method_chain_id, current_block_index, started_at)
+           VALUES (?, ?, ?, ?, ?, ?, 'active', 0, ?, 0, ?)""",
         (
             session_id,
             course_id,
@@ -95,9 +203,25 @@ def create_session():
             mode,
             topic,
             json.dumps(content_filter) if content_filter else None,
+            method_chain_id,
             now,
         ),
     )
+
+    # If a method chain is selected, create first block transition
+    first_block_name = None
+    if method_chain_id:
+        blocks = _resolve_chain_blocks(conn, method_chain_id)
+        if blocks:
+            first_block = blocks[0]
+            first_block_name = first_block["name"]
+            cur.execute(
+                """INSERT INTO tutor_block_transitions
+                   (tutor_session_id, block_id, block_index, started_at)
+                   VALUES (?, ?, 0, ?)""",
+                (session_id, first_block["id"], now),
+            )
+
     conn.commit()
     conn.close()
 
@@ -107,6 +231,9 @@ def create_session():
         "mode": mode,
         "topic": topic,
         "status": "active",
+        "method_chain_id": method_chain_id,
+        "current_block_index": 0,
+        "current_block_name": first_block_name,
         "started_at": now,
     }), 201
 
@@ -124,7 +251,6 @@ def get_session(session_id: str):
         return jsonify({"error": "Session not found"}), 404
 
     turns = _get_session_turns(conn, session_id)
-    conn.close()
 
     # Parse JSON fields
     for turn in turns:
@@ -141,6 +267,13 @@ def get_session(session_id: str):
             session["content_filter"] = json.loads(session["content_filter_json"])
         except (json.JSONDecodeError, TypeError):
             session["content_filter"] = None
+
+    # Include chain block info if chain is active
+    if session.get("method_chain_id"):
+        blocks = _resolve_chain_blocks(conn, session["method_chain_id"])
+        session["chain_blocks"] = blocks
+
+    conn.close()
 
     return jsonify(session)
 
@@ -168,6 +301,14 @@ def send_turn(session_id: str):
 
     # Load previous turns for chat history
     turns = _get_session_turns(conn, session_id, limit=20)
+
+    # Build chain/block context if method chain is active
+    block_info = None
+    chain_info = None
+    if session.get("method_chain_id"):
+        current_idx = session.get("current_block_index", 0) or 0
+        block_info, chain_info = _build_chain_info(conn, session["method_chain_id"], current_idx)
+
     conn.close()
 
     # Detect artifact commands
@@ -182,40 +323,98 @@ def send_turn(session_id: str):
         except (json.JSONDecodeError, TypeError):
             pass
 
+    # Extract material_ids from content filter (new dual-library approach)
+    material_ids = None
+    if content_filter and content_filter.get("material_ids"):
+        material_ids = content_filter["material_ids"]
+
+    # Legacy support: folder_paths
     folder_paths = None
     if content_filter and content_filter.get("folders"):
         folder_paths = content_filter["folders"]
 
-    # Build retriever + chain
-    from tutor_rag import get_retriever
-    from tutor_chains import build_first_pass_chain
-    from tutor_streaming import stream_tutor_response, format_sse_error, extract_citations
+    # Read model override from content_filter
+    model_override = None
+    if content_filter and content_filter.get("model"):
+        model_override = content_filter["model"]
 
-    retriever = get_retriever(
-        course_id=session.get("course_id"),
-        folder_paths=folder_paths,
-    )
+    # Resolve provider selection
+    model_str = (str(model_override).strip() if model_override else "")
+    model_lower = model_str.lower()
+    provider = os.environ.get("TUTOR_PROVIDER", "").strip().lower() or None
+    codex_model: Optional[str] = None
 
-    chain = build_first_pass_chain(
-        retriever=retriever,
-        mode=session.get("mode", "Core"),
-        course_id=session.get("course_id"),
-        topic=session.get("topic"),
-    )
+    if provider is None:
+        if model_lower in ("codex", "codex-cli", "chatgpt"):
+            provider = "codex"
+        elif "/" in model_str:
+            provider = "openrouter"
+        elif model_str:
+            provider = "codex"
+            codex_model = model_str
+        else:
+            provider = "codex"
 
-    # Build chat history for LangChain
-    from langchain_core.messages import HumanMessage, AIMessage
-    chat_history = []
-    for turn in turns:
-        if turn.get("question"):
-            chat_history.append(HumanMessage(content=turn["question"]))
-        if turn.get("answer"):
-            chat_history.append(AIMessage(content=turn["answer"]))
+    # Guard: if UI selects an OpenRouter-style model (contains "/") but OpenRouter
+    # isn't configured, fail fast with a readable SSE error instead of attempting
+    # OpenAI with an incompatible model id (e.g. "google/gemini-*").
+    if provider == "openrouter" and not (os.environ.get("OPENROUTER_API_KEY") or "").strip():
+        def _unconfigured():
+            from tutor_streaming import format_sse_error
+            yield format_sse_error(
+                "OpenRouter is not configured (OPENROUTER_API_KEY missing). "
+                "Select Codex or set OPENROUTER_API_KEY in brain/.env, then restart the dashboard."
+            )
 
-    input_dict = {
-        "question": question,
-        "chat_history": chat_history,
-    }
+        return Response(
+            _unconfigured(),
+            mimetype="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache, no-store",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive",
+            },
+        )
+
+    # Build LangChain chain only for API-backed providers
+    chain = None
+    input_dict = None
+    if provider != "codex":
+        from tutor_rag import get_retriever
+        from tutor_chains import build_tutor_chain
+
+        retriever = get_retriever(
+            course_id=session.get("course_id"),
+            folder_paths=folder_paths,
+            material_ids=material_ids,
+        )
+
+        chain = build_tutor_chain(
+            retriever=retriever,
+            mode=session.get("mode", "Core"),
+            course_id=session.get("course_id"),
+            topic=session.get("topic"),
+            model=model_override,
+            chain_id=session.get("method_chain_id"),
+            current_block_index=session.get("current_block_index", 0) or 0,
+            block_info=block_info,
+            chain_info=chain_info,
+        )
+
+        # Build chat history for LangChain
+        from langchain_core.messages import HumanMessage, AIMessage
+
+        chat_history = []
+        for turn in turns:
+            if turn.get("question"):
+                chat_history.append(HumanMessage(content=turn["question"]))
+            if turn.get("answer"):
+                chat_history.append(AIMessage(content=turn["answer"]))
+
+        input_dict = {
+            "question": question,
+            "chat_history": chat_history,
+        }
 
     turn_number = session["turn_count"] + 1
 
@@ -223,26 +422,121 @@ def send_turn(session_id: str):
         full_response = ""
         citations = []
 
-        try:
-            for chunk_str in stream_tutor_response(chain, input_dict, session_id):
-                full_response_part = chunk_str
-                yield chunk_str
+        from tutor_streaming import (
+            format_sse_chunk,
+            format_sse_done,
+            format_sse_error,
+            extract_citations,
+            stream_tutor_response,
+        )
 
-                # Accumulate response text from SSE chunks
-                if chunk_str.startswith("data: "):
-                    data_part = chunk_str.split("data: ", 1)[1].split("\n")[0]
-                    if data_part != "[DONE]":
-                        try:
-                            parsed = json.loads(data_part)
-                            if parsed.get("type") == "token":
-                                full_response += parsed.get("content", "")
-                            elif parsed.get("type") == "done":
-                                citations = parsed.get("citations", [])
-                        except (json.JSONDecodeError, KeyError):
-                            pass
-        except Exception as e:
-            yield format_sse_error(str(e))
-            full_response = f"[Error: {e}]"
+        if provider == "codex":
+            try:
+                from llm_provider import call_codex_json
+                from tutor_rag import keyword_search_dual
+                from tutor_prompt_builder import build_prompt_with_contexts
+                from tutor_chains import FIRST_PASS_ADDENDUM
+
+                # Dual search: materials + SOP instructions
+                dual = keyword_search_dual(
+                    question,
+                    course_id=session.get("course_id"),
+                    material_ids=material_ids,
+                    k_materials=6,
+                    k_instructions=4,
+                )
+                material_text, instruction_text = _format_dual_context(dual)
+
+                # Graceful mode when no materials
+                if not material_text:
+                    material_text = (
+                        "No course-specific materials were retrieved for this topic. "
+                        "Teach from your medical/PT training knowledge. "
+                        "Mark such content as [From training knowledge — verify with your textbooks] "
+                        "so the student knows to cross-reference."
+                    )
+
+                system_prompt = build_prompt_with_contexts(
+                    mode=session.get("mode", "Core"),
+                    current_block=block_info,
+                    chain_info=chain_info,
+                    course_id=session.get("course_id"),
+                    topic=session.get("topic"),
+                    instruction_context=instruction_text,
+                    material_context=None,  # material context goes in user prompt
+                )
+
+                if not block_info:
+                    system_prompt += "\n\n" + FIRST_PASS_ADDENDUM
+
+                system_prompt += (
+                    "\n\n## Tooling\n"
+                    "Do not run shell commands or attempt to read local files. "
+                    "Answer as a tutor only."
+                )
+
+                history_lines: list[str] = []
+                for t in turns:
+                    if t.get("question"):
+                        history_lines.append(f"User: {t['question']}")
+                    if t.get("answer"):
+                        history_lines.append(f"Assistant: {t['answer']}")
+                history_text = "\n".join(history_lines).strip() or "(no prior turns)"
+
+                user_prompt = f"""## Retrieved Context
+{material_text}
+
+## Chat History
+{history_text}
+
+## Current Question
+{question}
+
+Remember: cite source documents using [Source: filename] when you use them."""
+
+                result = call_codex_json(
+                    system_prompt,
+                    user_prompt,
+                    model=codex_model,
+                    timeout=120,
+                    isolated=True,
+                )
+                if not result.get("success"):
+                    raise RuntimeError(result.get("error") or "Codex failed")
+
+                full_response = (result.get("content") or "").strip()
+                citations = extract_citations(full_response)
+
+                max_chars = 220
+                for i in range(0, len(full_response), max_chars):
+                    yield format_sse_chunk(full_response[i : i + max_chars])
+
+                yield format_sse_done(citations=citations)
+
+            except Exception as e:
+                yield format_sse_error(str(e))
+                full_response = f"[Error: {e}]"
+                citations = []
+        else:
+            try:
+                for chunk_str in stream_tutor_response(chain, input_dict, session_id):
+                    yield chunk_str
+
+                    if chunk_str.startswith("data: "):
+                        data_part = chunk_str.split("data: ", 1)[1].split("\n")[0]
+                        if data_part != "[DONE]":
+                            try:
+                                parsed = json.loads(data_part)
+                                if parsed.get("type") == "token":
+                                    full_response += parsed.get("content", "")
+                                elif parsed.get("type") == "done":
+                                    citations = parsed.get("citations", [])
+                            except (json.JSONDecodeError, KeyError):
+                                pass
+            except Exception as e:
+                yield format_sse_error(str(e))
+                full_response = f"[Error: {e}]"
+                citations = []
 
         # After streaming completes, log the turn
         try:
@@ -270,11 +564,18 @@ def send_turn(session_id: str):
                 ),
             )
 
-            # Update turn count
             cur.execute(
                 "UPDATE tutor_sessions SET turn_count = ? WHERE session_id = ?",
                 (turn_number, session_id),
             )
+
+            if session.get("method_chain_id"):
+                cur.execute(
+                    """UPDATE tutor_block_transitions
+                       SET turn_count = turn_count + 1
+                       WHERE tutor_session_id = ? AND ended_at IS NULL""",
+                    (session_id,),
+                )
 
             db_conn.commit()
             db_conn.close()
@@ -293,6 +594,124 @@ def send_turn(session_id: str):
 
 
 # ---------------------------------------------------------------------------
+# POST /api/tutor/session/<id>/advance-block — Advance to next block in chain
+# ---------------------------------------------------------------------------
+
+@tutor_bp.route("/session/<session_id>/advance-block", methods=["POST"])
+def advance_block(session_id: str):
+    conn = get_connection()
+    session = _get_tutor_session(conn, session_id)
+    if not session:
+        conn.close()
+        return jsonify({"error": "Session not found"}), 404
+
+    chain_id = session.get("method_chain_id")
+    if not chain_id:
+        conn.close()
+        return jsonify({"error": "Session has no method chain"}), 400
+
+    blocks = _resolve_chain_blocks(conn, chain_id)
+    current_idx = session.get("current_block_index", 0) or 0
+
+    if current_idx >= len(blocks) - 1:
+        conn.close()
+        return jsonify({
+            "block_index": current_idx,
+            "block_name": blocks[current_idx]["name"] if blocks else "",
+            "block_description": blocks[current_idx].get("description", "") if blocks else "",
+            "is_last": True,
+            "complete": True,
+        })
+
+    now = datetime.now().isoformat()
+    cur = conn.cursor()
+
+    cur.execute(
+        """UPDATE tutor_block_transitions
+           SET ended_at = ?
+           WHERE tutor_session_id = ? AND ended_at IS NULL""",
+        (now, session_id),
+    )
+
+    next_idx = current_idx + 1
+    next_block = blocks[next_idx]
+
+    cur.execute(
+        "UPDATE tutor_sessions SET current_block_index = ? WHERE session_id = ?",
+        (next_idx, session_id),
+    )
+
+    cur.execute(
+        """INSERT INTO tutor_block_transitions
+           (tutor_session_id, block_id, block_index, started_at)
+           VALUES (?, ?, ?, ?)""",
+        (session_id, next_block["id"], next_idx, now),
+    )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "block_index": next_idx,
+        "block_name": next_block["name"],
+        "block_description": next_block.get("description", ""),
+        "is_last": next_idx >= len(blocks) - 1,
+    })
+
+
+# ---------------------------------------------------------------------------
+# GET /api/tutor/chains/templates — Template chains with resolved blocks
+# ---------------------------------------------------------------------------
+
+@tutor_bp.route("/chains/templates", methods=["GET"])
+def get_template_chains():
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+
+    cur.execute(
+        """SELECT id, name, description, block_ids, context_tags
+           FROM method_chains
+           WHERE is_template = 1
+           ORDER BY name"""
+    )
+    chains = [dict(r) for r in cur.fetchall()]
+
+    result = []
+    for chain in chains:
+        blocks = _resolve_chain_blocks(conn, chain["id"])
+        context_tags = ""
+        if chain.get("context_tags"):
+            try:
+                tags_obj = json.loads(chain["context_tags"])
+                if isinstance(tags_obj, dict):
+                    context_tags = ", ".join(f"{k}:{v}" for k, v in tags_obj.items())
+                elif isinstance(tags_obj, str):
+                    context_tags = tags_obj
+            except (json.JSONDecodeError, TypeError):
+                context_tags = chain["context_tags"] or ""
+
+        result.append({
+            "id": chain["id"],
+            "name": chain["name"],
+            "description": chain.get("description", ""),
+            "blocks": [
+                {
+                    "id": b["id"],
+                    "name": b["name"],
+                    "category": b.get("category", ""),
+                    "duration": b.get("default_duration_min", 5),
+                }
+                for b in blocks
+            ],
+            "context_tags": context_tags,
+        })
+
+    conn.close()
+    return jsonify(result)
+
+
+# ---------------------------------------------------------------------------
 # POST /api/tutor/session/<id>/end — End session
 # ---------------------------------------------------------------------------
 
@@ -307,7 +726,13 @@ def end_session(session_id: str):
     now = datetime.now()
     cur = conn.cursor()
 
-    # Create a Brain session record
+    cur.execute(
+        """UPDATE tutor_block_transitions
+           SET ended_at = ?
+           WHERE tutor_session_id = ? AND ended_at IS NULL""",
+        (now.isoformat(), session_id),
+    )
+
     brain_session_id = None
     try:
         cur.execute(
@@ -321,7 +746,7 @@ def end_session(session_id: str):
                 session.get("topic") or "Tutor Session",
                 f"Tutor-{session.get('mode', 'Core')}",
                 now.isoformat(),
-                session.get("turn_count", 0) * 2,  # rough estimate
+                session.get("turn_count", 0) * 2,
                 session.get("turn_count", 0) * 2,
             ),
         )
@@ -329,7 +754,6 @@ def end_session(session_id: str):
     except Exception:
         pass
 
-    # Update tutor_sessions
     cur.execute(
         """UPDATE tutor_sessions
            SET status = 'completed', ended_at = ?, brain_session_id = ?
@@ -349,13 +773,37 @@ def end_session(session_id: str):
 
 
 # ---------------------------------------------------------------------------
+# DELETE /api/tutor/session/<id> — Delete a tutor session and its turns
+# ---------------------------------------------------------------------------
+
+@tutor_bp.route("/session/<session_id>", methods=["DELETE"])
+def delete_session(session_id: str):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("SELECT id FROM tutor_sessions WHERE session_id = ?", (session_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"error": "Session not found"}), 404
+
+    cur.execute("DELETE FROM tutor_turns WHERE tutor_session_id = ?", (session_id,))
+    cur.execute("DELETE FROM tutor_block_transitions WHERE tutor_session_id = ?", (session_id,))
+    cur.execute("DELETE FROM tutor_sessions WHERE session_id = ?", (session_id,))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"deleted": True, "session_id": session_id})
+
+
+# ---------------------------------------------------------------------------
 # POST /api/tutor/session/<id>/artifact — Create artifact mid-session
 # ---------------------------------------------------------------------------
 
 @tutor_bp.route("/session/<session_id>/artifact", methods=["POST"])
 def create_artifact(session_id: str):
     data = request.get_json(silent=True) or {}
-    artifact_type = data.get("type")  # note, card, map
+    artifact_type = data.get("type")
     content = data.get("content", "")
     title = data.get("title", "")
 
@@ -394,7 +842,6 @@ def create_artifact(session_id: str):
         conn.commit()
 
     elif artifact_type == "note":
-        # Write to Obsidian via local REST API if available
         result["content"] = content
         result["title"] = title
         result["status"] = "created"
@@ -403,7 +850,6 @@ def create_artifact(session_id: str):
         result["mermaid"] = content
         result["status"] = "created"
 
-    # Track in session artifacts
     cur = conn.cursor()
     existing_artifacts = session.get("artifacts_json")
     artifacts = []
@@ -457,7 +903,8 @@ def list_sessions():
 
     cur.execute(
         f"""SELECT id, session_id, course_id, phase, mode, topic, status,
-                   turn_count, started_at, ended_at
+                   turn_count, method_chain_id, current_block_index,
+                   started_at, ended_at
             FROM tutor_sessions
             {where}
             ORDER BY started_at DESC
@@ -472,7 +919,7 @@ def list_sessions():
 
 
 # ---------------------------------------------------------------------------
-# GET /api/tutor/content-sources — Available courses + folders + doc counts
+# GET /api/tutor/content-sources — Available courses + materials summary
 # ---------------------------------------------------------------------------
 
 @tutor_bp.route("/content-sources", methods=["GET"])
@@ -481,53 +928,287 @@ def content_sources():
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
-    # Courses with rag_docs
+    # Academic courses only
     cur.execute(
         """SELECT c.id, c.name, c.code, COUNT(r.id) as doc_count
            FROM courses c
-           LEFT JOIN rag_docs r ON r.course_id = c.id AND COALESCE(r.enabled, 1) = 1
+           LEFT JOIN rag_docs r ON r.course_id = c.id AND COALESCE(r.enabled, 1) = 1 AND COALESCE(r.corpus, 'materials') = 'materials'
+           WHERE c.term IS NOT NULL
+              OR c.id IN (SELECT DISTINCT course_id FROM rag_docs WHERE course_id IS NOT NULL)
            GROUP BY c.id
            ORDER BY c.name"""
     )
     courses = [dict(r) for r in cur.fetchall()]
 
-    # Count system-level docs (course_id IS NULL) — SOP, methods, chains
+    # Total materials (not instructions)
     cur.execute(
         """SELECT COUNT(*) FROM rag_docs
-           WHERE course_id IS NULL AND COALESCE(enabled, 1) = 1"""
+           WHERE COALESCE(enabled, 1) = 1
+             AND COALESCE(corpus, 'materials') = 'materials'"""
     )
-    system_doc_count = cur.fetchone()[0]
+    total_materials = cur.fetchone()[0]
 
-    # Add a virtual "System / SOP" entry for null-course docs
-    if system_doc_count > 0:
-        courses.insert(0, {
-            "id": None,
-            "name": "System / SOP",
-            "code": "SOP",
-            "doc_count": system_doc_count,
-        })
-
-    # Distinct folder paths from rag_docs (include null course_id docs)
+    # Total instructions
     cur.execute(
-        """SELECT DISTINCT folder_path, course_id, COUNT(*) as doc_count
-           FROM rag_docs
-           WHERE COALESCE(enabled, 1) = 1 AND folder_path IS NOT NULL AND folder_path != ''
-           GROUP BY folder_path, course_id
-           ORDER BY folder_path"""
+        """SELECT COUNT(*) FROM rag_docs
+           WHERE COALESCE(enabled, 1) = 1
+             AND corpus = 'instructions'"""
     )
-    folders = [dict(r) for r in cur.fetchall()]
+    total_instructions = cur.fetchone()[0]
 
-    # Total docs
-    cur.execute("SELECT COUNT(*) FROM rag_docs WHERE COALESCE(enabled, 1) = 1")
-    total_docs = cur.fetchone()[0]
+    conn.close()
+
+    openrouter_enabled = bool((os.environ.get("OPENROUTER_API_KEY") or "").strip())
+
+    return jsonify({
+        "courses": courses,
+        "total_materials": total_materials,
+        "total_instructions": total_instructions,
+        "total_docs": total_materials + total_instructions,
+        "openrouter_enabled": openrouter_enabled,
+    })
+
+
+# ---------------------------------------------------------------------------
+# POST /api/tutor/materials/upload — Upload study material
+# ---------------------------------------------------------------------------
+
+@tutor_bp.route("/materials/upload", methods=["POST"])
+def upload_material():
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+
+    file = request.files["file"]
+    if not file.filename:
+        return jsonify({"error": "No filename"}), 400
+
+    from text_extractor import get_file_type, extract_text, SUPPORTED_EXTENSIONS
+
+    ext = Path(file.filename).suffix.lower()
+    if ext not in SUPPORTED_EXTENSIONS:
+        return jsonify({"error": f"Unsupported file type: {ext}. Supported: {', '.join(SUPPORTED_EXTENSIONS)}"}), 400
+
+    file_type = get_file_type(file.filename)
+    title = request.form.get("title", Path(file.filename).stem)
+    course_id = request.form.get("course_id", type=int)
+    tags = request.form.get("tags", "")
+
+    # Save to disk
+    os.makedirs(UPLOADS_DIR, exist_ok=True)
+    file_uuid = uuid.uuid4().hex[:12]
+    safe_name = _sanitize_filename(file.filename)
+    disk_name = f"{file_uuid}_{safe_name}"
+    disk_path = UPLOADS_DIR / disk_name
+    file.save(str(disk_path))
+
+    file_size = disk_path.stat().st_size
+
+    # Extract text
+    extraction = extract_text(str(disk_path))
+    content = extraction["content"]
+    extraction_error = extraction["error"]
+
+    # Insert into rag_docs
+    import hashlib
+    checksum = hashlib.sha256(content.encode("utf-8")).hexdigest() if content else ""
+
+    conn = get_connection()
+    cur = conn.cursor()
+    now = datetime.now().isoformat()
+
+    cur.execute(
+        """INSERT INTO rag_docs
+           (source_path, content, checksum, corpus, title, file_path, file_size,
+            file_type, doc_type, topic_tags, course_id, enabled,
+            extraction_error, created_at, updated_at)
+           VALUES (?, ?, ?, 'materials', ?, ?, ?, ?, 'upload', ?, ?, 1, ?, ?, ?)""",
+        (
+            str(disk_path),
+            content,
+            checksum,
+            title,
+            str(disk_path),
+            file_size,
+            file_type,
+            tags,
+            course_id,
+            extraction_error,
+            now,
+            now,
+        ),
+    )
+    material_id = cur.lastrowid
+    conn.commit()
+
+    # Attempt embedding (non-blocking — don't fail the upload if embedding fails)
+    embedded = False
+    if content and not extraction_error:
+        try:
+            from tutor_rag import embed_rag_docs
+            result = embed_rag_docs(corpus="materials")
+            embedded = result.get("embedded", 0) > 0
+        except Exception:
+            pass
 
     conn.close()
 
     return jsonify({
-        "courses": courses,
-        "folders": folders,
-        "total_docs": total_docs,
-    })
+        "id": material_id,
+        "title": title,
+        "file_type": file_type,
+        "file_size": file_size,
+        "course_id": course_id,
+        "extraction_error": extraction_error,
+        "embedded": embedded,
+        "char_count": len(content) if content else 0,
+    }), 201
+
+
+# ---------------------------------------------------------------------------
+# GET /api/tutor/materials — List materials library
+# ---------------------------------------------------------------------------
+
+@tutor_bp.route("/materials", methods=["GET"])
+def list_materials():
+    course_id = request.args.get("course_id", type=int)
+    file_type = request.args.get("file_type")
+    enabled = request.args.get("enabled", type=int)
+
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+
+    conditions = ["COALESCE(corpus, 'materials') = 'materials'"]
+    params: list = []
+
+    if course_id is not None:
+        conditions.append("course_id = ?")
+        params.append(course_id)
+    if file_type:
+        conditions.append("file_type = ?")
+        params.append(file_type)
+    if enabled is not None:
+        conditions.append("COALESCE(enabled, 1) = ?")
+        params.append(enabled)
+
+    where = " AND ".join(conditions)
+
+    cur.execute(
+        f"""SELECT id, title, file_type, file_size, course_id, topic_tags,
+                   COALESCE(enabled, 1) as enabled, extraction_error,
+                   created_at, updated_at
+            FROM rag_docs
+            WHERE {where}
+            ORDER BY created_at DESC""",
+        params,
+    )
+
+    materials = [dict(r) for r in cur.fetchall()]
+    conn.close()
+
+    return jsonify(materials)
+
+
+# ---------------------------------------------------------------------------
+# PUT /api/tutor/materials/<id> — Update material metadata
+# ---------------------------------------------------------------------------
+
+@tutor_bp.route("/materials/<int:material_id>", methods=["PUT"])
+def update_material(material_id: int):
+    data = request.get_json(silent=True) or {}
+
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+
+    cur.execute("SELECT id FROM rag_docs WHERE id = ? AND COALESCE(corpus, 'materials') = 'materials'", (material_id,))
+    if not cur.fetchone():
+        conn.close()
+        return jsonify({"error": "Material not found"}), 404
+
+    updates = []
+    params: list = []
+
+    for field in ("title", "course_id", "topic_tags"):
+        if field in data:
+            updates.append(f"{field} = ?")
+            params.append(data[field])
+
+    if "enabled" in data:
+        updates.append("enabled = ?")
+        params.append(1 if data["enabled"] else 0)
+
+    if not updates:
+        conn.close()
+        return jsonify({"error": "No fields to update"}), 400
+
+    updates.append("updated_at = ?")
+    params.append(datetime.now().isoformat())
+    params.append(material_id)
+
+    cur.execute(
+        f"UPDATE rag_docs SET {', '.join(updates)} WHERE id = ?",
+        params,
+    )
+    conn.commit()
+    conn.close()
+
+    return jsonify({"id": material_id, "updated": True})
+
+
+# ---------------------------------------------------------------------------
+# DELETE /api/tutor/materials/<id> — Delete material + file + ChromaDB chunks
+# ---------------------------------------------------------------------------
+
+@tutor_bp.route("/materials/<int:material_id>", methods=["DELETE"])
+def delete_material(material_id: int):
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+
+    cur.execute(
+        "SELECT id, file_path FROM rag_docs WHERE id = ? AND COALESCE(corpus, 'materials') = 'materials'",
+        (material_id,),
+    )
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"error": "Material not found"}), 404
+
+    file_path = row["file_path"]
+
+    # Get chroma_ids for deletion
+    cur.execute("SELECT chroma_id FROM rag_embeddings WHERE rag_doc_id = ?", (material_id,))
+    chroma_ids = [r["chroma_id"] for r in cur.fetchall() if r["chroma_id"]]
+
+    # Delete from ChromaDB
+    if chroma_ids:
+        try:
+            from tutor_rag import init_vectorstore, COLLECTION_MATERIALS
+            vs = init_vectorstore(COLLECTION_MATERIALS)
+            vs._collection.delete(ids=chroma_ids)
+        except Exception:
+            pass
+
+    # Delete embeddings from SQLite
+    cur.execute("DELETE FROM rag_embeddings WHERE rag_doc_id = ?", (material_id,))
+
+    # Delete rag_docs row
+    cur.execute("DELETE FROM rag_docs WHERE id = ?", (material_id,))
+
+    conn.commit()
+    conn.close()
+
+    # Delete file from disk
+    if file_path:
+        try:
+            p = Path(file_path)
+            if p.exists():
+                p.unlink()
+        except Exception:
+            pass
+
+    return jsonify({"deleted": True}), 200
 
 
 # ---------------------------------------------------------------------------
@@ -591,7 +1272,6 @@ def get_chain(chain_id: int):
         except (json.JSONDecodeError, TypeError):
             pass
 
-    # Fetch linked sessions
     sessions = []
     for sid in session_ids:
         s = _get_tutor_session(conn, sid)
@@ -613,47 +1293,11 @@ def trigger_embed():
     data = request.get_json(silent=True) or {}
     course_id = data.get("course_id")
     folder_path = data.get("folder_path")
+    corpus = data.get("corpus")
 
     try:
         from tutor_rag import embed_rag_docs
-        result = embed_rag_docs(course_id=course_id, folder_path=folder_path)
+        result = embed_rag_docs(course_id=course_id, folder_path=folder_path, corpus=corpus)
         return jsonify(result)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-# ---------------------------------------------------------------------------
-# POST /api/tutor/sync-vault — Sync an Obsidian vault folder into RAG
-# ---------------------------------------------------------------------------
-
-@tutor_bp.route("/sync-vault", methods=["POST"])
-def sync_vault():
-    data = request.get_json(silent=True) or {}
-    vault_path = data.get("vault_path", "").strip()
-    course_id = data.get("course_id")
-
-    if not vault_path:
-        return jsonify({"error": "vault_path is required"}), 400
-
-    try:
-        from rag_notes import sync_folder_to_rag
-        sync_result = sync_folder_to_rag(vault_path, corpus="study")
-
-        # Run embeddings on newly synced docs
-        embedded = 0
-        try:
-            from tutor_rag import embed_rag_docs
-            embed_result = embed_rag_docs()
-            embedded = embed_result.get("embedded", 0)
-        except Exception:
-            pass
-
-        return jsonify({
-            "processed": sync_result.get("processed", 0),
-            "embedded": embedded,
-            "errors": sync_result.get("errors", []),
-        })
-    except FileNotFoundError:
-        return jsonify({"error": f"Vault path not found: {vault_path}"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500

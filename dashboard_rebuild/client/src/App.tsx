@@ -11,6 +11,7 @@ const CalendarPage = lazy(() => import("@/pages/calendar"));
 const Scholar = lazy(() => import("@/pages/scholar"));
 const Tutor = lazy(() => import("@/pages/tutor"));
 const Methods = lazy(() => import("@/pages/methods"));
+const Library = lazy(() => import("@/pages/library"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 const LoadingFallback = () => (
@@ -29,6 +30,7 @@ function Router() {
         <Route path="/scholar" component={Scholar}/>
         <Route path="/tutor" component={Tutor}/>
         <Route path="/methods" component={Methods}/>
+        <Route path="/library" component={Library}/>
         <Route component={NotFound} />
       </Switch>
     </Suspense>

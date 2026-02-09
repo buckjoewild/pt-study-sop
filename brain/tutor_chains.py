@@ -1,8 +1,8 @@
 """
 Tutor Chains — LangChain chain definitions for Adaptive Tutor phases.
 
-Phase 1 MVP: First Pass only.
 Handles: chain building, LO extraction, concept maps, confusables, artifact detection.
+Uses tutor_prompt_builder for 3-layer system prompt assembly.
 """
 
 from __future__ import annotations
@@ -18,77 +18,72 @@ from config import load_env
 
 load_env()
 
-# Reuse mode prompts from tutor_engine
-from tutor_engine import MODE_PROMPTS, BASE_SYSTEM_PROMPT
+from tutor_prompt_builder import build_tutor_system_prompt
 
 
-def get_mode_prompt(mode: str) -> str:
-    """Get the mode-specific prompt text. Exported for reuse."""
-    return MODE_PROMPTS.get(mode, MODE_PROMPTS["Core"])
-
-
-def get_system_prompt(
-    course_id: Optional[int] = None,
-    topic_id: Optional[str] = None,
-    mode: str = "Core",
-) -> str:
-    """Build the full system prompt for a tutor session."""
-    mode_prompt = get_mode_prompt(mode)
-    return BASE_SYSTEM_PROMPT.format(
-        course_id=course_id or "N/A",
-        topic_id=topic_id or "N/A",
-        mode=mode,
-        mode_prompt=mode_prompt,
-    )
-
-
-# First Pass phase-specific additions
+# First Pass phase-specific additions (appended when no chain provides block context)
 FIRST_PASS_ADDENDUM = """
 ## First Pass Phase Rules
 You are in FIRST PASS mode — the student is seeing this material for the first time.
 
 Additional behaviors:
 1. **Learning Objectives**: At session start, identify 3-5 key learning objectives from the content.
-2. **Three-Layer Chunks**: Always present information as Source Facts → Interpretation → Application.
+2. **Three-Layer Chunks**: Always present information as Source Facts -> Interpretation -> Application.
 3. **Concept Maps**: When asked, generate Mermaid-syntax concept maps showing relationships.
 4. **Confusables**: Proactively identify easily confused terms/concepts and clarify differences.
 5. **Light Recall**: After each major concept, ask ONE recall question before moving on.
-6. **Citations**: Always cite source documents using [Source: filename] format.
-7. **Artifact Commands**: The student may say "put that in my notes", "make a flashcard", or "draw a map".
+6. **Artifact Commands**: The student may say "put that in my notes", "make a flashcard", or "draw a map".
    Acknowledge the command and continue teaching — the system will handle artifact creation.
-
-## No-Content Graceful Mode
-If no course materials are provided for the topic, teach from your medical/PT training knowledge.
-Mark such content as [From training knowledge — not from your course materials] so the student
-knows to verify with their textbooks. You are still an effective tutor even without RAG documents —
-use your knowledge of anatomy, physiology, kinesiology, and PT practice to teach accurately.
 
 ## Study Method Awareness
 You have access to a library of study methods (PEIRRO framework) that may appear in retrieved context.
 When suggesting study techniques, reference specific method blocks by name.
-Examples: "Try the KWIK Hook method for memorizing this term" or "Use a Draw-Label exercise for this anatomy."
-At session start, if a method chain matches the current context (mode + topic type), mention it as a
-suggested study flow. For example: "For this anatomy first exposure, I'd recommend the Dense Anatomy Intake
-chain: Pre-Test → Draw-Label → Free Recall → KWIK Hook → Anki Cards."
 """
 
 
-def build_first_pass_chain(
+def build_tutor_chain(
     retriever,
     mode: str = "Core",
     course_id: Optional[int] = None,
     topic: Optional[str] = None,
+    model: Optional[str] = None,
+    chain_id: Optional[int] = None,
+    current_block_index: int = 0,
+    block_info: Optional[dict] = None,
+    chain_info: Optional[dict] = None,
 ):
     """
-    Build a LangChain RunnableSequence for First Pass phase.
+    Build a LangChain RunnableSequence for a tutor session.
     Returns a chain that accepts {"question": str, "chat_history": list} and streams.
+
+    Args:
+        retriever: LangChain retriever for RAG documents.
+        mode: Behavioral mode (Core, Sprint, Drill, etc.).
+        course_id: Active course ID.
+        topic: Session topic.
+        model: LLM model override.
+        chain_id: method_chains.id if a chain is active.
+        current_block_index: Current position in the chain.
+        block_info: Dict with current block details (name, description, category, evidence, duration).
+        chain_info: Dict with chain overview (name, blocks list, current_index, total).
     """
     from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
     from langchain_core.output_parsers import StrOutputParser
-    from langchain_core.runnables import RunnablePassthrough, RunnableLambda
+    from langchain_core.runnables import RunnablePassthrough
     from langchain_openai import ChatOpenAI
 
-    system_prompt = get_system_prompt(course_id, topic, mode) + FIRST_PASS_ADDENDUM
+    # Build system prompt using 3-layer architecture
+    system_prompt = build_tutor_system_prompt(
+        mode=mode,
+        current_block=block_info,
+        chain_info=chain_info,
+        course_id=course_id,
+        topic=topic,
+    )
+
+    # Append First Pass addendum when no chain provides block-level context
+    if not block_info:
+        system_prompt += "\n\n" + FIRST_PASS_ADDENDUM
 
     # Context formatting
     def format_docs(docs):
@@ -115,10 +110,11 @@ def build_first_pass_chain(
     api_key = os.environ.get("OPENROUTER_API_KEY") or os.environ.get("OPENAI_API_KEY", "")
     base_url = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
 
-    # If we have an OpenRouter key, use their base URL
+    # Model priority: explicit param > env var > default
     if os.environ.get("OPENROUTER_API_KEY"):
+        selected_model = model or os.environ.get("TUTOR_MODEL", "google/gemini-2.0-flash-001")
         llm = ChatOpenAI(
-            model=os.environ.get("TUTOR_MODEL", "google/gemini-2.0-flash-001"),
+            model=selected_model,
             api_key=api_key,
             base_url=base_url,
             temperature=0.3,
@@ -126,8 +122,9 @@ def build_first_pass_chain(
             streaming=True,
         )
     else:
+        selected_model = model or os.environ.get("TUTOR_MODEL", "gpt-4o-mini")
         llm = ChatOpenAI(
-            model=os.environ.get("TUTOR_MODEL", "gpt-4o-mini"),
+            model=selected_model,
             api_key=api_key,
             temperature=0.3,
             max_tokens=1500,
@@ -149,12 +146,15 @@ def build_first_pass_chain(
     return chain
 
 
+# Backwards-compatible alias
+build_first_pass_chain = build_tutor_chain
+
+
 def extract_learning_objectives(content: str) -> list[dict]:
     """
     Extract learning objectives from document content.
     Returns list of {id, objective, bloom_level} dicts.
     """
-    # Pattern: lines starting with "LO", numbered items after "Learning Objectives" heading
     objectives = []
     lines = content.split("\n")
     in_lo_section = False
@@ -169,7 +169,6 @@ def extract_learning_objectives(content: str) -> list[dict]:
             if stripped.startswith("#"):
                 in_lo_section = False
                 continue
-            # Match numbered or bulleted items
             match = re.match(r"^[\d\-\*\•]+[.\)]\s*(.+)", stripped)
             if match:
                 obj_text = match.group(1).strip()
@@ -201,7 +200,6 @@ def _classify_bloom(text: str) -> str:
 
 def generate_concept_map(content: str, topic: str) -> str:
     """Generate a Mermaid-syntax concept map from content."""
-    # This returns a template; the LLM chain handles actual generation
     return f"""```mermaid
 graph TD
     A[{topic}] --> B[Key Concept 1]
@@ -219,7 +217,6 @@ def identify_confusables(content: str) -> list[dict]:
     confusables = []
     lines = content.split("\n")
 
-    # Look for "vs" or "versus" patterns
     for line in lines:
         match = re.search(r"(\b\w[\w\s]{2,30})\s+(?:vs\.?|versus)\s+(\b\w[\w\s]{2,30})", line, re.IGNORECASE)
         if match:
@@ -237,7 +234,6 @@ def generate_recall_questions(content: str, topic: str) -> list[dict]:
     Generate simple recall questions from content.
     Returns list of {question, expected_answer, difficulty} dicts.
     """
-    # Stub: actual generation done by LLM chain at runtime
     return []
 
 

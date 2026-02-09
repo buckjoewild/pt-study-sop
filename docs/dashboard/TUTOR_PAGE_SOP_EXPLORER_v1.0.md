@@ -1,5 +1,9 @@
 ﻿# Tutor Page â€” SOP Explorer (Dashboard Spec) v1.0
 
+> Status: Deprecated (2026-02-09). The dashboard `/tutor` route is now the **Adaptive Tutor** (interactive).
+> This document describes an older SOP Explorer concept that is not active.
+> See `docs/dashboard/DASHBOARD_WINDOW_INVENTORY.md` and `brain/dashboard/api_tutor.py` for current behavior.
+
 **Purpose:** Repurpose the Dashboard **Tutor** page into a structured, read-only **SOP Explorer** so you and Scholar can browse the SOP easily and reference it with deep links.
 
 This matches current workflow: tutoring happens in **Custom GPT**, not in the dashboard.

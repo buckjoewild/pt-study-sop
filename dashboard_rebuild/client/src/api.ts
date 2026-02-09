@@ -544,6 +544,10 @@ export const api = {
       request<TutorSessionEndResult>(`/tutor/session/${sessionId}/end`, {
         method: "POST",
       }),
+    deleteSession: (sessionId: string) =>
+      request<{ deleted: boolean; session_id: string }>(`/tutor/session/${sessionId}`, {
+        method: "DELETE",
+      }),
     listSessions: (params?: { course_id?: number; status?: string; limit?: number }) => {
       const qs = new URLSearchParams();
       if (params?.course_id) qs.set("course_id", String(params.course_id));
@@ -571,10 +575,36 @@ export const api = {
         method: "POST",
         body: JSON.stringify(data || {}),
       }),
-    syncVault: (data: { vault_path: string; course_id?: number }) =>
-      request<TutorSyncVaultResult>("/tutor/sync-vault", {
-        method: "POST",
+    uploadMaterial: async (file: File, opts?: { course_id?: number; title?: string; tags?: string }) => {
+      const form = new FormData();
+      form.append("file", file);
+      if (opts?.course_id) form.append("course_id", String(opts.course_id));
+      if (opts?.title) form.append("title", opts.title);
+      if (opts?.tags) form.append("tags", opts.tags);
+      const res = await fetch(`${API_BASE}/tutor/materials/upload`, { method: "POST", body: form });
+      if (!res.ok) throw new Error(`Upload failed: ${res.statusText}`);
+      return res.json() as Promise<MaterialUploadResponse>;
+    },
+    getMaterials: (params?: { course_id?: number; file_type?: string; enabled?: boolean }) => {
+      const qs = new URLSearchParams();
+      if (params?.course_id) qs.set("course_id", String(params.course_id));
+      if (params?.file_type) qs.set("file_type", params.file_type);
+      if (params?.enabled !== undefined) qs.set("enabled", params.enabled ? "1" : "0");
+      const q = qs.toString();
+      return request<Material[]>(`/tutor/materials${q ? `?${q}` : ""}`);
+    },
+    updateMaterial: (id: number, data: Partial<{ title: string; course_id: number | null; tags: string; enabled: boolean }>) =>
+      request<Material>(`/tutor/materials/${id}`, {
+        method: "PUT",
         body: JSON.stringify(data),
+      }),
+    deleteMaterial: (id: number) =>
+      request<{ deleted: boolean }>(`/tutor/materials/${id}`, { method: "DELETE" }),
+    getTemplateChains: () =>
+      request<TutorTemplateChain[]>("/tutor/chains/templates"),
+    advanceBlock: (sessionId: string) =>
+      request<TutorBlockProgress>(`/tutor/session/${sessionId}/advance-block`, {
+        method: "POST",
       }),
   },
 };
@@ -907,7 +937,14 @@ export interface ChainRunSummary {
 
 // Adaptive Tutor types
 export type TutorPhase = "first_pass" | "understanding" | "testing";
-export type TutorMode = "Core" | "Sprint" | "Drill" | "Diagnostic Sprint" | "Teaching Sprint";
+export type TutorMode =
+  | "Core"
+  | "Sprint"
+  | "Quick Sprint"
+  | "Light"
+  | "Drill"
+  | "Diagnostic Sprint"
+  | "Teaching Sprint";
 export type TutorSessionStatus = "active" | "completed" | "abandoned";
 
 export interface TutorCreateSessionRequest {
@@ -915,7 +952,24 @@ export interface TutorCreateSessionRequest {
   phase?: TutorPhase;
   mode?: TutorMode;
   topic?: string;
-  content_filter?: { folders?: string[] };
+  content_filter?: { material_ids?: number[]; model?: string };
+  method_chain_id?: number;
+}
+
+export interface TutorTemplateChain {
+  id: number;
+  name: string;
+  description: string;
+  blocks: { id: number; name: string; category: string; duration: number }[];
+  context_tags: string;
+}
+
+export interface TutorBlockProgress {
+  block_index: number;
+  block_name: string;
+  block_description: string;
+  is_last: boolean;
+  complete?: boolean;
 }
 
 export interface TutorSession {
@@ -925,6 +979,9 @@ export interface TutorSession {
   topic: string;
   status: TutorSessionStatus;
   started_at: string;
+  method_chain_id?: number | null;
+  current_block_index?: number;
+  current_block_name?: string | null;
 }
 
 export interface TutorTurn {
@@ -948,13 +1005,14 @@ export interface TutorSessionWithTurns extends TutorSession {
   brain_session_id: number | null;
   course_id: number | null;
   content_filter_json: string | null;
-  content_filter: { folders?: string[] } | null;
+  content_filter: { material_ids?: number[]; model?: string } | null;
   turn_count: number;
   artifacts_json: string | null;
   lo_ids_json: string | null;
   summary_text: string | null;
   ended_at: string | null;
   turns: TutorTurn[];
+  chain_blocks?: { id: number; name: string; category: string; description: string; default_duration_min: number }[];
 }
 
 export interface TutorSessionSummary {
@@ -998,8 +1056,10 @@ export interface TutorArtifactResult {
 
 export interface TutorContentSources {
   courses: { id: number | null; name: string; code: string | null; doc_count: number }[];
-  folders: { folder_path: string; course_id: number | null; doc_count: number }[];
+  total_materials: number;
+  total_instructions: number;
   total_docs: number;
+  openrouter_enabled: boolean;
 }
 
 export interface TutorChainRequest {
@@ -1031,10 +1091,26 @@ export interface TutorEmbedResult {
   total_chunks: number;
 }
 
-export interface TutorSyncVaultResult {
-  processed: number;
-  embedded: number;
-  errors: string[];
+export interface Material {
+  id: number;
+  title: string;
+  source_path: string;
+  file_type: string;
+  file_size: number;
+  course_id: number | null;
+  enabled: boolean;
+  extraction_error: string | null;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface MaterialUploadResponse {
+  id: number;
+  title: string;
+  file_type: string;
+  file_size: number;
+  char_count: number;
+  embedded: boolean;
 }
 
 // SSE streaming helper for Tutor chat

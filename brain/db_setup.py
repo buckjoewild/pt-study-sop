@@ -567,6 +567,31 @@ def init_database():
             cursor.execute("ALTER TABLE rag_docs ADD COLUMN enabled INTEGER DEFAULT 1")
         except sqlite3.OperationalError:
             pass
+    if "file_path" not in rag_cols:
+        try:
+            cursor.execute("ALTER TABLE rag_docs ADD COLUMN file_path TEXT")
+        except sqlite3.OperationalError:
+            pass
+    if "file_size" not in rag_cols:
+        try:
+            cursor.execute("ALTER TABLE rag_docs ADD COLUMN file_size INTEGER")
+        except sqlite3.OperationalError:
+            pass
+    if "file_type" not in rag_cols:
+        try:
+            cursor.execute("ALTER TABLE rag_docs ADD COLUMN file_type TEXT")
+        except sqlite3.OperationalError:
+            pass
+    if "title" not in rag_cols:
+        try:
+            cursor.execute("ALTER TABLE rag_docs ADD COLUMN title TEXT")
+        except sqlite3.OperationalError:
+            pass
+    if "extraction_error" not in rag_cols:
+        try:
+            cursor.execute("ALTER TABLE rag_docs ADD COLUMN extraction_error TEXT")
+        except sqlite3.OperationalError:
+            pass
 
     # Backfill corpus/enabled defaults for older rows.
     try:
@@ -1363,6 +1388,45 @@ def init_database():
         except sqlite3.OperationalError:
             pass
 
+    # ------------------------------------------------------------------
+    # 3-Layer Tutor: add method_chain_id + current_block_index to tutor_sessions
+    # ------------------------------------------------------------------
+    cursor.execute("PRAGMA table_info(tutor_sessions)")
+    ts_cols = {col[1] for col in cursor.fetchall()}
+    for col_name, col_type in [
+        ("method_chain_id", "INTEGER"),
+        ("current_block_index", "INTEGER DEFAULT 0"),
+    ]:
+        if col_name not in ts_cols:
+            try:
+                cursor.execute(f"ALTER TABLE tutor_sessions ADD COLUMN {col_name} {col_type}")
+                print(f"[INFO] Added '{col_name}' column to tutor_sessions table")
+            except sqlite3.OperationalError:
+                pass
+
+    # ------------------------------------------------------------------
+    # 3-Layer Tutor: tutor_block_transitions (tracks per-block progress)
+    # ------------------------------------------------------------------
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tutor_block_transitions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tutor_session_id TEXT NOT NULL,
+            block_id INTEGER NOT NULL,
+            block_index INTEGER NOT NULL,
+            started_at TEXT NOT NULL,
+            ended_at TEXT,
+            turn_count INTEGER DEFAULT 0,
+            outcome TEXT,
+            FOREIGN KEY(tutor_session_id) REFERENCES tutor_sessions(session_id),
+            FOREIGN KEY(block_id) REFERENCES method_blocks(id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_tutor_block_transitions_session
+        ON tutor_block_transitions(tutor_session_id)
+    """)
+
     conn.commit()
     conn.close()
 
@@ -1655,6 +1719,52 @@ if __name__ == "__main__":
     # Always run init_database() to ensure schema is fully up to date
     # (adds any missing columns and creates new planning/RAG tables).
     init_database()
+
+    # Ensure the Composable Method Library is present.
+    # Start_Dashboard.bat runs this script on every launch; if the DB file is new
+    # (or the method tables were wiped), re-seed so /methods and tutor chain
+    # templates don't appear empty after a restart.
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM method_blocks")
+        method_count = int(cursor.fetchone()[0] or 0)
+        cursor.execute("SELECT COUNT(*) FROM method_chains WHERE COALESCE(is_template, 0) = 1")
+        template_chain_count = int(cursor.fetchone()[0] or 0)
+        conn.close()
+    except Exception as e:
+        print(f"[WARN] Could not check method_blocks count for seeding: {e}")
+        method_count = None
+        template_chain_count = None
+
+    if method_count == 0 or template_chain_count == 0:
+        print(
+            "[INFO] Method library missing ("
+            f"method_blocks={method_count}, template_chains={template_chain_count}"
+            "); seeding..."
+        )
+        try:
+            import subprocess
+            from pathlib import Path
+
+            seed_script = Path(__file__).resolve().parent / "data" / "seed_methods.py"
+            if seed_script.exists():
+                result = subprocess.run(
+                    [sys.executable, str(seed_script)],
+                    capture_output=True,
+                    text=True,
+                )
+                if result.returncode == 0:
+                    print("[OK] Seeded method library (method_blocks + method_chains).")
+                else:
+                    msg = (result.stderr or "").strip() or (result.stdout or "").strip()
+                    if not msg:
+                        msg = f"exit code {result.returncode}"
+                    print(f"[WARN] seed_methods.py failed: {msg}")
+            else:
+                print(f"[WARN] seed_methods.py not found at: {seed_script}")
+        except Exception as e:
+            print(f"[WARN] Method library seed raised: {e}")
 
     # Optional one-time data correction for session minutes
     if os.environ.get("PT_BRAIN_BACKFILL_MINUTES", "").strip().lower() in {"1", "true", "yes"}:

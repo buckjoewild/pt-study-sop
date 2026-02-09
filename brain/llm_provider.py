@@ -4,6 +4,7 @@ import json
 import time
 import subprocess
 import tempfile
+import shutil
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union
 
@@ -323,8 +324,13 @@ Human: {user_prompt}
         output_file = Path(output_path)
 
         # Build command args
-        cmd_args = [
-            codex_cmd,
+        cmd_prefix: list[str]
+        if os.name == "nt" and Path(codex_cmd).suffix.lower() in (".cmd", ".bat"):
+            cmd_prefix = ["cmd.exe", "/c", codex_cmd]
+        else:
+            cmd_prefix = [codex_cmd]
+
+        cmd_args = cmd_prefix + [
             "exec",
             "--cd",
             work_dir,
@@ -394,3 +400,150 @@ Human: {user_prompt}
             "fallback_available": True,
             "fallback_models": ["gpt-4o-mini", "gpt-4.1-mini", "openrouter/auto"],
         }
+
+
+def _codex_exec_json(
+    prompt: str,
+    *,
+    model: Optional[str] = None,
+    timeout: int = DEFAULT_TIMEOUT_SECONDS,
+    isolated: bool = True,
+) -> Dict[str, Any]:
+    """
+    Run `codex exec` in JSON event mode and return the final agent message.
+
+    This is intended for "chat"-style usage inside the dashboard where we want:
+      - No API key management (uses `codex login` state, e.g. ChatGPT login)
+      - Safety defaults (no writes; no untrusted shell commands)
+      - A simple string response for downstream SSE formatting
+
+    Notes:
+      - Uses `-a untrusted` + `--sandbox read-only`.
+      - Uses `--ephemeral` to avoid persisting sessions to disk.
+    """
+    codex_cmd = find_codex_cli()
+    if not codex_cmd:
+        return {
+            "success": False,
+            "error": "Codex CLI not found. Install: npm install -g @openai/codex",
+            "content": None,
+        }
+
+    # If isolated, run in an empty temp directory (avoid repo file reads by default).
+    # Otherwise, run in repo root for full context.
+    work_dir = tempfile.mkdtemp(prefix="codex_isolated_") if isolated else str(
+        Path(__file__).parent.parent.resolve()
+    )
+
+    # Windows: if `codex_cmd` is a .cmd/.bat shim, execute via cmd.exe explicitly.
+    cmd_prefix: list[str]
+    if os.name == "nt" and Path(codex_cmd).suffix.lower() in (".cmd", ".bat"):
+        cmd_prefix = ["cmd.exe", "/c", codex_cmd]
+    else:
+        cmd_prefix = [codex_cmd]
+
+    cmd_args: list[str] = [
+        "-a",
+        "untrusted",
+        "exec",
+        "--sandbox",
+        "read-only",
+        "--json",
+        "--ephemeral",
+        "--cd",
+        work_dir,
+    ]
+
+    cmd_args = cmd_prefix + cmd_args
+
+    if isolated:
+        cmd_args.append("--skip-git-repo-check")
+
+    if model and isinstance(model, str) and model.strip():
+        cmd_args.extend(["--model", model.strip()])
+
+    cmd_args.append("-")  # stdin prompt
+
+    try:
+        result = subprocess.run(
+            cmd_args,
+            input=prompt,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            "success": False,
+            "error": f"Codex timed out after {timeout} seconds.",
+            "content": None,
+        }
+    finally:
+        if isolated:
+            shutil.rmtree(work_dir, ignore_errors=True)
+
+    if result.returncode != 0:
+        err = (result.stderr or "").strip() or (result.stdout or "").strip()
+        return {
+            "success": False,
+            "error": f"Codex process failed: {err}" if err else "Codex process failed.",
+            "content": None,
+        }
+
+    agent_messages: list[str] = []
+    usage: Optional[dict] = None
+
+    for raw in (result.stdout or "").splitlines():
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            evt = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+
+        if evt.get("type") == "item.completed":
+            item = evt.get("item") or {}
+            if item.get("type") == "agent_message":
+                text = (item.get("text") or "").strip()
+                if text:
+                    agent_messages.append(text)
+
+        if evt.get("type") == "turn.completed":
+            usage = evt.get("usage")
+
+    content = "\n\n".join(agent_messages).strip()
+    if not content:
+        return {
+            "success": False,
+            "error": "Codex returned no agent_message in JSON output.",
+            "content": None,
+            "usage": usage,
+        }
+
+    return {"success": True, "content": content, "error": None, "usage": usage}
+
+
+def call_codex_json(
+    system_prompt: str,
+    user_prompt: str,
+    *,
+    model: Optional[str] = None,
+    timeout: int = DEFAULT_TIMEOUT_SECONDS,
+    isolated: bool = True,
+) -> Dict[str, Any]:
+    """
+    Convenience wrapper for `_codex_exec_json` using a system+user prompt format.
+
+    This does not require an API key. It relies on `codex login` state.
+    """
+    full_prompt = f"""System: {system_prompt}
+
+User: {user_prompt}
+"""
+    return _codex_exec_json(
+        full_prompt,
+        model=model,
+        timeout=timeout,
+        isolated=isolated,
+    )

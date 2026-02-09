@@ -9,7 +9,8 @@ import {
   CreditCard,
   Map,
   Square,
-  ChevronDown,
+  ChevronRight,
+  Check,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -22,13 +23,32 @@ interface ChatMessage {
   isStreaming?: boolean;
 }
 
+interface ChainBlock {
+  id: number;
+  name: string;
+  category: string;
+  duration: number;
+}
+
 interface TutorChatProps {
   sessionId: string | null;
   onArtifactCreated: (artifact: { type: string; content: string; title?: string }) => void;
   onSessionEnd: () => void;
+  chainBlocks?: ChainBlock[];
+  currentBlockIndex?: number;
+  onAdvanceBlock?: () => void;
 }
 
-export function TutorChat({ sessionId, onArtifactCreated, onSessionEnd }: TutorChatProps) {
+export function TutorChat({
+  sessionId,
+  onArtifactCreated,
+  onSessionEnd,
+  chainBlocks = [],
+  currentBlockIndex = 0,
+  onAdvanceBlock,
+}: TutorChatProps) {
+  const hasChain = chainBlocks.length > 0;
+  const isChainComplete = hasChain && currentBlockIndex >= chainBlocks.length;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -194,6 +214,56 @@ export function TutorChat({ sessionId, onArtifactCreated, onSessionEnd }: TutorC
 
   return (
     <div className="flex flex-col h-full">
+      {/* Block progress bar */}
+      {hasChain && (
+        <div className="shrink-0 px-3 py-2 border-b-2 border-primary/30 bg-black/40">
+          <div className="flex items-center gap-1 overflow-x-auto">
+            {chainBlocks.map((block, i) => {
+              const isCompleted = i < currentBlockIndex;
+              const isCurrent = i === currentBlockIndex && !isChainComplete;
+              return (
+                <div key={block.id} className="flex items-center shrink-0">
+                  {i > 0 && (
+                    <ChevronRight className="w-2.5 h-2.5 text-muted-foreground/40 mx-0.5" />
+                  )}
+                  <div
+                    className={`px-1.5 py-0.5 border text-[10px] font-terminal flex items-center gap-1 ${
+                      isCurrent
+                        ? "border-primary bg-primary/20 text-primary"
+                        : isCompleted
+                          ? "border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground/60 line-through"
+                          : "border-muted-foreground/20 text-muted-foreground/40"
+                    }`}
+                  >
+                    {isCompleted && <Check className="w-2.5 h-2.5" />}
+                    {block.name}
+                  </div>
+                </div>
+              );
+            })}
+            {!isChainComplete && onAdvanceBlock && (
+              <button
+                onClick={onAdvanceBlock}
+                className="shrink-0 ml-2 px-2 py-0.5 border border-primary text-[10px] font-arcade text-primary hover:bg-primary/20 transition-colors"
+              >
+                NEXT
+              </button>
+            )}
+            {isChainComplete && (
+              <span className="shrink-0 ml-2 px-2 py-0.5 text-[10px] font-arcade text-green-400 border border-green-400/50">
+                COMPLETE
+              </span>
+            )}
+          </div>
+          {!isChainComplete && chainBlocks[currentBlockIndex] && (
+            <div className="mt-1 text-[10px] font-terminal text-muted-foreground">
+              <span className="text-primary">{chainBlocks[currentBlockIndex].category.toUpperCase()}</span>
+              {" "}&middot; ~{chainBlocks[currentBlockIndex].duration}min
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Messages */}
       <div
         ref={scrollRef}

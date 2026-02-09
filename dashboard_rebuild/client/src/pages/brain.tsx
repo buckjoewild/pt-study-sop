@@ -7,28 +7,27 @@ import {
 import { useBrainWorkspace } from "@/components/brain/useBrainWorkspace";
 import { BrainWorkspaceTopBar } from "@/components/brain/BrainWorkspaceTopBar";
 import { VaultSidebar } from "@/components/brain/VaultSidebar";
-import { CenterColumn } from "@/components/brain/CenterColumn";
-import { RightColumn } from "@/components/brain/RightColumn";
+import { MainContent } from "@/components/brain/MainContent";
 import { BrainModals } from "@/components/brain/BrainModals";
 import { useState } from "react";
-import { FolderOpen, Pencil, Layers } from "lucide-react";
+import { FolderOpen, Pencil } from "lucide-react";
 
-type MobileTab = "vault" | "editor" | "tools";
+type MobileTab = "vault" | "main";
 
 export default function Brain() {
   const workspace = useBrainWorkspace();
-  const [mobileTab, setMobileTab] = useState<MobileTab>("editor");
+  const [mobileTab, setMobileTab] = useState<MobileTab>("main");
 
   return (
     <Layout>
       <div className="flex flex-col h-[calc(100vh-64px)] min-w-0 overflow-hidden">
         <BrainWorkspaceTopBar workspace={workspace} />
 
-        {/* Desktop: 3-column resizable layout */}
+        {/* Desktop: 2-column resizable layout */}
         <div className="hidden lg:flex flex-1 min-h-0">
           <ResizablePanelGroup
             direction="horizontal"
-            autoSaveId="brain-workspace"
+            autoSaveId="brain-workspace-v2"
             className="h-full"
           >
             {/* Left: Vault sidebar */}
@@ -40,19 +39,10 @@ export default function Brain() {
 
             <ResizableHandle withHandle />
 
-            {/* Center: Editor / Chat */}
-            <ResizablePanel defaultSize={50} minSize={30}>
-              <div className="h-full border-r border-primary/30">
-                <CenterColumn workspace={workspace} />
-              </div>
-            </ResizablePanel>
-
-            <ResizableHandle withHandle />
-
-            {/* Right: Map / Anki */}
-            <ResizablePanel defaultSize={30} minSize={15} maxSize={45}>
+            {/* Main: Editor / Chat / Graph / Table / Anki */}
+            <ResizablePanel defaultSize={80} minSize={50}>
               <div className="h-full">
-                <RightColumn workspace={workspace} />
+                <MainContent workspace={workspace} />
               </div>
             </ResizablePanel>
           </ResizablePanelGroup>
@@ -62,15 +52,14 @@ export default function Brain() {
         <div className="flex flex-col flex-1 min-h-0 lg:hidden">
           <div className="flex-1 min-h-0 overflow-auto">
             {mobileTab === "vault" && <VaultSidebar workspace={workspace} />}
-            {mobileTab === "editor" && <CenterColumn workspace={workspace} />}
-            {mobileTab === "tools" && <RightColumn workspace={workspace} />}
+            {mobileTab === "main" && <MainContent workspace={workspace} />}
           </div>
 
           {/* Bottom tab bar */}
           <div className="flex items-center border-t-2 border-primary/50 bg-black/80 shrink-0">
             <button
               onClick={() => setMobileTab("vault")}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[9px] font-terminal transition-colors ${
+              className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-terminal transition-colors ${
                 mobileTab === "vault" ? "text-primary" : "text-muted-foreground"
               }`}
             >
@@ -78,22 +67,13 @@ export default function Brain() {
               Vault
             </button>
             <button
-              onClick={() => setMobileTab("editor")}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[9px] font-terminal transition-colors ${
-                mobileTab === "editor" ? "text-primary" : "text-muted-foreground"
+              onClick={() => setMobileTab("main")}
+              className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-terminal transition-colors ${
+                mobileTab === "main" ? "text-primary" : "text-muted-foreground"
               }`}
             >
               <Pencil className="w-4 h-4" />
-              Editor
-            </button>
-            <button
-              onClick={() => setMobileTab("tools")}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[9px] font-terminal transition-colors ${
-                mobileTab === "tools" ? "text-primary" : "text-muted-foreground"
-              }`}
-            >
-              <Layers className="w-4 h-4" />
-              Tools
+              Content
             </button>
           </div>
         </div>

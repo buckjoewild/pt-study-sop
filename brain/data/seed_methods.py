@@ -607,11 +607,16 @@ def seed_methods(force: bool = False):
         cursor.execute("DELETE FROM method_blocks")
         print("[FORCE] Cleared method_blocks, method_chains, method_ratings")
 
-    # Check if already seeded
+    # Check if already seeded (blocks + at least one template chain)
     cursor.execute("SELECT COUNT(*) FROM method_blocks")
-    count = cursor.fetchone()[0]
-    if count > 0:
-        print(f"[SKIP] method_blocks already has {count} rows. Use --force to re-seed.")
+    block_count = int(cursor.fetchone()[0] or 0)
+    cursor.execute("SELECT COUNT(*) FROM method_chains WHERE COALESCE(is_template, 0) = 1")
+    template_chain_count = int(cursor.fetchone()[0] or 0)
+    if block_count > 0 and template_chain_count > 0:
+        print(
+            f"[SKIP] Method library already present: method_blocks={block_count}, template_chains={template_chain_count}. "
+            "Use --force to re-seed."
+        )
         conn.close()
         return
 
@@ -628,31 +633,53 @@ def seed_methods(force: bool = False):
         version = "legacy"
         print("[DICT] Loading from hardcoded data (YAML not available)")
 
-    # Insert method blocks
-    name_to_id = {}
-    for block in methods_src:
-        cursor.execute(
-            """
-            INSERT INTO method_blocks (name, category, description, default_duration_min, energy_cost, best_stage, tags, evidence, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-            """,
-            (
-                block["name"],
-                block["category"],
-                block["description"],
-                block["default_duration_min"],
-                block["energy_cost"],
-                block["best_stage"],
-                json.dumps(block["tags"]),
-                block.get("evidence"),
-            ),
-        )
-        name_to_id[block["name"]] = cursor.lastrowid
+    # Build name->id lookup from any existing blocks
+    cursor.execute("SELECT id, name FROM method_blocks")
+    name_to_id = {r[1]: r[0] for r in cursor.fetchall()}
 
-    print(f"[OK] Inserted {len(methods_src)} method blocks")
+    inserted_blocks = 0
+    if block_count == 0:
+        # Insert method blocks
+        for block in methods_src:
+            cursor.execute(
+                """
+                INSERT INTO method_blocks (name, category, description, default_duration_min, energy_cost, best_stage, tags, evidence, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                """,
+                (
+                    block["name"],
+                    block["category"],
+                    block["description"],
+                    block["default_duration_min"],
+                    block["energy_cost"],
+                    block["best_stage"],
+                    json.dumps(block["tags"]),
+                    block.get("evidence"),
+                ),
+            )
+            name_to_id[block["name"]] = cursor.lastrowid
+            inserted_blocks += 1
 
-    # Insert template chains (resolve block names to IDs)
+        print(f"[OK] Inserted {inserted_blocks} method blocks")
+    else:
+        print(f"[INFO] method_blocks already has {block_count} rows — skipping block insert")
+
+    # Insert template chains (resolve block names to IDs; skip duplicates)
+    cursor.execute("SELECT name FROM method_chains")
+    existing_chain_names = {r[0] for r in cursor.fetchall()}
+
+    inserted_chains = 0
     for chain in chains_src:
+        if chain.get("is_template", 0) != 1:
+            continue
+        if chain["name"] in existing_chain_names:
+            continue
+
+        missing = [b for b in chain["blocks"] if b not in name_to_id]
+        if missing:
+            print(f"[WARN] Skipping chain '{chain['name']}' (missing blocks: {', '.join(missing)})")
+            continue
+
         block_ids = [name_to_id[name] for name in chain["blocks"]]
         cursor.execute(
             """
@@ -667,11 +694,16 @@ def seed_methods(force: bool = False):
                 chain["is_template"],
             ),
         )
+        inserted_chains += 1
 
-    print(f"[OK] Inserted {len(chains_src)} template chains")
+    print(f"[OK] Inserted {inserted_chains} template chains")
 
-    # Track seed operation in library_meta
-    _insert_library_meta(conn, version, len(methods_src), len(chains_src))
+    # Track seed operation in library_meta (store post-seed totals for clarity).
+    cursor.execute("SELECT COUNT(*) FROM method_blocks")
+    mb_total = int(cursor.fetchone()[0] or 0)
+    cursor.execute("SELECT COUNT(*) FROM method_chains")
+    mc_total = int(cursor.fetchone()[0] or 0)
+    _insert_library_meta(conn, version, mb_total, mc_total)
 
     conn.commit()
     conn.close()

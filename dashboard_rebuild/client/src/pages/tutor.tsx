@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { useState, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { TutorMode, TutorSessionSummary } from "@/lib/api";
+import type { TutorMode, TutorSessionSummary, TutorTemplateChain } from "@/lib/api";
 import { ContentFilter } from "@/components/ContentFilter";
 import { TutorChat } from "@/components/TutorChat";
 import { TutorArtifacts, type TutorArtifact } from "@/components/TutorArtifacts";
@@ -18,9 +18,13 @@ export default function Tutor() {
 
   // Filter state
   const [courseId, setCourseId] = useState<number | undefined>();
-  const [selectedFolders, setSelectedFolders] = useState<string[]>([]);
+  const [selectedMaterials, setSelectedMaterials] = useState<number[]>([]);
   const [mode, setMode] = useState<TutorMode>("Core");
+  const [chainId, setChainId] = useState<number | undefined>();
+  const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
+  const [chainBlocks, setChainBlocks] = useState<TutorTemplateChain["blocks"]>([]);
   const [topic, setTopic] = useState("");
+  const [model, setModel] = useState("codex");
 
   // Artifacts
   const [artifacts, setArtifacts] = useState<TutorArtifact[]>([]);
@@ -41,12 +45,33 @@ export default function Tutor() {
         phase: "first_pass",
         mode,
         topic: topic || undefined,
-        content_filter: selectedFolders.length > 0 ? { folders: selectedFolders } : undefined,
+        content_filter: {
+          ...(selectedMaterials.length > 0 ? { material_ids: selectedMaterials } : {}),
+          model,
+        },
+        method_chain_id: chainId,
       });
       setActiveSessionId(session.session_id);
       setStartedAt(session.started_at);
       setArtifacts([]);
       setTurnCount(0);
+      setCurrentBlockIndex(session.current_block_index ?? 0);
+
+      // If chain was selected, fetch full session to get chain_blocks
+      if (chainId) {
+        const full = await api.tutor.getSession(session.session_id);
+        if (full.chain_blocks) {
+          setChainBlocks(full.chain_blocks.map((b) => ({
+            id: b.id,
+            name: b.name,
+            category: b.category,
+            duration: b.default_duration_min,
+          })));
+        }
+      } else {
+        setChainBlocks([]);
+      }
+
       toast.success("Tutor session started");
       queryClient.invalidateQueries({ queryKey: ["tutor-sessions"] });
     } catch (err) {
@@ -54,7 +79,7 @@ export default function Tutor() {
     } finally {
       setIsStarting(false);
     }
-  }, [courseId, mode, topic, selectedFolders, queryClient]);
+  }, [courseId, mode, topic, selectedMaterials, model, chainId, queryClient]);
 
   const endSession = useCallback(async () => {
     if (!activeSessionId) return;
@@ -65,6 +90,8 @@ export default function Tutor() {
       setArtifacts([]);
       setTurnCount(0);
       setStartedAt(null);
+      setCurrentBlockIndex(0);
+      setChainBlocks([]);
       queryClient.invalidateQueries({ queryKey: ["tutor-sessions"] });
     } catch (err) {
       toast.error(`Failed to end session: ${err instanceof Error ? err.message : "Unknown"}`);
@@ -98,6 +125,21 @@ export default function Tutor() {
     },
     [activeSessionId, artifacts.length]
   );
+
+  const advanceBlock = useCallback(async () => {
+    if (!activeSessionId) return;
+    try {
+      const result = await api.tutor.advanceBlock(activeSessionId);
+      setCurrentBlockIndex(result.block_index);
+      if (result.complete) {
+        toast.success("Chain complete!");
+      } else {
+        toast.success(`Advanced to: ${result.block_name}`);
+      }
+    } catch (err) {
+      toast.error(`Failed to advance block: ${err instanceof Error ? err.message : "Unknown"}`);
+    }
+  }, [activeSessionId]);
 
   const resumeSession = useCallback(
     async (sessionId: string) => {
@@ -141,16 +183,20 @@ export default function Tutor() {
     <Layout>
       <div className="h-[calc(100vh-140px)] flex gap-2">
         {/* Left: Content Filter */}
-        <Card className="w-56 shrink-0 bg-black/40 border-2 border-primary rounded-none overflow-y-auto">
+        <Card className="w-64 shrink-0 bg-black/40 border-2 border-primary rounded-none overflow-y-auto">
           <ContentFilter
             courseId={courseId}
             setCourseId={setCourseId}
-            selectedFolders={selectedFolders}
-            setSelectedFolders={setSelectedFolders}
+            selectedMaterials={selectedMaterials}
+            setSelectedMaterials={setSelectedMaterials}
             mode={mode}
             setMode={setMode}
+            chainId={chainId}
+            setChainId={setChainId}
             topic={topic}
             setTopic={setTopic}
+            model={model}
+            setModel={setModel}
             onStartSession={startSession}
             isStarting={isStarting}
             hasActiveSession={!!activeSessionId}
@@ -163,11 +209,14 @@ export default function Tutor() {
             sessionId={activeSessionId}
             onArtifactCreated={handleArtifactCreated}
             onSessionEnd={endSession}
+            chainBlocks={chainBlocks}
+            currentBlockIndex={currentBlockIndex}
+            onAdvanceBlock={advanceBlock}
           />
         </Card>
 
         {/* Right: Artifacts */}
-        <Card className="w-56 shrink-0 bg-black/40 border-2 border-secondary rounded-none overflow-y-auto">
+        <Card className="w-64 shrink-0 bg-black/40 border-2 border-secondary rounded-none overflow-y-auto">
           <TutorArtifacts
             sessionId={activeSessionId}
             artifacts={artifacts}

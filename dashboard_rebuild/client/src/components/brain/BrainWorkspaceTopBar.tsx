@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   CheckCircle2, Circle, ArrowRight,
-  Download, BarChart3, Network,
+  Download,
 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -86,15 +86,15 @@ export function BrainWorkspaceTopBar({ workspace }: BrainWorkspaceTopBarProps) {
           return (
             <div key={step.id} className="flex items-center gap-0.5">
               <div
-                className={`flex items-center gap-0.5 px-1.5 py-0.5 text-[8px] font-terminal ${
+                className={`flex items-center gap-0.5 px-1.5 py-0.5 text-xs font-terminal ${
                   done ? "text-green-400" : "text-muted-foreground"
                 }`}
                 title={step.label}
               >
                 {done ? (
-                  <CheckCircle2 className="w-2.5 h-2.5" />
+                  <CheckCircle2 className="w-3 h-3" />
                 ) : (
-                  <Circle className="w-2.5 h-2.5" />
+                  <Circle className="w-3 h-3" />
                 )}
                 <span className="hidden xl:inline">{step.label}</span>
               </div>
@@ -113,24 +113,15 @@ export function BrainWorkspaceTopBar({ workspace }: BrainWorkspaceTopBarProps) {
       <Button
         size="sm"
         variant="outline"
-        className="h-6 px-2 rounded-none font-terminal text-[10px] border-primary/50"
+        className="h-6 px-2 rounded-none font-terminal text-xs border-primary/50"
         onClick={() => workspace.setImportOpen(true)}
       >
         <Download className="w-3 h-3 mr-1" />
         Import
       </Button>
-      <Button
-        size="sm"
-        variant="outline"
-        className="h-6 px-2 rounded-none font-terminal text-[10px] border-primary/50"
-        onClick={() => workspace.setGraphOpen(true)}
-      >
-        <Network className="w-3 h-3 mr-1" />
-        Graph
-      </Button>
 
       {/* Status badges — right-aligned */}
-      <div className="flex items-center gap-3 ml-auto font-terminal text-[10px]">
+      <div className="flex items-center gap-3 ml-auto font-terminal text-xs">
         <div className="flex items-center gap-1">
           <span className={`w-1.5 h-1.5 rounded-full ${workspace.obsidianStatus?.connected ? "bg-green-500" : "bg-red-500"}`} />
           <span className="text-muted-foreground">Obsidian</span>
@@ -140,7 +131,7 @@ export function BrainWorkspaceTopBar({ workspace }: BrainWorkspaceTopBarProps) {
           <span className="text-muted-foreground">Anki</span>
         </div>
         {workspace.pendingDrafts.length > 0 && (
-          <Badge variant="outline" className="h-5 px-1.5 text-[9px] rounded-none border-secondary/50 text-secondary">
+          <Badge variant="outline" className="h-5 px-1.5 text-xs rounded-none border-secondary/50 text-secondary">
             {workspace.pendingDrafts.length} drafts
           </Badge>
         )}

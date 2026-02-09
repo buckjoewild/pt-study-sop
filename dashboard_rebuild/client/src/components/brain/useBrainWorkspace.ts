@@ -2,8 +2,7 @@ import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
-export type CenterMode = "edit" | "chat";
-export type RightMode = "map" | "table" | "anki";
+export type MainMode = "edit" | "chat" | "graph" | "table" | "anki";
 
 function loadState<T>(key: string, fallback: T): T {
   try {
@@ -20,11 +19,8 @@ function saveState(key: string, value: unknown) {
 }
 
 export function useBrainWorkspace() {
-  const [centerMode, setCenterModeRaw] = useState<CenterMode>(
-    () => loadState<CenterMode>("brain-center-mode", "edit")
-  );
-  const [rightMode, setRightModeRaw] = useState<RightMode>(
-    () => loadState<RightMode>("brain-right-mode", "map")
+  const [mainMode, setMainModeRaw] = useState<MainMode>(
+    () => loadState<MainMode>("brain-main-mode", "edit")
   );
   const [currentFile, setCurrentFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState("");
@@ -34,16 +30,10 @@ export function useBrainWorkspace() {
 
   // Modal states
   const [importOpen, setImportOpen] = useState(false);
-  const [graphOpen, setGraphOpen] = useState(false);
 
-  const setCenterMode = useCallback((mode: CenterMode) => {
-    setCenterModeRaw(mode);
-    saveState("brain-center-mode", mode);
-  }, []);
-
-  const setRightMode = useCallback((mode: RightMode) => {
-    setRightModeRaw(mode);
-    saveState("brain-right-mode", mode);
+  const setMainMode = useCallback((mode: MainMode) => {
+    setMainModeRaw(mode);
+    saveState("brain-main-mode", mode);
   }, []);
 
   // Shared queries
@@ -158,9 +148,8 @@ export function useBrainWorkspace() {
   }, [obsidianConfig, vaultIndex, openFile]);
 
   return {
-    // Column modes
-    centerMode, setCenterMode,
-    rightMode, setRightMode,
+    // Main mode
+    mainMode, setMainMode,
 
     // File state
     currentFile, setCurrentFile,
@@ -172,7 +161,6 @@ export function useBrainWorkspace() {
 
     // Modals
     importOpen, setImportOpen,
-    graphOpen, setGraphOpen,
 
     // Wikilink navigation
     handleWikilinkClick,

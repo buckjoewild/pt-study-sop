@@ -125,6 +125,5 @@ The 75 original SOP files were consolidated into library files at `sop/library/`
 Codex MCP's `ask-codex` ignores full diff/code embedded in the prompt and asks for a repo path instead. When the repo isn't reachable by Codex, do the code review manually using the standard checklist (bugs, edge cases, security, performance, type correctness).
 
 ## Detailed Guidelines
-- Agent Workflow: ai-config/agent-workflow.md
 - Project Workflow: conductor/workflow.md
 - Conductor Tracks: conductor/tracks.md

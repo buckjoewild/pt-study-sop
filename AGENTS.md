@@ -61,6 +61,33 @@ Format:
 
 Group same-day entries under one date header.
 
+## Agent Hygiene
+
+- Clean up after each task: remove failed scripts, temp files, obsolete drafts.
+- Mark tasks complete in the relevant plan/ExecPlan and document what changed.
+- If a decision changes direction, add a note explaining why.
+- When a file becomes outdated, update it or mark deprecated with a pointer.
+
+## Prompt Blocks (reusable)
+
+### Research + Plan
+```
+Use subagents to map the repo, then propose a concrete plan with files, tests, and risks.
+use subagents
+```
+
+### Analytics (bq)
+```
+Use bq to answer the question. Show the exact query and a short result summary.
+If dataset/time window is missing, ask first.
+```
+
+### Learning Mode
+```
+Explain why behind each change, then implement.
+Include an ASCII diagram of the flow.
+```
+
 ## Conductor Workflow
 
 The `conductor/` directory contains the project's product definition, tech stack, active tracks, and workflow rules. When starting major work:

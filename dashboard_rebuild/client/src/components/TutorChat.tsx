@@ -364,7 +364,7 @@ export function TutorChat({
           onKeyDown={handleKeyDown}
           placeholder="Ask a question..."
           disabled={isStreaming}
-          className="flex-1 bg-black/60 border-2 border-primary/40 px-3 py-2 text-lg font-terminal text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none disabled:opacity-50"
+          className="flex-1 bg-black/60 border-2 border-primary/40 rounded-none px-3 py-2 text-lg font-terminal text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none disabled:opacity-50"
         />
         <Button
           onClick={sendMessage}

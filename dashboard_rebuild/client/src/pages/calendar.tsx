@@ -233,7 +233,7 @@ function GoogleTasksBoard({ tasks, taskLists }: { tasks: GoogleTask[], taskLists
           variant="ghost"
           size="icon"
           onClick={() => setCurrentListIndex(prev => (prev - 1 + taskLists.length) % taskLists.length)}
-          className="h-10 w-10 mt-3 rounded-full border border-white/10 hover:bg-white/10 hover:text-white shrink-0"
+          className="h-10 w-10 mt-3 rounded-none border border-secondary hover:bg-primary/10 hover:text-primary shrink-0"
         >
           <ChevronLeft className="h-5 w-5" />
         </Button>
@@ -268,7 +268,7 @@ function GoogleTasksBoard({ tasks, taskLists }: { tasks: GoogleTask[], taskLists
           variant="ghost"
           size="icon"
           onClick={() => setCurrentListIndex(prev => (prev + 1) % taskLists.length)}
-          className="h-10 w-10 mt-3 rounded-full border border-white/10 hover:bg-white/10 hover:text-white shrink-0"
+          className="h-10 w-10 mt-3 rounded-none border border-secondary hover:bg-primary/10 hover:text-primary shrink-0"
         >
           <ChevronRight className="h-5 w-5" />
         </Button>
@@ -320,11 +320,11 @@ function SortableCalendarRow({ cal, isHidden, onToggle }: { cal: { id: string; n
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center gap-3 p-2 border border-zinc-800 hover:bg-zinc-900 transition-colors",
+        "flex items-center gap-3 p-2 border border-secondary hover:bg-secondary/30 transition-colors",
         isHidden && "opacity-50"
       )}
     >
-      <div {...attributes} {...listeners} className="cursor-grab text-zinc-500 hover:text-zinc-300">
+      <div {...attributes} {...listeners} className="cursor-grab text-muted-foreground hover:text-foreground">
         <GripVertical className="w-4 h-4" />
       </div>
       <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: cal.color }} />
@@ -1582,9 +1582,9 @@ export default function CalendarPage() {
               {/* MONTH VIEW */}
               {viewMode === 'month' && (
                 <>
-                  <div className="grid grid-cols-7 border-b border-zinc-800 bg-zinc-900/80 shrink-0">
+                  <div className="grid grid-cols-7 border-b border-secondary bg-secondary/20 shrink-0">
                     {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((day) => (
-                      <div key={day} className="p-2 text-center font-arcade text-xs text-zinc-400 border-r border-zinc-800 last:border-r-0">{day}</div>
+                      <div key={day} className="p-2 text-center font-arcade text-xs text-zinc-400 border-r border-secondary last:border-r-0">{day}</div>
                     ))}
                   </div>
                   <div className="grid grid-cols-7 flex-1 overflow-auto">
@@ -1593,12 +1593,12 @@ export default function CalendarPage() {
                       const isCurrentMonth = isSameMonth(day, currentDate);
                       const isTodayDate = isToday(day);
                       return (
-                        <div key={index} onClick={() => goToDay(day)} className={cn("min-h-[180px] border-r border-b border-zinc-800 p-1.5 cursor-pointer transition-colors hover:bg-zinc-800/50", !isCurrentMonth && "bg-zinc-900/60 text-zinc-600", index % 7 === 6 && "border-r-0")} data-testid={`day-cell-${format(day, 'yyyy-MM-dd')}`}>
-                          <div className={cn("text-right font-mono text-sm w-6 h-6 flex items-center justify-center ml-auto", isTodayDate && "bg-red-500 text-white rounded-full font-bold")}>{format(day, 'd')}</div>
+                        <div key={index} onClick={() => goToDay(day)} className={cn("min-h-[180px] border-r border-b border-secondary p-1.5 cursor-pointer transition-colors hover:bg-secondary/30", !isCurrentMonth && "bg-secondary/10 text-muted-foreground", index % 7 === 6 && "border-r-0")} data-testid={`day-cell-${format(day, 'yyyy-MM-dd')}`}>
+                          <div className={cn("text-right font-mono text-sm w-6 h-6 flex items-center justify-center ml-auto", isTodayDate && "bg-red-500 text-white rounded-none font-bold")}>{format(day, 'd')}</div>
                           <div className="space-y-0.5 mt-1">
                             {dayEvents.slice(0, 3).map((event, i) => (
                               <div key={`${event.id}-${i}`} className={cn("text-xs font-mono truncate px-1.5 py-1 rounded cursor-pointer hover:brightness-110", getEventColor(event))} style={getEventInlineStyle(event)} title={event.title} onClick={(e) => { e.stopPropagation(); handleEventClick(event); }}>
-                                {event.eventType === 'online' && <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 mr-1 align-middle" title="Online" />}
+                                {event.eventType === 'online' && <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/60 mr-1 align-middle" title="Online" />}
                                 {event.title}
                               </div>
                             ))}
@@ -1614,23 +1614,23 @@ export default function CalendarPage() {
               {/* WEEK VIEW */}
               {viewMode === 'week' && (
                 <>
-                  <div className="grid grid-cols-8 border-b border-zinc-800 bg-zinc-900/80 shrink-0">
-                    <div className="p-2 w-16 border-r border-zinc-800"></div>
+                  <div className="grid grid-cols-8 border-b border-secondary bg-secondary/20 shrink-0">
+                    <div className="p-2 w-16 border-r border-secondary"></div>
                     {weekDays.map((day) => (
-                      <div key={day.toISOString()} className="p-2 text-center border-r border-zinc-800 last:border-r-0 cursor-pointer hover:bg-zinc-800/50" onClick={() => goToDay(day)}>
+                      <div key={day.toISOString()} className="p-2 text-center border-r border-secondary last:border-r-0 cursor-pointer hover:bg-secondary/30" onClick={() => goToDay(day)}>
                         <div className="font-arcade text-xs text-zinc-400">{format(day, 'EEE').toUpperCase()}</div>
-                        <div className={cn("font-mono text-lg mt-1 w-8 h-8 flex items-center justify-center mx-auto", isToday(day) && "bg-red-500 text-white rounded-full font-bold")}>{format(day, 'd')}</div>
+                        <div className={cn("font-mono text-lg mt-1 w-8 h-8 flex items-center justify-center mx-auto", isToday(day) && "bg-red-500 text-white rounded-none font-bold")}>{format(day, 'd')}</div>
                       </div>
                     ))}
                   </div>
 
                   {/* All-day events row */}
-                  <div className="grid grid-cols-8 border-b border-zinc-800 bg-zinc-900/60 shrink-0">
-                    <div className="p-1 w-16 border-r border-zinc-800 text-xs font-mono text-zinc-500 text-right pr-2">ALL DAY</div>
+                  <div className="grid grid-cols-8 border-b border-secondary bg-secondary/10 shrink-0">
+                    <div className="p-1 w-16 border-r border-secondary text-xs font-mono text-muted-foreground text-right pr-2">ALL DAY</div>
                     {weekDays.map((day) => {
                       const allDayEvents = getEventsForDay(day).filter(e => e.allDay);
                       return (
-                        <div key={`allday-${day.toISOString()}`} className="border-r border-zinc-800 last:border-r-0 p-0.5 min-h-[28px]">
+                        <div key={`allday-${day.toISOString()}`} className="border-r border-secondary last:border-r-0 p-0.5 min-h-[28px]">
                           {allDayEvents.map((event, i) => (
                             <div key={i} className={cn("text-[10px] font-mono truncate px-1.5 py-0.5 rounded cursor-pointer hover:brightness-110", getEventColor(event))} style={getEventInlineStyle(event)} onClick={(e) => { e.stopPropagation(); handleEventClick(event); }}>{event.title}</div>
                           ))}
@@ -1642,9 +1642,9 @@ export default function CalendarPage() {
                   <ScrollArea className="flex-1">
                     <div className="grid grid-cols-8 relative" style={{ height: `${24 * HOUR_HEIGHT}px` }}>
                       {/* Time column */}
-                      <div className="w-16 border-r border-zinc-800">
+                      <div className="w-16 border-r border-secondary">
                         {HOURS.map((hour) => (
-                          <div key={hour} className="border-b border-zinc-800/50 text-right pr-2 font-mono text-[11px] text-zinc-500" style={{ height: `${HOUR_HEIGHT}px` }}>
+                          <div key={hour} className="border-b border-secondary/50 text-right pr-2 font-mono text-[11px] text-muted-foreground" style={{ height: `${HOUR_HEIGHT}px` }}>
                             {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
                           </div>
                         ))}
@@ -1656,9 +1656,9 @@ export default function CalendarPage() {
                         const timedEvents = getEventsForDay(day).filter(e => !e.allDay);
                         const eventColumns = calculateEventColumns(timedEvents);
                         return (
-                          <div key={day.toISOString()} className="relative border-r border-zinc-800/50 last:border-r-0">
+                          <div key={day.toISOString()} className="relative border-r border-secondary/50 last:border-r-0">
                             {HOURS.map((hour) => (
-                              <div key={hour} className="border-b border-zinc-800/30 cursor-pointer hover:bg-zinc-800/30" style={{ height: `${HOUR_HEIGHT}px` }} onClick={() => openCreateModal(day, hour)}></div>
+                              <div key={hour} className="border-b border-secondary/30 cursor-pointer hover:bg-secondary/20" style={{ height: `${HOUR_HEIGHT}px` }} onClick={() => openCreateModal(day, hour)}></div>
                             ))}
                             {timedEvents.map((event, i) => {
                               const colInfo = eventColumns.get(event.id) || { column: 0, totalColumns: 1 };
@@ -1681,7 +1681,7 @@ export default function CalendarPage() {
               {/* DAY VIEW */}
               {viewMode === 'day' && (
                 <>
-                  <div className="p-4 border-b border-zinc-800 bg-zinc-900/80 shrink-0 flex items-center justify-between">
+                  <div className="p-4 border-b border-secondary bg-secondary/20 shrink-0 flex items-center justify-between">
                     <div>
                       <div className="font-arcade text-xs text-zinc-400">{format(currentDate, 'EEEE').toUpperCase()}</div>
                       <div className={cn("font-mono text-2xl font-bold", isToday(currentDate) && "text-red-500")}>{format(currentDate, 'd')}</div>
@@ -1708,11 +1708,11 @@ export default function CalendarPage() {
                   <ScrollArea className="flex-1">
                     <div className="relative" style={{ height: `${24 * HOUR_HEIGHT}px` }}>
                       {HOURS.map((hour) => (
-                        <div key={hour} className="flex border-b border-zinc-800/30 cursor-pointer hover:bg-zinc-800/30" style={{ height: `${HOUR_HEIGHT}px` }} onClick={() => openCreateModal(currentDate, hour)}>
-                          <div className="w-20 text-right pr-2 font-mono text-xs text-zinc-500 shrink-0 pt-1">
+                        <div key={hour} className="flex border-b border-secondary/30 cursor-pointer hover:bg-secondary/20" style={{ height: `${HOUR_HEIGHT}px` }} onClick={() => openCreateModal(currentDate, hour)}>
+                          <div className="w-20 text-right pr-2 font-mono text-xs text-muted-foreground shrink-0 pt-1">
                             {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
                           </div>
-                          <div className="flex-1 border-l border-zinc-800/50"></div>
+                          <div className="flex-1 border-l border-secondary/50"></div>
                         </div>
                       ))}
 

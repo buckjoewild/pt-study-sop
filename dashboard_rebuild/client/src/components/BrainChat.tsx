@@ -640,7 +640,7 @@ export function BrainChat() {
                     <img src={img} alt="pending" className="h-12 rounded-none border border-primary/30" />
                     <button
                       onClick={() => setPendingImages((prev) => prev.filter((_, j) => j !== i))}
-                      className="absolute -top-1 -right-1 bg-destructive rounded-full p-0.5"
+                      className="absolute -top-1 -right-1 bg-destructive rounded-none p-0.5"
                     >
                       <X className="w-3 h-3" />
                     </button>

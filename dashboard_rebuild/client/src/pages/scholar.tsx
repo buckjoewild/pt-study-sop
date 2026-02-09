@@ -442,7 +442,7 @@ export default function Scholar() {
                           <div
                             key={i}
                             className={cn(
-                              "p-2 rounded-sm font-terminal text-xs",
+                              "p-2 rounded-none font-terminal text-xs",
                               msg.role === 'user'
                                 ? "bg-primary/20 text-primary ml-8"
                                 : "bg-secondary/20 text-white mr-8"
@@ -608,7 +608,7 @@ export default function Scholar() {
                               { stage: "User Escalation", count: 2 },
                             ].map((item, i) => (
                               <div key={i} className="flex items-center gap-3">
-                                <div className="w-3 h-3 rounded-full bg-primary/60" />
+                                <div className="w-3 h-3 bg-primary/60" />
                                 <span className="font-terminal text-sm flex-1">{item.stage}</span>
                                 <Badge variant="outline" className="rounded-none">{item.count}</Badge>
                               </div>

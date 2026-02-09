@@ -315,7 +315,7 @@ export default function Dashboard() {
       case "overdue": return "border-red-500 bg-red-500/20 text-red-400";
       case "today": return "border-orange-500 bg-orange-500/20 text-orange-400";
       case "tomorrow": return "border-yellow-500 bg-yellow-500/20 text-yellow-400";
-      case "soon": return "border-blue-500 bg-blue-500/20 text-blue-400";
+      case "soon": return "border-secondary bg-secondary/20 text-muted-foreground";
       default: return "border-secondary/30 text-muted-foreground";
     }
   };
@@ -899,7 +899,7 @@ export default function Dashboard() {
                               >
                                 <button
                                   onClick={() => toggleGoogleTaskMutation.mutate(task)}
-                                  className="flex-shrink-0 p-0.5 hover:bg-green-500/20 rounded"
+                                  className="flex-shrink-0 p-0.5 hover:bg-primary/20 rounded-none"
                                 >
                                   <CheckCircle2 className="w-4 h-4 text-green-500" />
                                 </button>

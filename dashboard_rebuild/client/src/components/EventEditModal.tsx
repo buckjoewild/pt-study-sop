@@ -244,7 +244,7 @@ export function EventEditModal({
           {/* Header */}
           <div className="bg-green-500/20 border-b border-green-500 p-4 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <div className="w-2 h-2 bg-green-500 animate-pulse" />
               <span className="text-green-500 font-bold tracking-wider">EDIT_EVENT</span>
             </div>
             <div className="flex items-center gap-2">
@@ -329,7 +329,7 @@ export function EventEditModal({
                       <SelectTrigger className="bg-black border-green-500/50 text-green-500 rounded-none h-8 font-terminal text-xs">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-black border-green-500 text-green-500 font-terminal z-[100010]">
+                      <SelectContent className="bg-black border-green-500 text-green-500 font-terminal rounded-none z-[100010]">
                         <SelectItem value="study">STUDY</SelectItem>
                         <SelectItem value="lecture">LECTURE</SelectItem>
                         <SelectItem value="exam">EXAM</SelectItem>
@@ -379,7 +379,7 @@ export function EventEditModal({
                       <SelectTrigger className="bg-black border-green-500/50 text-green-500 rounded-none h-8 font-terminal text-xs">
                         <SelectValue placeholder="Default" />
                       </SelectTrigger>
-                      <SelectContent className="bg-black border-green-500 text-green-500 font-terminal z-[100010]">
+                      <SelectContent className="bg-black border-green-500 text-green-500 font-terminal rounded-none z-[100010]">
                         <SelectItem value="0">Default</SelectItem>
                         <SelectItem value="1">Lavender</SelectItem>
                         <SelectItem value="2">Sage</SelectItem>
@@ -505,7 +505,7 @@ export function EventEditModal({
                         <SelectTrigger className="bg-black border-green-500/50 text-green-500 rounded-none h-8 font-terminal text-xs">
                           <SelectValue placeholder="No Recurrence" />
                         </SelectTrigger>
-                        <SelectContent className="bg-black border-green-500 text-green-500 font-terminal z-[100010]">
+                        <SelectContent className="bg-black border-green-500 text-green-500 font-terminal rounded-none z-[100010]">
                           <SelectItem value="none">None</SelectItem>
                           <SelectItem value="RRULE:FREQ=DAILY">Daily</SelectItem>
                           <SelectItem value="RRULE:FREQ=WEEKLY">Weekly</SelectItem>
@@ -603,7 +603,7 @@ export function EventEditModal({
                 {(event.conferenceData || event.hangoutLink) && (
                   <div className="space-y-2">
                     <Label className="text-xs text-green-500/80">CONFERENCE_</Label>
-                    <div className="p-2 border border-blue-500/30 rounded-none">
+                    <div className="p-2 border border-blue-500/30">
                       <p className="text-xs text-blue-400 font-terminal">
                         {event.conferenceData?.conferenceSolution?.name || "Google Meet"}
                       </p>

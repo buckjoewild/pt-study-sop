@@ -264,28 +264,79 @@ export function ContentFilter({
           {/* Mode selector */}
           <div>
             <SectionLabel>Mode</SectionLabel>
-            <div className="grid grid-cols-2 gap-1">
-              {PRIMARY_MODES.map((m) => (
+            {/* Custom layout: LEARN/QUICK top, FIX middle (full width), REVIEW/LIGHT bottom */}
+            <div className="space-y-1">
+              {/* Row 1: LEARN & QUICK */}
+              <div className="grid grid-cols-2 gap-1">
                 <button
-                  key={m.value}
-                  onClick={() => applyMode(m.value)}
-                  className={`text-left px-2 py-1 border-2 transition-colors ${
-                    mode === m.value
+                  onClick={() => applyMode("Core")}
+                  className={`text-left px-2 py-2 border-2 transition-colors ${
+                    mode === "Core"
                       ? "border-primary bg-primary/20 text-primary"
-                      : "border-muted-foreground/30 text-foreground/80 hover:border-muted-foreground/50 hover:text-foreground hover:bg-black/30"
+                      : "border-primary/30 text-foreground/80 hover:border-primary/50 hover:text-foreground hover:bg-black/30"
                   }`}
                 >
-                  <div className="font-arcade text-[10px] leading-tight truncate">
-                    {m.label}
-                  </div>
-                  <div className={`${TEXT_MUTED} text-xs leading-tight truncate`}>
-                    {m.desc}
-                  </div>
+                  <div className="font-arcade text-xs leading-tight truncate">LEARN</div>
+                  <div className={`${TEXT_MUTED} text-xs leading-tight truncate`}>Prime + encode</div>
                 </button>
-              ))}
+                <button
+                  onClick={() => applyMode("Quick Sprint")}
+                  className={`text-left px-2 py-2 border-2 transition-colors ${
+                    mode === "Quick Sprint"
+                      ? "border-primary bg-primary/20 text-primary"
+                      : "border-primary/30 text-foreground/80 hover:border-primary/50 hover:text-foreground hover:bg-black/30"
+                  }`}
+                >
+                  <div className="font-arcade text-xs leading-tight truncate">QUICK</div>
+                  <div className={`${TEXT_MUTED} text-xs leading-tight truncate`}>Quick retrieval</div>
+                </button>
+              </div>
+              
+              {/* Row 2: FIX (full width, centered) */}
+              <button
+                onClick={() => applyMode("Drill")}
+                className={`w-full text-left px-2 py-2 border-2 transition-colors ${
+                  mode === "Drill"
+                    ? "border-primary bg-primary/20 text-primary"
+                    : "border-primary/30 text-foreground/80 hover:border-primary/50 hover:text-foreground hover:bg-black/30"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-arcade text-xs leading-tight">FIX</div>
+                    <div className={`${TEXT_MUTED} text-xs leading-tight`}>Target weak spots</div>
+                  </div>
+                </div>
+              </button>
+              
+              {/* Row 3: REVIEW & LIGHT */}
+              <div className="grid grid-cols-2 gap-1">
+                <button
+                  onClick={() => applyMode("Sprint")}
+                  className={`text-left px-2 py-2 border-2 transition-colors ${
+                    mode === "Sprint"
+                      ? "border-primary bg-primary/20 text-primary"
+                      : "border-primary/30 text-foreground/80 hover:border-primary/50 hover:text-foreground hover:bg-black/30"
+                  }`}
+                >
+                  <div className="font-arcade text-xs leading-tight truncate">REVIEW</div>
+                  <div className={`${TEXT_MUTED} text-xs leading-tight truncate`}>Retrieve + refine</div>
+                </button>
+                <button
+                  onClick={() => applyMode("Light")}
+                  className={`text-left px-2 py-2 border-2 transition-colors ${
+                    mode === "Light"
+                      ? "border-primary bg-primary/20 text-primary"
+                      : "border-primary/30 text-foreground/80 hover:border-primary/50 hover:text-foreground hover:bg-black/30"
+                  }`}
+                >
+                  <div className="font-arcade text-xs leading-tight truncate">LIGHT</div>
+                  <div className={`${TEXT_MUTED} text-xs leading-tight truncate`}>Low energy</div>
+                </button>
+              </div>
             </div>
 
-            <div className={`${TEXT_MUTED} text-xs mt-1`}>
+            <div className={`${TEXT_MUTED} text-xs mt-2`}>
               Auto-picks a chain template. Override below.
             </div>
 
@@ -301,14 +352,14 @@ export function ContentFilter({
             </SectionLabel>
 
             {/* Recommended chain row */}
-            <div className="flex items-center justify-between gap-2 mb-1">
+            <div className="flex items-center justify-between gap-2 mb-2">
               <div className={`${TEXT_MUTED} text-xs min-w-0 truncate`}>
                 <span className="opacity-70">Rec:</span>{" "}
                 {recommendedChain ? (
                   <>
-                    <span className="text-foreground">{recommendedChain.name}</span>
-                    <Badge variant="outline" className={`ml-1 ${TEXT_BADGE} h-4 px-1`}>
-                      {recommendedChain.blocks.length}
+                    <span className="text-foreground font-medium">{recommendedChain.name}</span>
+                    <Badge variant="outline" className={`ml-1 ${TEXT_BADGE} h-4 px-1.5 text-xs`}>
+                      {recommendedChain.blocks.length} blocks
                     </Badge>
                   </>
                 ) : chainsLoading ? (
@@ -322,14 +373,14 @@ export function ContentFilter({
                 <Button
                   size="sm"
                   onClick={() => setChainId(recommendedChain.id)}
-                  className="rounded-none h-6 px-2 font-arcade text-[10px] bg-primary text-primary-foreground hover:bg-primary/90"
+                  className="rounded-none h-6 px-2 font-arcade text-[10px] bg-primary text-primary-foreground hover:bg-primary/90 border border-primary"
                 >
                   APPLY
                 </Button>
               )}
             </div>
 
-            <label className={`flex items-center gap-2 ${TEXT_BODY} text-muted-foreground mb-1 cursor-pointer`}>
+            <label className={`flex items-center gap-2 ${TEXT_BODY} text-muted-foreground mb-2 cursor-pointer`}>
               <Checkbox
                 checked={autoPickChain}
                 onCheckedChange={(v) => setAutoPickChain(v === true)}
@@ -338,44 +389,54 @@ export function ContentFilter({
               <span className="select-none text-xs">Auto-pick recommended chain</span>
             </label>
 
-            {/* Scrollable chain list with max-height */}
-            <ScrollArea className="h-32 border border-primary/20">
-              <div className="space-y-0.5 p-1">
+            {/* Chain list - card style with better borders */}
+            <ScrollArea className="h-40 border-2 border-primary/30 bg-black/20">
+              <div className="p-1 space-y-1">
+                {/* Freeform option as a card */}
                 <button
                   onClick={() => {
                     setChainId(undefined);
                     setLastAutoPickMode(mode);
                   }}
-                  className={`w-full text-left px-2 py-0.5 ${TEXT_BODY} text-xs border-l-2 transition-colors ${
+                  className={`w-full text-left px-3 py-2 border-2 transition-all ${
                     !chainId
-                      ? "border-primary text-primary bg-primary/10"
-                      : "border-transparent text-foreground/80 hover:text-foreground hover:border-muted-foreground/40 hover:bg-black/30"
+                      ? "border-primary bg-primary/20 text-primary"
+                      : "border-primary/20 text-foreground/80 hover:border-primary/40 hover:text-foreground hover:bg-black/30"
                   }`}
                 >
-                  Freeform
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-arcade text-xs">FREEFORM</div>
+                      <div className={`${TEXT_MUTED} text-xs`}>No template</div>
+                    </div>
+                    {!chainId && <div className="w-2 h-2 rounded-full bg-primary" />}
+                  </div>
                 </button>
+                
                 {chainsLoading ? (
-                  <div className="space-y-1 p-2">
-                    <Skeleton className="w-full h-4 bg-primary/10" />
-                    <Skeleton className="w-full h-4 bg-primary/10" />
-                    <Skeleton className="w-full h-4 bg-primary/10" />
-                    <Skeleton className="w-full h-4 bg-primary/10" />
+                  <div className="space-y-2 p-2">
+                    <Skeleton className="w-full h-10 bg-primary/10" />
+                    <Skeleton className="w-full h-10 bg-primary/10" />
+                    <Skeleton className="w-full h-10 bg-primary/10" />
                   </div>
                 ) : (
                   templateChains.map((chain) => (
                     <button
                       key={chain.id}
                       onClick={() => setChainId(chain.id)}
-                      className={`w-full text-left px-2 py-0.5 ${TEXT_BODY} text-xs border-l-2 transition-colors ${
+                      className={`w-full text-left px-3 py-2 border-2 transition-all ${
                         chainId === chain.id
-                          ? "border-primary text-primary bg-primary/10"
-                          : "border-transparent text-foreground/80 hover:text-foreground hover:border-muted-foreground/40 hover:bg-black/30"
+                          ? "border-primary bg-primary/20 text-primary"
+                          : "border-primary/20 text-foreground/80 hover:border-primary/40 hover:text-foreground hover:bg-black/30"
                       }`}
                     >
-                      <span className="truncate">{chain.name}</span>
-                      <Badge variant="outline" className={`ml-1 ${TEXT_BADGE} h-3 px-1 text-[10px]`}>
-                        {chain.blocks.length}
-                      </Badge>
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-arcade text-xs truncate">{chain.name.toUpperCase()}</div>
+                          <div className={`${TEXT_MUTED} text-xs`}>{chain.blocks.length} blocks</div>
+                        </div>
+                        {chainId === chain.id && <div className="w-2 h-2 rounded-full bg-primary ml-2" />}
+                      </div>
                     </button>
                   ))
                 )}
@@ -390,45 +451,55 @@ export function ContentFilter({
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder="e.g. Hip Flexors"
-              className={INPUT_BASE}
+              className={`${INPUT_BASE} border-2 border-primary/30`}
             />
           </div>
 
-          {/* Model selector */}
+          {/* Model selector - vertical stack */}
           <div>
             <SectionLabel>Model</SectionLabel>
 
-            <div className="grid grid-cols-2 gap-1 mb-1">
+            <div className="space-y-1 mb-2">
               <button
                 onClick={toCodex}
-                className={`text-left px-2 py-1 border-2 transition-colors ${
+                className={`w-full text-left px-3 py-2 border-2 transition-colors ${
                   provider === "codex"
                     ? "border-primary bg-primary/20 text-primary"
-                    : "border-muted-foreground/30 text-foreground/80 hover:border-muted-foreground/50 hover:text-foreground hover:bg-black/30"
+                    : "border-primary/30 text-foreground/80 hover:border-primary/50 hover:text-foreground hover:bg-black/30"
                 }`}
               >
-                <div className="flex items-center gap-1.5">
-                  <Cpu className={ICON_SM} />
-                  <div className="font-arcade text-xs leading-tight">CODEX</div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Cpu className={ICON_SM} />
+                    <div>
+                      <div className="font-arcade text-xs leading-tight">CODEX</div>
+                      <div className={`${TEXT_MUTED} text-xs leading-tight`}>ChatGPT login</div>
+                    </div>
+                  </div>
+                  {provider === "codex" && <div className="w-2 h-2 rounded-full bg-primary" />}
                 </div>
-                <div className={`${TEXT_MUTED} leading-tight`}>ChatGPT login</div>
               </button>
 
               <button
                 onClick={toOpenrouter}
                 disabled={!openrouterEnabled}
-                className={`text-left px-2 py-1 border-2 transition-colors ${
+                className={`w-full text-left px-3 py-2 border-2 transition-colors ${
                   provider === "openrouter"
                     ? "border-primary bg-primary/20 text-primary"
-                    : "border-muted-foreground/30 text-foreground/80 hover:border-muted-foreground/50 hover:text-foreground hover:bg-black/30"
+                    : "border-primary/30 text-foreground/80 hover:border-primary/50 hover:text-foreground hover:bg-black/30"
                 } ${!openrouterEnabled ? "opacity-50 cursor-not-allowed" : ""}`}
               >
-                <div className="flex items-center gap-1.5">
-                  <Cloud className={ICON_SM} />
-                  <div className="font-arcade text-xs leading-tight">OPENROUTER</div>
-                </div>
-                <div className={`${TEXT_MUTED} leading-tight`}>
-                  {openrouterEnabled ? "API key enabled" : "API key missing"}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Cloud className={ICON_SM} />
+                    <div>
+                      <div className="font-arcade text-xs leading-tight">OPENROUTER</div>
+                      <div className={`${TEXT_MUTED} text-xs leading-tight`}>
+                        {openrouterEnabled ? "API key enabled" : "API key missing"}
+                      </div>
+                    </div>
+                  </div>
+                  {provider === "openrouter" && <div className="w-2 h-2 rounded-full bg-primary" />}
                 </div>
               </button>
             </div>
@@ -437,7 +508,7 @@ export function ContentFilter({
               <select
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                className={SELECT_BASE}
+                className={`${SELECT_BASE} border-2 border-primary/30`}
               >
                 {OPENROUTER_MODELS.map((m) => (
                   <option key={m.value} value={m.value}>
@@ -450,7 +521,7 @@ export function ContentFilter({
                 value={model === "codex" ? "" : model}
                 onChange={(e) => setModel(e.target.value.trim() ? e.target.value : "codex")}
                 placeholder="Codex model override (optional)"
-                className={INPUT_BASE}
+                className={`${INPUT_BASE} border-2 border-primary/30`}
               />
             )}
           </div>
@@ -478,7 +549,7 @@ export function ContentFilter({
               <select
                 value={courseId ?? ""}
                 onChange={(e) => setCourseId(e.target.value ? Number(e.target.value) : undefined)}
-                className={SELECT_BASE}
+                className={`${SELECT_BASE} border-2 border-primary/30`}
               >
                 <option value="">All courses</option>
                 {courses.map((c) => (

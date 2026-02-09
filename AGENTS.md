@@ -12,24 +12,44 @@ C:\pt-study-sop\Start_Dashboard.bat
 ```
 
 This will:
-1. Build the UI: `dashboard_rebuild/dist/public/` → `brain/static/dist/`
+1. Build the UI directly to `brain/static/dist/` (one step!)
 2. Start Python Flask server on **port 5000**
 3. Open browser to `http://127.0.0.1:5000/brain`
 
-### After Any Code Changes
+---
 
-If you modify React files in `dashboard_rebuild/client/src/`:
+## Quick Development Workflow (Streamlined!)
 
+The build now outputs **directly** to `brain/static/dist` - no copy/sync step needed!
+
+### Option 1: Double-click (Easiest)
+```
+C:\pt-study-sop\dashboard_rebuild\build-and-sync.bat
+```
+
+### Option 2: NPM Script
 ```powershell
 cd C:\pt-study-sop\dashboard_rebuild
-npm run build
-robocopy dist\public ..\brain\static\dist /MIR
+npm run deploy        # Build only
+npm run deploy:open   # Build + open browser
 ```
 
-Then **hard refresh** browser (Ctrl+Shift+R) or add cache buster:
+### Option 3: PowerShell
+```powershell
+cd C:\pt-study-sop\dashboard_rebuild
+.\build-and-sync.ps1          # Build
+.\build-and-sync.ps1 -Reload  # Build + open browser
 ```
-http://127.0.0.1:5000/brain?t=123
-```
+
+---
+
+## What Changed?
+
+**Before (3 steps):** Build → `dist/public` → Copy → `brain/static/dist`
+
+**Now (1 step):** Build → `brain/static/dist` (direct!)
+
+The Vite config now outputs directly to the Flask server's static folder.
 
 ---
 
@@ -39,14 +59,15 @@ http://127.0.0.1:5000/brain?t=123
 C:\pt-study-sop\
 ├── dashboard_rebuild\          # React frontend source
 │   ├── client\src\             # All React components
-│   ├── dist\public\            # Build output (temporary)
-│   └── BUILD.md                # Detailed build instructions
-├── brain\                       # Python Flask server + static files
-│   ├── static\dist\            # ★ CANONICAL BUILD - served on port 5000
-│   ├── dashboard_web.py        # Flask server entry point
+│   ├── build-and-sync.ps1      # Build script (outputs to brain/)
+│   ├── build-and-sync.bat      # Double-click version
+│   └── BUILD.md                # Build instructions
+├── brain\                       # Python Flask server
+│   ├── static\dist\            # ★ BUILD OUTPUT GOES HERE
+│   ├── dashboard_web.py        # Flask server entry
 │   └── ...
-├── Start_Dashboard.bat         # ★ USE THIS TO START
-└── docs\                       # Project documentation
+├── Start_Dashboard.bat         # ★ USE THIS TO START SERVER
+└── AGENTS.md                   # This file
 ```
 
 ---
@@ -56,29 +77,8 @@ C:\pt-study-sop\
 | Mistake | Why It Fails |
 |---------|--------------|
 | `npm run dev` | Opens port 3000, doesn't serve Python API |
-| Building to wrong folder | Changes go to `dist/public` but Flask serves `brain/static/dist` |
-| Not clearing cache | Browser shows old build even after updates |
-| Multiple servers | Port conflicts, confusing which server has latest build |
-
----
-
-## Quick Reference
-
-```powershell
-# Build and deploy
-npm run build
-robocopy dist\public ..\brain\static\dist /MIR
-
-# Start server
-..\Start_Dashboard.bat
-
-# Check what's running
-tasklist | findstr python
-tasklist | findstr node
-
-# Clear browser cache
-# Press Ctrl+Shift+R in browser
-```
+| Forgetting hard refresh | Browser shows old cached build |
+| Multiple servers | Port conflicts - use `Start_Dashboard.bat` only |
 
 ---
 
@@ -95,24 +95,7 @@ tasklist | findstr node
 
 ---
 
-## Mobile vs Desktop Layout
-
-The Brain page has two layouts:
-
-**Desktop (≥1024px):** Two resizable panels (Vault sidebar + Main content)
-
-**Mobile (<1024px):** Single column with bottom tab bar (Vault/Content buttons)
-
-The mobile tab bar uses `lg:hidden` class - it only appears when viewport is < 1024px.
-
-**Current positioning:**
-- Brain container: `bottom-[48px]` (48px from bottom to clear footer)
-- Mobile nav: Inside container at bottom
-- Footer: `z-20`, Brain container: `z-30` (appears above footer)
-
----
-
-## Troubleshooting Commands
+## Troubleshooting
 
 Run these in browser console (F12):
 
@@ -120,18 +103,12 @@ Run these in browser console (F12):
 // Check viewport width
 window.innerWidth
 
-// Check if mobile view should be active
-window.innerWidth < 1024
-
 // See all fixed positioned elements
 Array.from(document.querySelectorAll('.fixed')).map(e => ({
   class: e.className.slice(0, 50),
   bottom: getComputedStyle(e).bottom,
   zIndex: getComputedStyle(e).zIndex
 }))
-
-// Check if mobile nav buttons exist
-document.querySelectorAll('nav[aria-label="Mobile navigation"] button')
 ```
 
 ---

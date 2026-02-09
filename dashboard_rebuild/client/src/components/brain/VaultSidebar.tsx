@@ -279,7 +279,7 @@ export function VaultSidebar({ workspace }: VaultSidebarProps) {
         key={`filetree-${errorKey}`}
         fallback={<SidebarErrorFallback onReset={() => setErrorKey((k) => k + 1)} />}
       >
-        <ScrollArea className="flex-1 min-h-0">
+        <ScrollArea className="flex-1 min-h-0 border-b border-primary/30">
           <div className="py-1">
             {filteredFiles.map((file: string | { path: string }) => {
               const filePath = typeof file === "string" ? file : file.path;

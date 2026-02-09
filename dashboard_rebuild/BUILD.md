@@ -1,29 +1,50 @@
-# Dashboard Build & Sync
+# Dashboard Build
 
-## Quick Build (copy-paste this)
+## Quick Build (One Step!)
 
-```powershell
-cd C:\pt-study-sop\dashboard_rebuild
-npm install
-npm run build
-robocopy dist\public ..\brain\static\dist /MIR
+The build now outputs **directly** to `brain/static/dist` - no sync needed!
+
+### Option 1: Double-click
+```
+build-and-sync.bat
 ```
 
-Then run the dashboard via: `Start_Dashboard.bat`
+### Option 2: NPM Script
+```powershell
+cd C:\pt-study-sop\dashboard_rebuild
+npm run deploy        # Build only
+npm run deploy:open   # Build + open browser
+```
 
-## Why This Process
+### Option 3: PowerShell
+```powershell
+cd C:\pt-study-sop\dashboard_rebuild
+.\build-and-sync.ps1          # Build
+.\build-and-sync.ps1 -Reload  # Build + open browser
+```
 
-- The UI builds to `dashboard_rebuild/dist/public/`.
-- Flask serves the canonical build from `brain/static/dist/`.
-- After any frontend change, build and mirror-copy `dist/public` into `brain/static/dist`.
+---
+
+## What Changed?
+
+**Before:** Build → `dist/public` → Copy → `brain/static/dist`
+
+**Now:** Build → `brain/static/dist` (direct!)
+
+The Vite config now outputs directly to the Flask server's static folder.
+
+---
 
 ## IMPORTANT
 
-- The repo's canonical run path is `Start_Dashboard.bat` (port 5000). Do not run `npm run dev` / `vite dev` for this project.
-- Canonical developer workflow lives in `docs/root/GUIDE_DEV.md`.
+- The repo's canonical run path is `Start_Dashboard.bat` (port 5000)
+- Do not run `npm run dev` / `vite dev` for this project
+- After building, hard refresh browser with `Ctrl+Shift+R`
 
-## Common Mistakes
+---
 
-- **Stale `index.html`**: If you see old UI after building, the `index.html` is referencing old JS hashes. Delete `brain/static/dist/` entirely and re-copy from `dist/public/`.
-- **Cache**: Hard refresh browser with `Ctrl+Shift+R` after deploying.
-- **Source files**: All React source is in `dashboard_rebuild/client/src/`, NOT in `brain/`.
+## Troubleshooting
+
+- **Stale files**: Delete `brain/static/dist/` and rebuild
+- **Cache issues**: Hard refresh with `Ctrl+Shift+R`
+- **Build errors**: Check that `Start_Dashboard.bat` isn't running (port conflict)

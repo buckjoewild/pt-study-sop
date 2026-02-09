@@ -712,9 +712,7 @@ def call_chatgpt_responses(
         "input": [{"role": "user", "content": user_prompt}],
         "store": False,
         "stream": True,
-        "reasoning": {"effort": "low", "summary": "auto"},
-        "text": {"verbosity": "medium"},
-        "include": ["reasoning.encrypted_content"],
+        "text": {"verbosity": "low"},
     })
 
     headers = {
@@ -797,9 +795,7 @@ def stream_chatgpt_responses(
         "input": [{"role": "user", "content": user_prompt}],
         "store": False,
         "stream": True,
-        "reasoning": {"effort": "low", "summary": "auto"},
-        "text": {"verbosity": "medium"},
-        "include": ["reasoning.encrypted_content"],
+        "text": {"verbosity": "low"},
     })
 
     headers = {

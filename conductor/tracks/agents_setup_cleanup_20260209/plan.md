@@ -11,4 +11,4 @@ Make repo instructions and skills consistent and discoverable across tools.
 - [x] Ignore repo-root planning artifacts (`/task_plan.md`, `/findings.md`, `/progress.md`)
 - [x] Update `CONTINUITY.md`
 - [x] Verify: `python scripts/check_docs_sync.py` and `git status`
-- [ ] Commit + push
+- [x] Commit + push

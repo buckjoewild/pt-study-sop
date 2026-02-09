@@ -49,6 +49,7 @@
                             "python -m pytest brain/tests -v",
                             "pytest brain/tests/ -v",
                             "python brain/dashboard_web.py",
+                            "python scripts/check_docs_sync.py",
                             "python scripts/release_check.py",
                             "python --version",
                             "bash -lc",

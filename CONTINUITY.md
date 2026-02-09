@@ -414,3 +414,7 @@
 - Session created with study_mode = chain name, method_chain_id linked
 - Obsidian write via lazy-imported `obsidian_append()`, gated by `write_obsidian` option
 - RAG context capped at 2000 chars from `source_doc_ids`
+
+## 2026-02-09 - Agent Setup Cleanup
+
+- 02:04: Added Agents Conductor track, clarified workflow + track pointers for Claude compatibility, vendored `x-research` skill for Codex, and ignored repo-root planning artifacts. Files: `conductor/tracks/agents_setup_cleanup_20260209/`, `conductor/tracks.md`, `AGENTS.md`, `CLAUDE.md`, `.claude/AGENTS.md`, `.claude/CLAUDE.md`, `.codex/skills/x-research/`, `.gitignore`.

@@ -38,6 +38,7 @@ Canonical run/build/test commands live in `docs/root/GUIDE_DEV.md`.
 - SOP manifest: (archived — replaced by sop/library/00-overview.md file map)
 - Google Calendar credentials: GoogleCalendarTasksAPI.json (handle as sensitive; do not modify unless asked).
 - Conductor: conductor/ (product def, tech stack, tracks, workflow)
+- Agents track: conductor/tracks/agents_setup_cleanup_20260209/ (agent instruction + skill wiring)
 
 ## System Modules
 - Dashboard, Brain, Calendar (Flask): brain/

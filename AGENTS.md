@@ -20,6 +20,15 @@ Applies to all work under `C:/pt-study-sop`. A nearer `AGENTS.md` overrides this
 - Shell: PowerShell by default. Bash/WSL when the tool or command requires it.
 - Prompt suffix defaults: treat every request as if it ends with `use subagents; use bq when asked; explain why; include ASCII diagram when helpful` unless the user says "no suffix" or "no subagents".
 
+## Workflow
+
+- For any multi-step work: create and maintain the Task list; complete tasks one-by-one.
+- Delegate:
+  - Exploration/searching to a read-only subagent when possible
+  - Test running to a test-runner subagent
+  - Final review to code-reviewer subagent
+- Prefer background subagents for long-running tasks; summarize results back in the main thread.
+
 ## When to Ask
 
 - Task needs a target (repo, path, env) that is not explicit.

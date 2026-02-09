@@ -303,14 +303,18 @@ def _keyword_fallback(
         params.extend(material_ids)
 
     keyword_clauses = []
+    keyword_params: list = []
     for kw in keywords[:5]:
         keyword_clauses.append(
             f"(CASE WHEN LOWER(content) LIKE ? THEN 1 ELSE 0 END)"
         )
-        params.append(f"%{kw}%")
+        keyword_params.append(f"%{kw}%")
 
     score_expr = " + ".join(keyword_clauses) if keyword_clauses else "0"
     where = " AND ".join(conditions)
+
+    # score_expr appears twice (SELECT + WHERE) so keyword_params needed twice
+    query_params = keyword_params + params + keyword_params + [k]
 
     cur.execute(
         f"""SELECT id, source_path, content, course_id, folder_path,
@@ -319,7 +323,7 @@ def _keyword_fallback(
             WHERE {where} AND ({score_expr}) > 0
             ORDER BY relevance DESC
             LIMIT ?""",
-        params + [k],
+        query_params,
     )
 
     results = []

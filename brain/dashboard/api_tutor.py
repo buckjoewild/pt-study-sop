@@ -432,7 +432,7 @@ def send_turn(session_id: str):
 
         if provider == "codex":
             try:
-                from llm_provider import call_codex_json
+                from llm_provider import stream_chatgpt_responses, call_codex_json
                 from tutor_rag import keyword_search_dual
                 from tutor_prompt_builder import build_prompt_with_contexts
                 from tutor_chains import FIRST_PASS_ADDENDUM
@@ -442,8 +442,8 @@ def send_turn(session_id: str):
                     question,
                     course_id=session.get("course_id"),
                     material_ids=material_ids,
-                    k_materials=6,
-                    k_instructions=4,
+                    k_materials=4,
+                    k_instructions=2,
                 )
                 material_text, instruction_text = _format_dual_context(dual)
 
@@ -475,12 +475,17 @@ def send_turn(session_id: str):
                     "Answer as a tutor only."
                 )
 
+                # Limit history to last 6 turns, truncate answers for speed
+                recent_turns = turns[-6:] if len(turns) > 6 else turns
                 history_lines: list[str] = []
-                for t in turns:
+                for t in recent_turns:
                     if t.get("question"):
                         history_lines.append(f"User: {t['question']}")
                     if t.get("answer"):
-                        history_lines.append(f"Assistant: {t['answer']}")
+                        ans = t["answer"]
+                        if len(ans) > 400:
+                            ans = ans[:400] + "..."
+                        history_lines.append(f"Assistant: {ans}")
                 history_text = "\n".join(history_lines).strip() or "(no prior turns)"
 
                 user_prompt = f"""## Retrieved Context
@@ -494,23 +499,42 @@ def send_turn(session_id: str):
 
 Remember: cite source documents using [Source: filename] when you use them."""
 
-                result = call_codex_json(
-                    system_prompt,
-                    user_prompt,
-                    model=codex_model,
-                    timeout=120,
-                    isolated=True,
-                )
-                if not result.get("success"):
-                    raise RuntimeError(result.get("error") or "Codex failed")
+                # Primary: stream via ChatGPT backend API (fast)
+                use_streaming = True
+                try:
+                    for chunk in stream_chatgpt_responses(
+                        system_prompt, user_prompt,
+                        model=codex_model or "gpt-5.1",
+                        timeout=120,
+                    ):
+                        if chunk.get("type") == "delta":
+                            full_response += chunk.get("text", "")
+                            yield format_sse_chunk(chunk.get("text", ""))
+                        elif chunk.get("type") == "error":
+                            raise RuntimeError(chunk.get("error", "ChatGPT API failed"))
+                        elif chunk.get("type") == "done":
+                            pass
+                except Exception as stream_err:
+                    # Fallback: Codex CLI (slower but reliable)
+                    if not full_response:
+                        use_streaming = False
+                        result = call_codex_json(
+                            system_prompt,
+                            user_prompt,
+                            model=codex_model,
+                            timeout=120,
+                            isolated=True,
+                        )
+                        if not result.get("success"):
+                            raise RuntimeError(result.get("error") or "Codex failed")
+                        full_response = (result.get("content") or "").strip()
+                        max_chars = 220
+                        for i in range(0, len(full_response), max_chars):
+                            yield format_sse_chunk(full_response[i : i + max_chars])
+                    else:
+                        raise stream_err
 
-                full_response = (result.get("content") or "").strip()
                 citations = extract_citations(full_response)
-
-                max_chars = 220
-                for i in range(0, len(full_response), max_chars):
-                    yield format_sse_chunk(full_response[i : i + max_chars])
-
                 yield format_sse_done(citations=citations)
 
             except Exception as e:

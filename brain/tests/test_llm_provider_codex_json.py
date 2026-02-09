@@ -6,7 +6,13 @@ import llm_provider
 
 def _fake_completed_process(*, stdout: str, stderr: str = "", returncode: int = 0):
     # Mimic subprocess.CompletedProcess shape used by llm_provider._codex_exec_json
-    return subprocess.CompletedProcess(args=["codex"], returncode=returncode, stdout=stdout, stderr=stderr)
+    # stdout/stderr are bytes because we removed text=True and decode manually
+    return subprocess.CompletedProcess(
+        args=["codex"],
+        returncode=returncode,
+        stdout=stdout.encode("utf-8"),
+        stderr=stderr.encode("utf-8"),
+    )
 
 
 def test_call_codex_json_parses_agent_message_and_usage(monkeypatch):
@@ -55,9 +61,8 @@ def test_call_codex_json_parses_agent_message_and_usage(monkeypatch):
     assert work_dir in captured["args"]
     assert "--skip-git-repo-check" in captured["args"]
 
-    sent_prompt = captured["kwargs"].get("input")
-    assert "System: sys" in sent_prompt
-    assert "User: user" in sent_prompt
+    # Prompt is passed via stdin file handle, not as string input kwarg
+    assert "stdin" in captured["kwargs"]
 
 
 def test_call_codex_json_returns_error_on_nonzero_returncode(monkeypatch):

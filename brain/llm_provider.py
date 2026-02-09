@@ -5,6 +5,9 @@ import time
 import subprocess
 import tempfile
 import shutil
+import http.client
+import ssl
+import uuid as _uuid
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union
 
@@ -345,17 +348,34 @@ Human: {user_prompt}
 
         cmd_args.append("-")  # stdin
 
-        # subprocess.run with timeout
+        # Write prompt to temp file to avoid Windows cmd.exe encoding issues
+        prompt_file = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", encoding="utf-8", delete=False
+        )
+        prompt_file.write(full_prompt)
+        prompt_file.close()
+        prompt_stdin = open(prompt_file.name, "rb")
+
         process = subprocess.Popen(
             cmd_args,
-            stdin=subprocess.PIPE,
+            stdin=prompt_stdin,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
         )
 
         try:
-            stdout, stderr = process.communicate(input=full_prompt, timeout=timeout)
+            stdout_bytes, stderr_bytes = process.communicate(timeout=timeout)
+            stdout = stdout_bytes.decode("utf-8", errors="replace")
+            stderr = stderr_bytes.decode("utf-8", errors="replace")
+        finally:
+            prompt_stdin.close()
+            try:
+                os.remove(prompt_file.name)
+            except OSError:
+                pass
+
+        try:
+            stdout, stderr = stdout, stderr  # already decoded above
         except subprocess.TimeoutExpired:
             process.kill()
             return {
@@ -464,14 +484,23 @@ def _codex_exec_json(
 
     cmd_args.append("-")  # stdin prompt
 
+    # Write prompt to temp file to avoid Windows cmd.exe encoding issues
+    prompt_file = tempfile.NamedTemporaryFile(
+        mode="w", suffix=".txt", encoding="utf-8", delete=False
+    )
+    prompt_file.write(prompt)
+    prompt_file.close()
+
     try:
-        result = subprocess.run(
-            cmd_args,
-            input=prompt,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
+        with open(prompt_file.name, "rb") as prompt_stdin:
+            result = subprocess.run(
+                cmd_args,
+                stdin=prompt_stdin,
+                capture_output=True,
+                timeout=timeout,
+            )
+        stdout_text = result.stdout.decode("utf-8", errors="replace") if result.stdout else ""
+        stderr_text = result.stderr.decode("utf-8", errors="replace") if result.stderr else ""
     except subprocess.TimeoutExpired:
         return {
             "success": False,
@@ -481,9 +510,13 @@ def _codex_exec_json(
     finally:
         if isolated:
             shutil.rmtree(work_dir, ignore_errors=True)
+        try:
+            os.remove(prompt_file.name)
+        except OSError:
+            pass
 
     if result.returncode != 0:
-        err = (result.stderr or "").strip() or (result.stdout or "").strip()
+        err = stderr_text.strip() or stdout_text.strip()
         return {
             "success": False,
             "error": f"Codex process failed: {err}" if err else "Codex process failed.",
@@ -493,7 +526,7 @@ def _codex_exec_json(
     agent_messages: list[str] = []
     usage: Optional[dict] = None
 
-    for raw in (result.stdout or "").splitlines():
+    for raw in stdout_text.splitlines():
         raw = raw.strip()
         if not raw:
             continue
@@ -547,3 +580,277 @@ User: {user_prompt}
         timeout=timeout,
         isolated=isolated,
     )
+
+# ---------------------------------------------------------------------------
+# ChatGPT Backend API (direct -- bypasses Codex CLI for speed)
+# ---------------------------------------------------------------------------
+
+_CHATGPT_BASE = "chatgpt.com"
+_CODEX_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
+_TOKEN_URL_HOST = "auth.openai.com"
+_TOKEN_URL_PATH = "/oauth/token"
+_AUTH_CACHE: Dict[str, Any] = {}
+
+
+def _load_codex_auth() -> Optional[Dict[str, str]]:
+    """Load and auto-refresh tokens from ~/.codex/auth.json."""
+    if _AUTH_CACHE.get("access_token") and _AUTH_CACHE.get("account_id"):
+        return {
+            "access_token": _AUTH_CACHE["access_token"],
+            "account_id": _AUTH_CACHE["account_id"],
+        }
+
+    auth_path = Path.home() / ".codex" / "auth.json"
+    if not auth_path.exists():
+        return None
+
+    try:
+        data = json.loads(auth_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+
+    access_token = data.get("access_token") or data.get("token")
+    refresh_token = data.get("refresh_token")
+    account_id = data.get("account_id")
+
+    if not access_token:
+        return None
+
+    # Extract account_id from JWT if not stored
+    if not account_id:
+        try:
+            import base64
+            parts = access_token.split(".")
+            if len(parts) >= 2:
+                payload = parts[1] + "=" * (4 - len(parts[1]) % 4)
+                claims = json.loads(base64.urlsafe_b64decode(payload))
+                account_id = (
+                    claims.get("https://api.openai.com/auth", {}).get("account_id")
+                    or claims.get("account_id")
+                )
+        except Exception:
+            pass
+
+    # Check expiry and refresh if needed
+    try:
+        import base64
+        parts = access_token.split(".")
+        if len(parts) >= 2:
+            payload = parts[1] + "=" * (4 - len(parts[1]) % 4)
+            claims = json.loads(base64.urlsafe_b64decode(payload))
+            exp = claims.get("exp", 0)
+            if exp and time.time() > exp - 60:
+                refreshed = _refresh_codex_token(refresh_token) if refresh_token else None
+                if refreshed:
+                    access_token = refreshed["access_token"]
+                    if refreshed.get("account_id"):
+                        account_id = refreshed["account_id"]
+    except Exception:
+        pass
+
+    _AUTH_CACHE["access_token"] = access_token
+    _AUTH_CACHE["account_id"] = account_id or ""
+
+    return {"access_token": access_token, "account_id": account_id or ""}
+
+
+def _refresh_codex_token(refresh_token: str) -> Optional[Dict[str, str]]:
+    """Refresh OAuth token via auth.openai.com."""
+    try:
+        body = json.dumps({
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+            "client_id": _CODEX_CLIENT_ID,
+        })
+        ctx = ssl.create_default_context()
+        conn = http.client.HTTPSConnection(_TOKEN_URL_HOST, context=ctx, timeout=10)
+        conn.request("POST", _TOKEN_URL_PATH, body=body, headers={
+            "Content-Type": "application/json",
+        })
+        resp = conn.getresponse()
+        if resp.status == 200:
+            data = json.loads(resp.read().decode("utf-8"))
+            new_token = data.get("access_token")
+            if new_token:
+                _AUTH_CACHE["access_token"] = new_token
+                auth_path = Path.home() / ".codex" / "auth.json"
+                try:
+                    stored = json.loads(auth_path.read_text(encoding="utf-8"))
+                    stored["access_token"] = new_token
+                    if data.get("refresh_token"):
+                        stored["refresh_token"] = data["refresh_token"]
+                    auth_path.write_text(json.dumps(stored, indent=2), encoding="utf-8")
+                except Exception:
+                    pass
+                return {"access_token": new_token, "account_id": _AUTH_CACHE.get("account_id", "")}
+        conn.close()
+    except Exception:
+        pass
+    return None
+
+
+def call_chatgpt_responses(
+    system_prompt: str,
+    user_prompt: str,
+    *,
+    model: str = "gpt-5.1",
+    timeout: int = 120,
+) -> Dict[str, Any]:
+    """
+    Synchronous call to ChatGPT backend API (chatgpt.com/backend-api/codex/responses).
+    Returns same shape as call_codex_json: {success, content, error, usage}.
+    """
+    auth = _load_codex_auth()
+    if not auth:
+        return {"success": False, "error": "No Codex auth tokens found (~/.codex/auth.json)", "content": None}
+
+    body = json.dumps({
+        "model": model,
+        "instructions": system_prompt,
+        "input": [{"role": "user", "content": user_prompt}],
+        "store": False,
+        "stream": True,
+        "reasoning": {"effort": "low", "summary": "auto"},
+        "text": {"verbosity": "medium"},
+        "include": ["reasoning.encrypted_content"],
+    })
+
+    headers = {
+        "Authorization": f"Bearer {auth['access_token']}",
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+        "OpenAI-Beta": "responses=experimental",
+        "originator": "codex_cli_rs",
+        "x-request-id": f"req-{_uuid.uuid4().hex[:12]}",
+    }
+    if auth.get("account_id"):
+        headers["chatgpt-account-id"] = auth["account_id"]
+
+    try:
+        ctx = ssl.create_default_context()
+        conn = http.client.HTTPSConnection(_CHATGPT_BASE, context=ctx, timeout=timeout)
+        conn.request("POST", "/backend-api/codex/responses", body=body, headers=headers)
+        resp = conn.getresponse()
+
+        if resp.status != 200:
+            err_body = resp.read().decode("utf-8", errors="replace")[:500]
+            return {"success": False, "error": f"ChatGPT API {resp.status}: {err_body}", "content": None}
+
+        full_text = ""
+        usage = None
+
+        while True:
+            line = resp.readline()
+            if not line:
+                break
+            line = line.decode("utf-8", errors="replace").strip()
+            if not line.startswith("data: "):
+                continue
+            data_str = line[6:]
+            if data_str == "[DONE]":
+                break
+            try:
+                evt = json.loads(data_str)
+            except json.JSONDecodeError:
+                continue
+
+            evt_type = evt.get("type", "")
+            if evt_type == "response.output_text.delta":
+                full_text += evt.get("delta", "")
+            elif evt_type == "response.completed":
+                r = evt.get("response", {})
+                usage = r.get("usage")
+
+        conn.close()
+
+        if not full_text.strip():
+            return {"success": False, "error": "ChatGPT API returned empty response", "content": None, "usage": usage}
+
+        return {"success": True, "content": full_text.strip(), "error": None, "usage": usage}
+
+    except Exception as e:
+        return {"success": False, "error": f"ChatGPT API error: {e}", "content": None}
+
+
+def stream_chatgpt_responses(
+    system_prompt: str,
+    user_prompt: str,
+    *,
+    model: str = "gpt-5.1",
+    timeout: int = 120,
+):
+    """
+    Streaming generator for ChatGPT backend API.
+    Yields dicts: {"type": "delta", "text": "..."} or {"type": "done", "usage": {...}}
+    or {"type": "error", "error": "..."}.
+    """
+    auth = _load_codex_auth()
+    if not auth:
+        yield {"type": "error", "error": "No Codex auth tokens found (~/.codex/auth.json)"}
+        return
+
+    body = json.dumps({
+        "model": model,
+        "instructions": system_prompt,
+        "input": [{"role": "user", "content": user_prompt}],
+        "store": False,
+        "stream": True,
+        "reasoning": {"effort": "low", "summary": "auto"},
+        "text": {"verbosity": "medium"},
+        "include": ["reasoning.encrypted_content"],
+    })
+
+    headers = {
+        "Authorization": f"Bearer {auth['access_token']}",
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+        "OpenAI-Beta": "responses=experimental",
+        "originator": "codex_cli_rs",
+        "x-request-id": f"req-{_uuid.uuid4().hex[:12]}",
+    }
+    if auth.get("account_id"):
+        headers["chatgpt-account-id"] = auth["account_id"]
+
+    try:
+        ctx = ssl.create_default_context()
+        conn = http.client.HTTPSConnection(_CHATGPT_BASE, context=ctx, timeout=timeout)
+        conn.request("POST", "/backend-api/codex/responses", body=body, headers=headers)
+        resp = conn.getresponse()
+
+        if resp.status != 200:
+            err_body = resp.read().decode("utf-8", errors="replace")[:500]
+            yield {"type": "error", "error": f"ChatGPT API {resp.status}: {err_body}"}
+            return
+
+        usage = None
+
+        while True:
+            line = resp.readline()
+            if not line:
+                break
+            line = line.decode("utf-8", errors="replace").strip()
+            if not line.startswith("data: "):
+                continue
+            data_str = line[6:]
+            if data_str == "[DONE]":
+                break
+            try:
+                evt = json.loads(data_str)
+            except json.JSONDecodeError:
+                continue
+
+            evt_type = evt.get("type", "")
+            if evt_type == "response.output_text.delta":
+                delta = evt.get("delta", "")
+                if delta:
+                    yield {"type": "delta", "text": delta}
+            elif evt_type == "response.completed":
+                r = evt.get("response", {})
+                usage = r.get("usage")
+
+        conn.close()
+        yield {"type": "done", "usage": usage}
+
+    except Exception as e:
+        yield {"type": "error", "error": f"ChatGPT API error: {e}"}
+

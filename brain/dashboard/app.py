@@ -1,22 +1,15 @@
 from flask import Flask, jsonify, request, send_from_directory
-
-from dashboard.routes import dashboard_bp
-from dashboard.v3_routes import dashboard_v3_bp, dashboard_v3_api_bp
 from config import DATA_DIR, SESSION_LOGS_DIR
+from paths import TEMPLATES_DIR, STATIC_DIR, DIST_DIR
 import os
 import time
 from pathlib import Path
 
 
 def create_app():
-    # Templates and static are in brain/templates and brain/static
-    # This file is in brain/dashboard/app.py
-    # So we look up one level
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    brain_dir = os.path.dirname(base_dir)  # brain/
-    template_dir = os.path.join(brain_dir, "templates")
-
-    static_dir = os.path.join(brain_dir, "static")
+    # Use centralized paths
+    template_dir = str(TEMPLATES_DIR)
+    static_dir = str(STATIC_DIR)
 
     app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
     app.config["TEMPLATES_AUTO_RELOAD"] = True
@@ -24,22 +17,18 @@ def create_app():
 
     # Register blueprints BEFORE catch-all route
     from dashboard.routes import dashboard_bp
-    from dashboard.v3_routes import dashboard_v3_bp, dashboard_v3_api_bp
     from dashboard.api_adapter import adapter_bp
     from dashboard.api_methods import methods_bp
     from dashboard.api_chain_runner import chain_runner_bp
     from dashboard.api_tutor import tutor_bp
+    from dashboard.v3_routes import dashboard_v3_api_bp
 
     app.register_blueprint(adapter_bp)  # /api/* routes - must be first
     app.register_blueprint(methods_bp)  # /api/methods, /api/chains
     app.register_blueprint(chain_runner_bp)  # /api/chain-run
     app.register_blueprint(tutor_bp)  # /api/tutor/*
-    app.register_blueprint(dashboard_bp)
-    # Register v3 routes only if the v3 bundle exists (archived bundles are not active)
-    v3_root = Path(__file__).resolve().parents[2] / "dashboard_rebuild" / "code"
-    if v3_root.exists():
-        app.register_blueprint(dashboard_v3_bp)
-        app.register_blueprint(dashboard_v3_api_bp)
+    app.register_blueprint(dashboard_v3_api_bp)  # /api/v3/* - calendar data
+    app.register_blueprint(dashboard_bp)  # Legacy routes (will be deprecated)
 
     # DEBUG: Print all registered routes
     print("\n=== REGISTERED ROUTES ===")

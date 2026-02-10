@@ -14,6 +14,7 @@ from typing import Dict, List, Optional, Tuple
 
 from db_setup import get_connection, init_database
 from config import load_env, DB_PATH
+from paths import DATA_DIR, API_CONFIG_PATH
 
 
 # Google API imports (install: pip install google-auth google-auth-oauthlib google-api-python-client)
@@ -38,10 +39,9 @@ except ImportError:
 # Strict scope validation causes errors when Google returns implicit scopes
 os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = "1"
 
-# Paths
-DATA_DIR = Path(__file__).parent.parent / "data"
+# Paths (imported from paths.py)
 TOKEN_PATH = DATA_DIR / "gcal_token.json"
-CONFIG_PATH = DATA_DIR / "api_config.json"
+CONFIG_PATH = API_CONFIG_PATH  # From paths
 # DB_PATH imported from config
 
 # OAuth scopes - read-only access to calendar and tasks

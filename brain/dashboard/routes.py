@@ -21,6 +21,7 @@ from config import (
     DATA_DIR,
     STUDY_RAG_DIR,
     SESSION_LOGS_DIR,
+    PROJECT_FILES_DIR,
     SCORE_MIN,
     SCORE_MAX,
     STALE_DAYS,
@@ -80,8 +81,6 @@ dashboard_bp = Blueprint("dashboard", __name__)
 # We can do it here just to be safe if blueprint is imported
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(SESSION_LOGS_DIR, exist_ok=True)
-
-PROJECT_FILES_DIR = Path(DATA_DIR) / "project_files"
 os.makedirs(PROJECT_FILES_DIR, exist_ok=True)
 
 STUDY_RAG_PATH = Path(STUDY_RAG_DIR)

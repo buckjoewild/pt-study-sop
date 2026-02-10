@@ -1,9 +1,23 @@
 #!/usr/bin/env python3
 """
 Configuration settings for PT Study Brain v9.4.
+Uses centralized path definitions from paths.py
 """
 
 import os
+from pathlib import Path
+
+# Import centralized paths
+from paths import (
+    BRAIN_DIR,
+    DATA_DIR,
+    SESSION_LOGS_DIR,
+    OUTPUT_DIR,
+    STUDY_RAG_DIR,
+    PROJECT_FILES_DIR,
+    API_CONFIG_PATH,
+    DB_PATH,
+)
 
 # Version
 VERSION = '9.4'
@@ -42,36 +56,32 @@ def load_env(override_env=True):
 # Initialize environment variables from .env once at import time
 _ENV_CACHE = load_env(override_env=True)
 
-# Base paths
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, 'data')
-SESSION_LOGS_DIR = os.path.join(BASE_DIR, 'session_logs')
-OUTPUT_DIR = os.path.join(BASE_DIR, 'output')
-
-# Study RAG (drop files here; no upload needed)
-_DEFAULT_STUDY_RAG_DIR = os.path.join(DATA_DIR, 'study_rag')
-
-# Check api_config.json for saved study_rag_path first
-def _load_study_rag_path():
-    api_config_path = os.path.join(DATA_DIR, 'api_config.json')
-    if os.path.exists(api_config_path):
+# Support for custom STUDY_RAG_DIR via api_config.json or environment
+def _get_effective_study_rag_dir():
+    """
+    Load study_rag_path from api_config.json if set, otherwise use default from paths.
+    This allows users to configure a custom RAG directory without code changes.
+    """
+    if Path(API_CONFIG_PATH).exists():
         try:
-            with open(api_config_path, 'r', encoding='utf-8') as f:
-                cfg = __import__('json').load(f)
+            import json
+            with open(API_CONFIG_PATH, 'r', encoding='utf-8') as f:
+                cfg = json.load(f)
                 if cfg.get('study_rag_path'):
-                    return cfg['study_rag_path']
-        except:
+                    custom_path = cfg['study_rag_path']
+                    return Path(custom_path).expanduser().resolve()
+        except Exception:
             pass
-    # Fall back to env var or default
-    return os.environ.get('PT_STUDY_RAG_DIR', _DEFAULT_STUDY_RAG_DIR)
+    
+    # Fall back to environment or default from paths
+    env_path = os.environ.get('PT_STUDY_RAG_DIR')
+    if env_path:
+        return Path(env_path).expanduser().resolve()
+    
+    return STUDY_RAG_DIR
 
-STUDY_RAG_DIR = os.path.abspath(os.path.expanduser(os.path.expandvars(_load_study_rag_path())))
-
-# Database
-DB_PATH = os.path.join(DATA_DIR, 'pt_study.db')
-
-# API Configuration
-API_CONFIG_PATH = os.path.join(DATA_DIR, 'api_config.json')
+# Get effective study rag directory (might be custom)
+STUDY_RAG_DIR_EFFECTIVE = _get_effective_study_rag_dir()
 
 # Study modes (legacy - kept for backward compatibility)
 STUDY_MODES_LEGACY = ['Sprint', 'Core', 'Drill']
@@ -335,14 +345,15 @@ READINESS_WEIGHTS = {
 def ensure_directories():
     """Create required directories if they don't exist."""
     for dir_path in [DATA_DIR, SESSION_LOGS_DIR, OUTPUT_DIR, STUDY_RAG_DIR]:
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
+        dir_path = Path(dir_path) if not isinstance(dir_path, Path) else dir_path
+        if not dir_path.exists():
+            dir_path.mkdir(parents=True, exist_ok=True)
             print(f"Created directory: {dir_path}")
 
 if __name__ == '__main__':
     print(f"PT Study Brain v{VERSION} Configuration")
     print("=" * 40)
-    print(f"Base Directory: {BASE_DIR}")
+    print(f"Base Directory: {BRAIN_DIR}")
     print(f"Database: {DB_PATH}")
     print(f"Session Logs: {SESSION_LOGS_DIR}")
     print(f"Output: {OUTPUT_DIR}")

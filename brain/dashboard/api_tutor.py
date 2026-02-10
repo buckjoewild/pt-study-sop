@@ -33,10 +33,9 @@ from typing import Optional
 from flask import Blueprint, Response, jsonify, request
 
 from db_setup import DB_PATH, get_connection
+from paths import UPLOADS_DIR
 
 tutor_bp = Blueprint("tutor", __name__, url_prefix="/api/tutor")
-
-UPLOADS_DIR = Path(__file__).parent.parent / "data" / "uploads"
 
 
 # ---------------------------------------------------------------------------

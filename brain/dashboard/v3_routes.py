@@ -2,27 +2,13 @@ from datetime import datetime, timedelta, date
 from pathlib import Path
 from typing import Optional, Tuple
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, jsonify, request
 
 from dashboard.calendar import get_calendar_data
 from dashboard.syllabus import fetch_all_courses_and_events
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-V3_CODE_DIR = REPO_ROOT / "dashboard_rebuild" / "code"
-V3_TEMPLATES_DIR = V3_CODE_DIR / "templates"
-V3_STATIC_DIR = V3_CODE_DIR / "static"
-
-
-dashboard_v3_bp = Blueprint(
-    "dashboard_v3",
-    __name__,
-    url_prefix="/v3",
-    template_folder=str(V3_TEMPLATES_DIR),
-    static_folder=str(V3_STATIC_DIR),
-    static_url_path="/static",
-)
-
+# Only register the API blueprint - template serving is handled by React
 dashboard_v3_api_bp = Blueprint("dashboard_v3_api", __name__, url_prefix="/api/v3")
 
 
@@ -37,11 +23,6 @@ SOURCE_COLORS = {
     "study_session": "#188038",
     "planned_repetition": "#f9ab00",
 }
-
-
-@dashboard_v3_bp.route("/")
-def v3_calendar():
-    return render_template("v3_calendar.html")
 
 
 def _parse_date(value: Optional[str]) -> Optional[date]:

@@ -7,6 +7,7 @@ import logging
 import re
 import requests
 from typing import List, Dict, Any, Optional
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 from db_setup import get_connection
 from config import load_env, COURSE_FOLDERS, SEMESTER_DATES
 from dashboard.utils import load_api_config
+from paths import ORCHESTRATOR_RUNS_DIR
 
 # ==============================================================================
 # OBSIDIAN LOCAL REST API CONFIG
@@ -2667,10 +2669,7 @@ def _scholar_status_payload() -> dict:
       - progress: number 0-100 (optional; best-effort)
       - errors: list[str] (best-effort)
     """
-    from pathlib import Path
-
-    repo_root = Path(__file__).parent.parent.parent.resolve()
-    run_dir = repo_root / "scholar" / "outputs" / "orchestrator_runs"
+    run_dir = ORCHESTRATOR_RUNS_DIR
     run_dir.mkdir(parents=True, exist_ok=True)
 
     running = any(run_dir.glob("*.pid")) or any(run_dir.glob("*.running"))
@@ -2774,12 +2773,9 @@ def run_scholar():
     Uses the in-app orchestrator runner so the button actually starts
     the Codex-powered Scholar workflow and writes outputs.
     """
-    from pathlib import Path
-
     try:
         from dashboard.scholar import cleanup_stale_pids, run_scholar_orchestrator
-        repo_root = Path(__file__).parent.parent.parent.resolve()
-        run_dir = repo_root / "scholar" / "outputs" / "orchestrator_runs"
+        run_dir = ORCHESTRATOR_RUNS_DIR
         run_dir.mkdir(parents=True, exist_ok=True)
 
         cleanup_stale_pids()
@@ -2811,11 +2807,8 @@ def scholar_status():
 @adapter_bp.route("/scholar/logs", methods=["GET"])
 def scholar_logs():
     """Get latest logs."""
-    from pathlib import Path
-
     try:
-        repo_root = Path(__file__).parent.parent.parent.resolve()
-        run_dir = repo_root / "scholar" / "outputs" / "orchestrator_runs"
+        run_dir = ORCHESTRATOR_RUNS_DIR
 
         # Find latest .log
         log_files = list(run_dir.glob("*.log"))
